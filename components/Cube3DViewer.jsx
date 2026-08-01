@@ -72,7 +72,8 @@ export default function Cube3DViewer({
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-    camera.position.set(0, 2.5, 8);
+    // Cámara centrada en cara azul (Front) por defecto
+    camera.position.set(0, 2.0, 9.1);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -125,8 +126,8 @@ export default function Cube3DViewer({
       const onMove = (e) => {
         if (!isDraggingRef.current) return;
         const pt = e.touches ? e.touches[0] : e;
-        const dx = (pt.clientX - prevMouseRef.current.x) * 0.01;
-        const dy = (pt.clientY - prevMouseRef.current.y) * 0.01;
+        const dx = (pt.clientX - prevMouseRef.current.x) * 0.004;
+        const dy = (pt.clientY - prevMouseRef.current.y) * 0.003;
         prevMouseRef.current = { x: pt.clientX, y: pt.clientY };
         
         const sph = new THREE.Spherical().setFromVector3(camera.position);
@@ -264,11 +265,11 @@ export default function Cube3DViewer({
       }
 
       if (isLocked) {
-        // Balanceo suave alrededor de la orientación estándar (±15° en Y, ±5° en X).
-        // El cubo nunca gira más de 15°, así cada cara siempre queda en su lado correcto.
-        const t = Date.now() * 0.0008;
-        cubeGroup.rotation.y = Math.sin(t) * 0.26;          // ±15°
-        cubeGroup.rotation.x = Math.sin(t * 0.6 + 1) * 0.09; // ±5°
+        // Balanceo muy sutil: solo ±6° en Y, sin movimiento en X.
+        // La cara azul queda siempre de frente al usuario.
+        const t = Date.now() * 0.0005;
+        cubeGroup.rotation.y = Math.sin(t) * 0.10;  // ±~6°
+        cubeGroup.rotation.x = 0;                    // Sin inclinación
         renderer.render(scene, camera);
         return;
       }
@@ -300,10 +301,10 @@ export default function Cube3DViewer({
           cubeGroup.rotation.y += (0 - cubeGroup.rotation.y) * 0.06;
           cubeGroup.rotation.x += (0 - cubeGroup.rotation.x) * 0.06;
         } else {
-          // === MODO NORMAL (turno usuario / idle): cámara fija isométrica ===
+          // === MODO NORMAL: cámara vuelve a cara azul (Front) ===
           camera.position.x += (0   - camera.position.x) * 0.04;
-          camera.position.y += (2.5 - camera.position.y) * 0.04;
-          camera.position.z += (8   - camera.position.z) * 0.04;
+          camera.position.y += (2.0 - camera.position.y) * 0.04;
+          camera.position.z += (9.1 - camera.position.z) * 0.04;
           camera.lookAt(0, 0, 0);
 
           cubeGroup.rotation.y += (0 - cubeGroup.rotation.y) * 0.04;
