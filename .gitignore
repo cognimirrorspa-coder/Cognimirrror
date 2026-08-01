@@ -29,3 +29,8 @@ node_modules
 /tmp/
 contraseña_supabase.txt
 
+# Backup folders
+Cognimirrror-main1/
+Cognimirror-main/
+CogniMirror_Cubo/
+
