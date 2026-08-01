@@ -139,10 +139,12 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
 
     const now = performance.now();
 
-    // ── FILTRO INERCIAL DE RE-ALINEACIÓN (350ms COOLDOWN) ──
-    // Evita rebotes mecánicos sin bloquear respuestas rápidas y fluidas del usuario
-    if (normalizedFace === lastInputFaceRef.current && (now - lastInputTimeRef.current) < 350) {
-      console.warn(`[Corsi Filter] Descartando rebote de re-alineación en la cara ${normalizedFace}`);
+    // ── FILTRO DE RE-ALINEACIÓN DE MISMA CARA (1200ms COOLDOWN) ──
+    // Si el usuario mueve R y luego R' para volver a su lugar (o R+R por error),
+    // dentro de 1.2 segundos el segundo giro de la MISMA cara se descarta completamente.
+    // Esto evita fallos injustos cuando el usuario corrige el giro de vuelta.
+    if (normalizedFace === lastInputFaceRef.current && (now - lastInputTimeRef.current) < 1200) {
+      console.warn(`[Corsi Filter] Descartando re-alineación de la cara ${normalizedFace} (dentro de 1.2s)`);
       return;
     }
 

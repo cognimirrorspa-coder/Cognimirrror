@@ -421,13 +421,24 @@ export default function Cube3DViewer({
       if (isDemoRunningRef.current) return;
       isDemoRunningRef.current = true;
       
-      // La cámara ya orbita sola hacia la cara activa vía highlightFace.
-      // Aquí simplemente esperamos a que la cámara llegue y se establezca.
-      await new Promise(r => setTimeout(r, 400));
+      // Esperar a que la cámara orbital llegue a la cara (lerp 0.06 llega en ~350ms)
+      await new Promise(r => setTimeout(r, 350));
+
       for (const m of demoMoves) {
-        await three.rotateFace(m, 14);
-        await new Promise(r => setTimeout(r, 120));
+        // Giro de demostración: 90° lento y visible (16 pasos)
+        await three.rotateFace(m, 16);
+        
+        // Mantener girado para que el usuario vea claramente qué cara mover
+        await new Promise(r => setTimeout(r, 400));
+
+        // Devolver a posición original limpiamente (cubo resuelto = gemelo digital correcto)
+        const reverseMove = m.endsWith("'") ? m.slice(0, -1) : m + "'";
+        await three.rotateFace(reverseMove, 12);
+
+        // Pausa breve antes del siguiente movimiento (si hubiera más de uno)
+        await new Promise(r => setTimeout(r, 200));
       }
+
       isDemoRunningRef.current = false;
       if (onDemoComplete) onDemoComplete();
     };
