@@ -14,20 +14,33 @@ const FACE_FREQUENCIES = {
 };
 
 const FACE_METADATA = {
-  U: { name: 'Superior (U)', color: 'bg-white border-white/20', text: 'text-white', note: 'La' },
-  D: { name: 'Inferior (D)', color: 'bg-yellow-400 border-yellow-500/20 text-black', text: 'text-yellow-400', note: 'Do#' },
-  R: { name: 'Derecha (R)', color: 'bg-orange-500 border-orange-600/20', text: 'text-orange-500', note: 'Mi' },
-  L: { name: 'Izquierda (L)', color: 'bg-red-500 border-red-600/20', text: 'text-red-500', note: 'La (Octava)' },
-  F: { name: 'Frontal (F)', color: 'bg-blue-600 border-blue-700/20', text: 'text-blue-500', note: 'Mi (Grave)' }
+  U: { name: 'BLANCO', position: 'Arriba (U)', color: 'bg-white text-black border-white', text: 'text-white', badge: '⚪ BLANCO (Cara Arriba)' },
+  D: { name: 'AMARILLO', position: 'Abajo (D)', color: 'bg-yellow-400 text-black border-yellow-500', text: 'text-yellow-400', badge: '🟡 AMARILLO (Cara Abajo)' },
+  R: { name: 'NARANJA', position: 'Derecha (R)', color: 'bg-orange-500 text-white border-orange-600', text: 'text-orange-500', badge: '🟠 NARANJA (Mano Derecha)' },
+  L: { name: 'ROJO', position: 'Izquierda (L)', color: 'bg-red-500 text-white border-red-600', text: 'text-red-500', badge: '🔴 ROJO (Mano Izquierda)' },
+  F: { name: 'AZUL', position: 'Frente (F)', color: 'bg-blue-600 text-white border-blue-700', text: 'text-blue-500', badge: '🔵 AZUL (Cara Frente)' }
 };
 
-// Sintetizador Web Audio API puro
+// Singleton para el motor de audio Web Audio API
+let audioCtxInstance = null;
+const getAudioContext = () => {
+  if (typeof window === 'undefined') return null;
+  if (!audioCtxInstance) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtxInstance = new AudioContextClass();
+    }
+  }
+  if (audioCtxInstance && audioCtxInstance.state === 'suspended') {
+    audioCtxInstance.resume();
+  }
+  return audioCtxInstance;
+};
+
 const playTone = (frequency, type = 'triangle', duration = 0.4) => {
-  if (typeof window === 'undefined') return;
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gainNode = ctx.createGain();
 
@@ -35,7 +48,7 @@ const playTone = (frequency, type = 'triangle', duration = 0.4) => {
     osc.frequency.value = frequency;
 
     gainNode.gain.setValueAtTime(0, ctx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.05); // volume 0.25
+    gainNode.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.05); // volumen 0.25
     gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
 
     osc.connect(gainNode);
@@ -88,6 +101,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
   const [demoKey, setDemoKey] = useState(0);
   const [showErrorFlash, setShowErrorFlash] = useState(false);
   const [cubeSize, setCubeSize] = useState(300);
+  const [userTurnFeedback, setUserTurnFeedback] = useState(null); // Feedback visual instantáneo de giro del usuario
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -152,15 +166,29 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
     }
   }, [activeFace, gameState]);
 
+  // Handler unificado de input del usuario con feedback visual instantáneo
+  const triggerUserInputFeedback = (face) => {
+    handleCubeInput(face);
+
+    if (FACE_METADATA[face]) {
+      setUserTurnFeedback({ face, meta: FACE_METADATA[face], timestamp: Date.now() });
+      setDemoKey(k => k + 1);
+      setTimeout(() => setUserTurnFeedback(null), 700);
+    }
+
+    if (FACE_FREQUENCIES[face]) {
+      playTone(FACE_FREQUENCIES[face], 'triangle', 0.35);
+    }
+  };
+
   // Suscripción activa a giros BLE del hardware
   useEffect(() => {
     const unsub = subscribeToMoves((movimiento) => {
       const face = movimiento.replace("'", "");
-      handleCubeInput(face);
-
-      // Feedback de audio durante el turno del usuario
-      if (gameState === 'waiting_for_user' && FACE_FREQUENCIES[face]) {
-        playTone(FACE_FREQUENCIES[face], 'triangle', 0.35);
+      if (gameState === 'waiting_for_user') {
+        triggerUserInputFeedback(face);
+      } else {
+        handleCubeInput(face);
       }
     });
     return () => unsub();
@@ -180,11 +208,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
       else if (e.key === ' ' || e.key === 'Enter' || keyUpper === 'F') face = 'F';
 
       if (face) {
-        handleCubeInput(face);
-        // Feedback de audio durante el turno del usuario
-        if (FACE_FREQUENCIES[face]) {
-          playTone(FACE_FREQUENCIES[face], 'triangle', 0.35);
-        }
+        triggerUserInputFeedback(face);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -383,38 +407,56 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               )}
             </div>
 
-            {/* FLOAT GLASS HUD PANEL FOR PLAYING CAPAS */}
-            {activeMeta && (
-              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 md:left-8 md:top-1/2 md:-translate-y-1/2 md:bottom-auto md:translate-x-0 bg-[#13161e]/85 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex md:flex-col items-center gap-3 w-64 md:w-48 shadow-2xl z-20 transition-all duration-300 scale-100">
-                <span className="text-[9px] font-black tracking-widest text-white/40 uppercase md:block hidden">Capa Activa</span>
-                <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl ${activeMeta.color} shadow-2xl flex items-center justify-center font-black text-lg md:text-2xl text-black border shrink-0`}>
-                  {activeFace}
+            {/* HUD PANEL: MUESTRA LA CARA ACTIVA O EL GIRO DEL USUARIO */}
+            {(activeMeta || userTurnFeedback) && (
+              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 md:left-8 md:top-1/2 md:-translate-y-1/2 md:bottom-auto md:translate-x-0 bg-[#13161e]/90 backdrop-blur-md border border-white/15 rounded-2xl p-4 flex md:flex-col items-center gap-3 w-72 md:w-52 shadow-2xl z-20 transition-all duration-300 animate-in fade-in zoom-in-95">
+                <span className="text-[10px] font-black tracking-widest text-white/50 uppercase">
+                  {userTurnFeedback ? 'Giro Detectado' : 'Cara en Secuencia'}
+                </span>
+                <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl ${(userTurnFeedback?.meta || activeMeta)?.color} shadow-2xl flex items-center justify-center font-black text-xl md:text-3xl border-2 shrink-0 animate-pulse`}>
+                  {(userTurnFeedback?.face || activeFace)}
                 </div>
                 <div className="text-left md:text-center">
-                  <p className={`font-black uppercase tracking-wider text-xs ${activeMeta.text}`}>{activeMeta.name}</p>
-                  <p className="text-[9px] text-white/40 font-mono mt-0.5 font-bold">Nota: {activeMeta.note}</p>
+                  <p className={`font-black uppercase tracking-wider text-xs md:text-sm ${(userTurnFeedback?.meta || activeMeta)?.text}`}>
+                    {(userTurnFeedback?.meta || activeMeta)?.name}
+                  </p>
+                  <p className="text-[10px] text-white/70 font-mono mt-1 font-bold">
+                    {(userTurnFeedback?.meta || activeMeta)?.position}
+                  </p>
                 </div>
               </div>
             )}
 
-            {/* ÁREA DEL CUBO */}
+            {/* ÁREA DEL CUBO 3D */}
             <div style={{ width: `${cubeSize}px`, height: `${cubeSize}px` }} className="relative transition-all duration-300 flex items-center justify-center">
+              {/* Banner superior con notación + color explicativo */}
               {activeFace && gameState === 'showing_sequence' && (
-                <div className="absolute top-0 left-0 right-0 flex items-center justify-center pointer-events-none z-50 -mt-6 sm:-mt-8">
-                  <span className="text-[1.8rem] sm:text-[3rem] font-black text-white/90 drop-shadow-[0_0_30px_rgba(255,255,255,1)] tracking-[0.3em] uppercase">
-                    {activeFace === 'U' ? 'BLANCO' :
-                      activeFace === 'D' ? 'AMARILLO' :
-                        activeFace === 'R' ? 'NARANJA' :
-                          activeFace === 'L' ? 'ROJO' :
-                            activeFace === 'F' ? 'AZUL' : ''}
+                <div className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center pointer-events-none z-50 -mt-8 sm:-mt-10 animate-bounce">
+                  <span className="text-2xl sm:text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(255,255,255,1)] tracking-[0.2em] uppercase">
+                    {FACE_METADATA[activeFace]?.badge || activeFace}
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-bold text-cyan-300 tracking-widest uppercase mt-1 bg-black/60 px-3 py-1 rounded-full border border-cyan-400/30">
+                    {FACE_METADATA[activeFace]?.position}
                   </span>
                 </div>
               )}
+
+              {userTurnFeedback && gameState === 'waiting_for_user' && (
+                <div className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center pointer-events-none z-50 -mt-8 sm:-mt-10">
+                  <span className="text-xl sm:text-3xl font-black text-emerald-400 drop-shadow-[0_0_25px_rgba(57,255,20,0.9)] tracking-[0.2em] uppercase">
+                    ¡GIRASTE: {userTurnFeedback.meta.name}!
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-bold text-white tracking-widest uppercase mt-1 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40">
+                    {userTurnFeedback.meta.position}
+                  </span>
+                </div>
+              )}
+
               <Cube3DViewer
                 status={gameState === 'finished' ? 'eval_celebration' : 'gyro_active'}
                 size={cubeSize}
-                highlightFace={activeFace}
-                demoMoves={activeFace && gameState === 'showing_sequence' ? [activeFace, `${activeFace}'`] : null}
+                highlightFace={activeFace || userTurnFeedback?.face}
+                demoMoves={(activeFace && gameState === 'showing_sequence') || userTurnFeedback ? [(activeFace || userTurnFeedback.face), `${(activeFace || userTurnFeedback.face)}'`] : null}
                 demoKey={demoKey}
                 ignoreSensor={gameState !== 'waiting_for_user' && gameState !== 'idle'}
               />
