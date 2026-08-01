@@ -312,6 +312,12 @@ export default function MemoryGameView({ onExit, subjectId, etiquetaEstudio, isW
   const [onPasscodeSuccess, setOnPasscodeSuccess] = useState(() => () => {});
 
   const triggerSecurity = (action) => {
+    const isKioscoActive = typeof window !== 'undefined' && localStorage.getItem('cognimirror_kiosco_active') === 'true';
+    if (!isKioscoActive) {
+      action();
+      return;
+    }
+
     setOnPasscodeSuccess(() => () => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('cognimirror_kiosco_active');

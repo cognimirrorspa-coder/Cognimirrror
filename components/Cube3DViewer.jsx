@@ -19,15 +19,15 @@ const MOVES_CONFIG = {
   'B':  { axis: 'z', val: -1, angle:  Math.PI / 2 },
 };
 
-// Posiciones de cámara cinematográficas suaves para enfocar cada cara sin brusquedad (soporta giros de 180°)
+// Posiciones de cámara a distancia constante (R = 9.5) para evitar cualquier efecto de zoom molesto o agrandamiento
 const TARGET_CAMERA_POSITIONS = {
-  U: new THREE.Vector3(3.5, 6.2, 5.2),   // Blanco / Up
-  D: new THREE.Vector3(3.5, -6.2, 5.2),  // Amarillo / Down
-  R: new THREE.Vector3(7.2, 2.5, 3.2),   // Naranja / Right
-  L: new THREE.Vector3(-7.2, 2.5, 3.2),  // Rojo / Left
-  F: new THREE.Vector3(0, 2.2, 8.2),     // Azul / Front
-  B: new THREE.Vector3(0, 2.2, -8.2),    // Verde / Back (Giro suave de 180°)
-  DEFAULT: new THREE.Vector3(4, 4, 8)
+  U: new THREE.Vector3(2.5, 8.0, 4.4),   // Blanco / Up (Vista superior constante)
+  D: new THREE.Vector3(2.5, -8.0, 4.4),  // Amarillo / Down (Vista inferior constante)
+  R: new THREE.Vector3(7.8, 2.5, 5.0),   // Naranja / Right (Vista derecha constante)
+  L: new THREE.Vector3(-7.8, 2.5, 5.0),  // Rojo / Left (Vista izquierda constante)
+  F: new THREE.Vector3(0.0, 2.5, 9.1),   // Azul / Front (Vista frontal constante)
+  B: new THREE.Vector3(0.0, 2.5, -9.1),  // Verde / Back (Vista trasera 180° constante)
+  DEFAULT: new THREE.Vector3(4.2, 4.2, 7.3)
 };
 
 // M = L + R' (capa central en el eje X)
@@ -101,8 +101,10 @@ export default function Cube3DViewer({
             new THREE.MeshPhongMaterial({ color: z === 1 ? COLORS.F : COLORS.CORE, shininess: 50 }),
             new THREE.MeshPhongMaterial({ color: z === -1 ? COLORS.B : COLORS.CORE, shininess: 50 }),
           ];
-          // Guardar color base original en userData para evitar deformaciones por transparencia
-          mats.forEach(m => { m.userData.baseColor = m.color.clone(); });
+          // Guardar el hex base inmutable en userData para prevenir decoloración o desaparición de piezas
+          mats.forEach(m => { 
+            m.userData.baseHex = m.color.getHex(); 
+          });
 
           const cubie = new THREE.Mesh(geo, mats);
           cubie.position.set(x, y, z);
@@ -308,37 +310,48 @@ export default function Cube3DViewer({
     }
   }, [moveHistory, isLocked, ignoreSensor]);
 
-  // ═══ HIGHLIGHT FACE (SIMON SAYS - SÓLIDO SIN DEFORMACIÓN POR TRANSPARENCIA) ═══
+  // ═══ HIGHLIGHT FACE (SIMON SAYS - SÓLIDO E INMUTABLE SIN PERDIDA DE PIEZAS NI TRANSPARENCIA) ═══
   useEffect(() => {
     highlightFaceRef.current = highlightFace;
     if (!threeRef.current) return;
     const { allCubies } = threeRef.current;
     if (!allCubies) return;
 
+    const FACE_HEX_MAP = {
+      'U': COLORS.U,
+      'D': COLORS.D,
+      'R': COLORS.R,
+      'L': COLORS.L,
+      'F': COLORS.F,
+      'B': COLORS.B
+    };
+
     allCubies.forEach(cubie => {
       if (Array.isArray(cubie.material)) {
-        cubie.material.forEach((mat, idx) => {
-          const baseColor = mat.userData.baseColor || mat.color;
+        cubie.material.forEach((mat) => {
+          const baseHex = mat.userData.baseHex !== undefined ? mat.userData.baseHex : mat.color.getHex();
+          if (baseHex === COLORS.CORE) return;
 
           if (highlightFace) {
-             const mapIdx = { 'R': 0, 'L': 1, 'U': 2, 'D': 3, 'F': 4, 'B': 5 };
-             if (idx === mapIdx[highlightFace] && baseColor.getHex() !== COLORS.CORE) {
-               // Cara Iluminada: Sólida, sin transparencia, con alto brillo emissive
-               mat.color.copy(baseColor);
-               mat.emissive.copy(baseColor);
+             const targetHex = FACE_HEX_MAP[highlightFace];
+             if (baseHex === targetHex) {
+               // Sticker de la cara activa: Brillo de neón emissive intenso
+               mat.color.setHex(baseHex);
+               mat.emissive.setHex(baseHex);
                mat.emissiveIntensity = 1.8;
                mat.opacity = 1.0;
                mat.transparent = false;
-             } else if (baseColor.getHex() !== COLORS.CORE) {
-               // Caras Apagadas: Sólidas atenudadas al 22% para evitar ver huecos internos
-               mat.color.copy(baseColor).multiplyScalar(0.22);
+             } else {
+               // Stickers inactivos: Atenuados limpiamente al 28% sin corrupción ni desaparición
+               const dimColor = new THREE.Color(baseHex).multiplyScalar(0.28);
+               mat.color.copy(dimColor);
                mat.emissive.setHex(0x000000);
                mat.opacity = 1.0;
                mat.transparent = false;
              }
           } else {
-             // Reset al estado normal sólido
-             mat.color.copy(baseColor);
+             // Reset perfecto al estado sólido original
+             mat.color.setHex(baseHex);
              mat.emissive.setHex(0x000000);
              mat.opacity = 1.0;
              mat.transparent = false;
