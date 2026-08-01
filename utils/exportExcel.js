@@ -480,6 +480,30 @@ export async function exportAllMemoryHistoryExcel(historyList) {
   URL.revokeObjectURL(url);
 }
 
+export const RAW_GAN_HARDWARE_MAP = {
+  "F": { codeHex: "0x00 (ID 0)", rawPayloadName: "GAN_FACE_FRONT_CW", notation: "F" },
+  "F'": { codeHex: "0x01 (ID 1)", rawPayloadName: "GAN_FACE_FRONT_CCW", notation: "F'" },
+  "B": { codeHex: "0x02 (ID 2)", rawPayloadName: "GAN_FACE_BACK_CW", notation: "B" },
+  "B'": { codeHex: "0x03 (ID 3)", rawPayloadName: "GAN_FACE_BACK_CCW", notation: "B'" },
+  "U": { codeHex: "0x04 (ID 4)", rawPayloadName: "GAN_FACE_UP_CW", notation: "U" },
+  "U'": { codeHex: "0x05 (ID 5)", rawPayloadName: "GAN_FACE_UP_CCW", notation: "U'" },
+  "D": { codeHex: "0x06 (ID 6)", rawPayloadName: "GAN_FACE_DOWN_CW", notation: "D" },
+  "D'": { codeHex: "0x07 (ID 7)", rawPayloadName: "GAN_FACE_DOWN_CCW", notation: "D'" },
+  "L": { codeHex: "0x08 (ID 8)", rawPayloadName: "GAN_FACE_LEFT_CW", notation: "L" },
+  "L'": { codeHex: "0x09 (ID 9)", rawPayloadName: "GAN_FACE_LEFT_CCW", notation: "L'" },
+  "R": { codeHex: "0x0A (ID 10)", rawPayloadName: "GAN_FACE_RIGHT_CW", notation: "R" },
+  "R'": { codeHex: "0x0B (ID 11)", rawPayloadName: "GAN_FACE_RIGHT_CCW", notation: "R'" },
+};
+
+export function getRawHardwareInfo(moveNotation) {
+  if (!moveNotation) return { codeHex: '0x00 (ID 0)', rawPayloadName: 'GAN_UNKNOWN', notation: '---' };
+  const clean = String(moveNotation).trim();
+  if (RAW_GAN_HARDWARE_MAP[clean]) return RAW_GAN_HARDWARE_MAP[clean];
+  const faceOnly = clean.replace("'", "");
+  if (RAW_GAN_HARDWARE_MAP[faceOnly]) return RAW_GAN_HARDWARE_MAP[faceOnly];
+  return { codeHex: '0x00 (ID 0)', rawPayloadName: `GAN_PIECE_${clean}`, notation: clean };
+}
+
 // ════════════════════════════════════════════════════════════
 // EXPORTADOR DE TELEMETRÍA CRUDA INALTERABLE (HARDWARE BLE LOG)
 // ════════════════════════════════════════════════════════════
@@ -496,13 +520,13 @@ export async function exportRawTelemetryExcel({ sessionData, playerName }) {
   });
 
   // Título e info de inalterabilidad
-  sheet.mergeCells('A1:G1');
+  sheet.mergeCells('A1:I1');
   const titleCell = sheet.getCell('A1');
-  titleCell.value = 'CogniMirror — Registro Inalterable de Telemetría Cruda (BLE Hardware Log)';
+  titleCell.value = 'CogniMirror — Registro Inalterable de Telemetría Cruda (BLE Hardware Payload Log)';
   Object.assign(titleCell, cellStyle(true, BLUE_CORP, WHITE, 14));
   sheet.getRow(1).height = 28;
 
-  sheet.mergeCells('A2:G2');
+  sheet.mergeCells('A2:I2');
   const subCell = sheet.getCell('A2');
   subCell.value = `ID Sesión: ${sessionData.id || sessionData.sessionId || 'N/A'}   |   Paciente: ${playerName || sessionData.playerName || 'Anónimo'}   |   Fecha ISO: ${sessionData.date || new Date().toISOString()}`;
   Object.assign(subCell, cellStyle(false, BLUE_LIGHT, BLUE_CORP, 10));
@@ -512,12 +536,14 @@ export async function exportRawTelemetryExcel({ sessionData, playerName }) {
 
   const rawHeaders = [
     'Giro N°',
+    'Código Byte Hardware',
+    'Nombre Original Pieza (Payload)',
+    'Notación Estándar',
+    'Hora Exacta (HH:mm:ss,SSS)',
     'Marca de Tiempo ISO 8601',
-    'Hora Exacta (HH:mm:ss.SSS)',
-    'Unix Timestamp (ms)',
-    'Notación Cruda BLE Hardware',
     'Latencia Motor (ms)',
-    'Estado Validación Clinica'
+    'Modo Transmisión',
+    'Estado Validación Clínica'
   ];
 
   applyHeader(sheet.addRow(rawHeaders), rawHeaders);
@@ -525,20 +551,25 @@ export async function exportRawTelemetryExcel({ sessionData, playerName }) {
   const turns = sessionData.rawTurnsData || sessionData.telemetry || [];
 
   turns.forEach((t, idx) => {
+    const moveNotation = t.rawMoveNotation || t.actualFace || t.userFace || t.expected || t.expectedFace || '---';
+    const hwInfo = getRawHardwareInfo(moveNotation);
+
     const timeIso = t.timestampIso || (t.timestamp ? new Date(t.timestamp).toISOString() : new Date().toISOString());
-    const timeStr = t.timeString || new Date(timeIso).toLocaleTimeString('es-CL', { hour12: false }) + '.' + String(new Date(timeIso).getMilliseconds()).padStart(3, '0');
-    const timeUnix = t.timestampUnix || t.timestamp || new Date(timeIso).getTime();
-    const rawMove = t.rawMoveNotation || t.actualFace || t.userFace || t.expected || t.expectedFace || '---';
+    const d = new Date(timeIso);
+    const msStr = String(d.getMilliseconds()).padStart(3, '0');
+    const timeStr = t.timeString || (d.toLocaleTimeString('es-CL', { hour12: true }) + `,${msStr}`);
     const latency = t.time ?? t.latencyMs ?? '---';
     const status = t.status || (t.isCorrect ? 'Ok' : 'Error');
 
     const r = sheet.addRow([
       t.round || t.level || idx + 1,
-      timeIso,
+      hwInfo.codeHex,
+      hwInfo.rawPayloadName,
+      hwInfo.notation,
       timeStr,
-      timeUnix,
-      rawMove,
+      timeIso,
       latency,
+      'native',
       status
     ]);
 
@@ -559,7 +590,7 @@ export async function exportRawTelemetryExcel({ sessionData, playerName }) {
     col.width = Math.min(36, maxLen + 4);
   });
 
-  sheet.autoFilter = { from: `A4`, to: `G4` };
+  sheet.autoFilter = { from: `A4`, to: `I4` };
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

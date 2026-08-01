@@ -39,14 +39,20 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Timeout de seguridad máximo para evitar bloqueos de UI (1000ms)
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+
     // 1. Obtener la sesión activa al inicializar
     const getInitialSession = async () => {
       try {
-        const stored = localStorage.getItem('cognimirror_bypass_session');
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('cognimirror_bypass_session') : null;
         if (stored) {
           const parsed = JSON.parse(stored);
           setUser(parsed.user);
           setLoading(false);
+          clearTimeout(safetyTimer);
           return;
         }
 
@@ -57,6 +63,7 @@ export function AuthProvider({ children }) {
         console.error('[AuthContext] Error obteniendo sesión inicial:', e.message);
       } finally {
         setLoading(false);
+        clearTimeout(safetyTimer);
       }
     };
 

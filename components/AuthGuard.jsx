@@ -17,8 +17,8 @@ export default function AuthGuard({ children }) {
   const [pinCode, setPinCode] = useState('');
   const [pinError, setPinError] = useState(false);
 
-  // Rutas públicas que NO requieren autenticación
-  const PUBLIC_ROUTES = ['/', '/login'];
+  // Rutas públicas o semi-abiertas que NO requieren bloqueo de sesión
+  const PUBLIC_ROUTES = ['/', '/login', '/patients'];
   const isPublicRoute = PUBLIC_ROUTES.includes(safePath);
 
   useEffect(() => {

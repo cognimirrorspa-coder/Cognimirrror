@@ -10,6 +10,8 @@ import Cube3DViewer from './Cube3DViewer';
 import { computeCumulativeMetrics, analyzeGameData } from '../utils/analyzeGameData';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import TelemetryPreviewModal from './TelemetryPreviewModal';
+import { Eye, ShieldCheck, Printer, FileSpreadsheet } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────
 // MOTOR ANALÍTICO PRO 5.0 — High Performance Diagnostics
@@ -243,22 +245,71 @@ export default function ExecutiveReport({ record, onRestart, onExit }) {
     return data;
   }, [record]);
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [isRawPreview, setIsRawPreview] = useState(false);
+
+  const handleOpenPreview = (rawOnly = false) => {
+    setIsRawPreview(rawOnly);
+    setPreviewOpen(true);
+  };
+
+  const handlePrintVisualReport = () => {
+    window.print();
+  };
+
   if (!record) return null;
 
   return (
     <div className="min-h-screen bg-[#07080f] text-white font-sans overflow-x-hidden pb-20 selection:bg-[#00FFFF]/30">
       
-      <div className="max-w-4xl mx-auto px-6 pt-6 flex justify-between gap-4 no-print border-b border-white/5 pb-6">
-        <button onClick={onExit} className="px-5 py-2.5 bg-white/5 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white/10 transition">
-          History
+      <div className="max-w-4xl mx-auto px-6 pt-6 flex flex-wrap items-center justify-between gap-3 no-print border-b border-white/5 pb-6">
+        <button onClick={onExit} className="px-4 py-2.5 bg-white/5 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white/10 transition">
+          Volver
         </button>
-        <button onClick={downloadPDF} className="flex-1 px-5 py-2.5 bg-gradient-to-r from-[#00FFFF] to-[#3b82f6] hover:brightness-110 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-[0_0_20px_rgba(0,255,255,0.3)] transition text-black">
-          📥 EXPORT CLINICAL PDF
-        </button>
-        <button onClick={onRestart} className="px-5 py-2.5 bg-white text-black rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-gray-200 transition">
-          RE-TEST
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button 
+            onClick={() => handleOpenPreview(true)}
+            className="px-3.5 py-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-xl font-bold uppercase text-[10px] tracking-wider flex items-center gap-1.5 transition"
+          >
+            <ShieldCheck size={14} /> Telemetría Cruda BLE
+          </button>
+          
+          <button 
+            onClick={() => handleOpenPreview(false)}
+            className="px-3.5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl font-bold uppercase text-[10px] tracking-wider flex items-center gap-1.5 transition"
+          >
+            <FileSpreadsheet size={14} /> Previsualizar Excel
+          </button>
+
+          <button 
+            onClick={handlePrintVisualReport}
+            className="px-3.5 py-2.5 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl font-bold uppercase text-[10px] tracking-wider flex items-center gap-1.5 transition"
+          >
+            <Printer size={14} /> Imprimir Pantalla
+          </button>
+
+          <button 
+            onClick={downloadPDF} 
+            className="px-4 py-2.5 bg-gradient-to-r from-[#00FFFF] to-[#3b82f6] hover:brightness-110 rounded-xl font-black uppercase text-[10px] tracking-[0.15em] shadow-[0_0_20px_rgba(0,255,255,0.3)] transition text-black"
+          >
+            📥 PDF Clínico
+          </button>
+        </div>
+
+        <button onClick={onRestart} className="px-4 py-2.5 bg-white text-black rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-gray-200 transition">
+          Re-Test
         </button>
       </div>
+
+      {/* Modal de Previsualización Interactivo */}
+      <TelemetryPreviewModal 
+        isOpen={previewOpen} 
+        onClose={() => setPreviewOpen(false)} 
+        sessionData={record} 
+        playerName={record.playerName}
+        isRawOnly={isRawPreview}
+      />
 
       <div ref={reportRef} className="max-w-4xl mx-auto px-6 py-10 flex flex-col gap-10 bg-[#07080f]">
         
