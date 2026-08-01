@@ -106,6 +106,19 @@ function StepMenu({ onNext, onHistory, activePatient, setActivePatientId, patien
           </button>
 
           <button
+            onClick={() => onNext('practice')}
+            disabled={!activePatient}
+            className={`
+              w-full py-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-[0.2em] transition-all border flex items-center justify-center gap-2
+              ${activePatient
+                ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20 hover:scale-105 shadow-[0_0_20px_rgba(6,182,212,0.2)] cursor-pointer'
+                : 'bg-white/5 border-white/10 text-white/20 cursor-not-allowed shadow-none'}
+            `}
+          >
+            🏋️ Modo Entrenamiento / Práctica
+          </button>
+
+          <button
             onClick={onHistory}
             className="w-full py-4 rounded-2xl font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm uppercase tracking-widest border border-white/5 cursor-pointer"
           >
@@ -347,12 +360,19 @@ export default function MemoryGameView({ onExit, subjectId, etiquetaEstudio, isW
 
       {step === 'menu' && (
         <StepMenu 
-          onNext={() => {
+          onNext={(mode) => {
             if (typeof window !== 'undefined') {
               localStorage.setItem('cognimirror_kiosco_active', 'true');
             }
             setSessionStartTime(Date.now());
-            setStep('tutorial');
+            if (mode === 'practice') {
+              setIsWarmupMode(true);
+              setSessionMeta({ observaciones: 'Sesión de Entrenamiento / Práctica' });
+              setStep('playing');
+            } else {
+              setIsWarmupMode(false);
+              setStep('tutorial');
+            }
           }} 
           onHistory={() => setStep('history')}
           activePatient={activePatient}

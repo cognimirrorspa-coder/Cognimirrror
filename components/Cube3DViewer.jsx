@@ -174,23 +174,41 @@ export default function Cube3DViewer({
         renderer.render(scene, camera);
       }
 
-      // SNAP con quaterniones — numéricamente estable
+      // SNAP ORTOGONAL BASADO EN MATRIZ — Previene gimbal lock, deformación y piezas negras
       active.forEach(c => {
         cubeGroup.attach(c); // hereda transform mundial
-        // Snap posición a enteros
+        
+        // 1. Snap posición a enteros exactos (-1, 0, 1)
         c.position.set(
           Math.round(c.position.x),
           Math.round(c.position.y),
           Math.round(c.position.z)
         );
-        // Snap cuaternión al múltiplo más cercano de 90°
-        const hp = Math.PI / 2;
-        const e = c.rotation;
-        c.rotation.set(
-          Math.round(e.x / hp) * hp,
-          Math.round(e.y / hp) * hp,
-          Math.round(e.z / hp) * hp
-        );
+
+        // 2. Snap ejes de rotación a la dirección ortogonal global más cercana
+        c.updateMatrixWorld(true);
+        const m = c.matrix;
+        const xAxis = new THREE.Vector3();
+        const yAxis = new THREE.Vector3();
+        const zAxis = new THREE.Vector3();
+        m.extractBasis(xAxis, yAxis, zAxis);
+
+        const snapVector = (v) => {
+          let maxComp = 'x';
+          if (Math.abs(v.y) > Math.abs(v[maxComp])) maxComp = 'y';
+          if (Math.abs(v.z) > Math.abs(v[maxComp])) maxComp = 'z';
+          const val = Math.sign(v[maxComp]) || 1;
+          v.set(0, 0, 0);
+          v[maxComp] = val;
+        };
+
+        snapVector(xAxis);
+        snapVector(yAxis);
+        snapVector(zAxis);
+
+        const snappedMatrix = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
+        c.quaternion.setFromRotationMatrix(snappedMatrix);
+        c.rotation.setFromQuaternion(c.quaternion);
         c.updateMatrixWorld(true);
       });
       cubeGroup.remove(pivot);
@@ -259,21 +277,22 @@ export default function Cube3DViewer({
         if (activeFaceKey === 'B') {
           targetY = Math.PI; // Giro suave de 180° en Y para ver la cara Verde de atrás
         } else if (activeFaceKey === 'L') {
-          targetY = Math.PI / 3.2; // Giro suave de +56° para enfocar la cara Roja (L)
+          targetY = Math.PI / 6; // Inclinación sutil de 30° para enfocar la cara Roja (L)
         } else if (activeFaceKey === 'R') {
-          targetY = -Math.PI / 3.2; // Giro suave de -56° para enfocar la cara Naranja (R)
+          targetY = -Math.PI / 6; // Inclinación sutil de -30° para enfocar la cara Naranja (R)
         } else if (activeFaceKey === 'U') {
-          targetX = Math.PI / 3.5; // Inclinación suave hacia abajo para enfocar la cara Blanca (U) arriba
+          targetX = Math.PI / 6; // Inclinación sutil hacia abajo para enfocar la cara Blanca (U)
         } else if (activeFaceKey === 'D') {
-          targetX = -Math.PI / 3.5; // Inclinación suave hacia arriba para enfocar la cara Amarilla (D) abajo
-        } else if (activeFaceKey === 'F') {
+          targetX = -Math.PI / 6; // Inclinación sutil hacia arriba para enfocar la cara Amarilla (D)
+        } else {
+          // Sin cara activa (o cara F Azul): reordenar y regresar suavemente al centro (Frente Azul)
           targetY = 0;
           targetX = 0;
         }
 
-        // Suavizado fluido de la rotación del grupo del cubo en 3D (lerp 0.038)
-        cubeGroup.rotation.y += (targetY - cubeGroup.rotation.y) * 0.038;
-        cubeGroup.rotation.x += (targetX - cubeGroup.rotation.x) * 0.038;
+        // Suavizado fluido de la rotación del grupo del cubo en 3D (lerp 0.04)
+        cubeGroup.rotation.y += (targetY - cubeGroup.rotation.y) * 0.04;
+        cubeGroup.rotation.x += (targetX - cubeGroup.rotation.x) * 0.04;
 
         // Cámara 100% fija en perspectiva isométrica constante (SIN ZOOM NI TELETRANSPORTE)
         camera.position.set(4.5, 4.0, 7.5);
