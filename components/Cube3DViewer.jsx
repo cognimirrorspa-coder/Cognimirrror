@@ -234,9 +234,20 @@ export default function Cube3DViewer({
 
       const now = Date.now();
       const isIdle = (now - lastInteractionRef.current > 3000) && !isDraggingRef.current;
-      if (!isDraggingRef.current && isIdle) {
-        camera.position.lerp(new THREE.Vector3(4, 4, 8), 0.05);
-        camera.lookAt(0, 0, 0);
+      
+      if (!isDraggingRef.current) {
+        if (highlightFaceRef.current === 'D') {
+          // Inclinar cámara hacia abajo para mostrar claramente la cara AMARILLA (Abajo - D)
+          camera.position.lerp(new THREE.Vector3(4, -4.2, 6.5), 0.08);
+          camera.lookAt(0, 0, 0);
+        } else if (highlightFaceRef.current === 'U') {
+          // Inclinar cámara hacia arriba para mostrar claramente la cara BLANCA (Arriba - U)
+          camera.position.lerp(new THREE.Vector3(4, 5.5, 6.5), 0.08);
+          camera.lookAt(0, 0, 0);
+        } else if (isIdle) {
+          camera.position.lerp(new THREE.Vector3(4, 4, 8), 0.05);
+          camera.lookAt(0, 0, 0);
+        }
       }
       renderer.render(scene, camera);
     };

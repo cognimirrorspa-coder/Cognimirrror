@@ -23,20 +23,20 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
   const lastInputTimeRef = useRef(0);
 
   /**
-   * Generador de Secuencia Corsi
-   * Genera un array aleatorio de caras basándose en el nivel.
-   * Evita repeticiones consecutivas (ej. NO ['R', 'R']).
+   * Generador de Secuencia Corsi Mejorado
+   * Ninguna cara puede repetirse en los últimos 2 movimientos (evita U, L, U).
    */
   const generateSequence = useCallback((span) => {
     const newSeq = [];
-    let lastFace = null;
     for (let i = 0; i < span; i++) {
       let nextFace;
       do {
         nextFace = VALID_FACES[Math.floor(Math.random() * VALID_FACES.length)];
-      } while (nextFace === lastFace);
+      } while (
+        (newSeq.length > 0 && nextFace === newSeq[newSeq.length - 1]) ||
+        (newSeq.length > 1 && nextFace === newSeq[newSeq.length - 2])
+      );
       newSeq.push(nextFace);
-      lastFace = nextFace;
     }
     return newSeq;
   }, []);
