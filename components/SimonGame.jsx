@@ -54,18 +54,18 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
   const wasConnectedAtStartRef = useRef(isConnected);
   const requireBluetooth = wasConnectedAtStartRef.current;
 
-  const { 
-    gameState, 
-    level, 
+  const {
+    gameState,
+    level,
     trial,
-    sequence, 
-    activeFace, 
+    sequence,
+    activeFace,
     userIndex,
     showingIndex,
-    errorsInLevel, 
-    telemetry, 
-    startGame, 
-    handleCubeInput 
+    errorsInLevel,
+    telemetry,
+    startGame,
+    handleCubeInput
   } = useVisuospatialTest(isConnected, requireBluetooth);
 
   // Monitor de nivel para finalizar de forma asíncrona y comprimida de 15 segundos si es modo defensa (máx Nivel 3)
@@ -152,10 +152,10 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
     }
   }, [activeFace, gameState]);
 
-  // Suscribirse a los movimientos del cubo y reproducir tono
+  // Suscripción activa a giros BLE del hardware
   useEffect(() => {
-    const unsubscribe = subscribeToMoves((move) => {
-      const face = move.replace("'", "");
+    const unsub = subscribeToMoves((movimiento) => {
+      const face = movimiento.replace("'", "");
       handleCubeInput(face);
 
       // Feedback de audio durante el turno del usuario
@@ -163,7 +163,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
         playTone(FACE_FREQUENCIES[face], 'triangle', 0.35);
       }
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, [subscribeToMoves, handleCubeInput, gameState]);
 
   // Atajos de teclado para simulación de giros en SimonGame (Memory Mirror)
@@ -200,7 +200,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
 
   const handleFinishTest = () => {
     const correctMoves = telemetry.filter(t => t.isCorrect);
-    const avgLatencyMs = correctMoves.length > 0 
+    const avgLatencyMs = correctMoves.length > 0
       ? Math.round(correctMoves.reduce((acc, curr) => acc + curr.latencyMs, 0) / correctMoves.length)
       : 0;
 
@@ -249,7 +249,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] rounded-full bg-red-600/10 blur-[130px]" />
         </div>
-        
+
         <div className="relative z-10 flex flex-col items-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-3xl mb-6 shadow-lg shadow-red-500/5 animate-pulse">
             ⚠️
@@ -258,14 +258,14 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
           <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-8">
             Se ha interrumpido la conexión Bluetooth con el cubo inteligente. Hemos pausado la prueba para que no pierdas tu progreso.
           </p>
-          
+
           <button
             onClick={openScanner}
             className="w-full py-4.5 bg-gradient-to-r from-red-600 to-pink-600 hover:shadow-[0_0_30px_rgba(220,38,38,0.3)] hover:scale-105 active:scale-95 transition-all text-white font-black uppercase text-[10px] tracking-widest rounded-2xl cursor-pointer mb-4 animate-pulse"
           >
             Reconectar Cubo
           </button>
-          
+
           <button
             onClick={() => onExit(null)}
             className="w-full py-4.5 bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-slate-300 font-bold uppercase text-[10px] tracking-widest rounded-2xl cursor-pointer"
@@ -309,17 +309,16 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               <span className="text-[9px] sm:text-xs text-white/30 border border-white/10 px-2 py-0.5 rounded-full font-black font-mono">CORSI TEST</span>
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm font-bold tracking-widest uppercase">
             <div className="text-white/40">
               Nivel: <span className="text-[#a855f7] text-lg sm:text-xl font-black drop-shadow-[0_0_10px_rgba(168,85,247,0.4)]">{level}</span>
             </div>
             <div className="flex items-center gap-4">
-              <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border-2 text-[10px] sm:text-xs font-black tracking-widest uppercase transition-all ${
-                trial === 'A' 
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
-                  : 'bg-rose-500/20 text-rose-400 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
-              }`}>
+              <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full border-2 text-[10px] sm:text-xs font-black tracking-widest uppercase transition-all ${trial === 'A'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                : 'bg-rose-500/20 text-rose-400 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
+                }`}>
                 {trial === 'A' ? 'Oportunidad 1 de 2' : 'ÚLTIMO INTENTO'}
               </div>
             </div>
@@ -330,7 +329,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
         <div className="flex flex-1 overflow-hidden relative min-h-0">
           {/* PANEL IZQUIERDO: GEMELO DIGITAL Y ESTADO */}
           <div className="flex-1 flex flex-col items-center justify-center relative p-4 sm:p-8 min-h-0">
-            
+
             <div className="absolute top-4 sm:top-8 text-center w-full z-10 px-4">
               {gameState === 'idle' && (
                 <p className="text-white/40 font-bold tracking-[0.25em] uppercase text-[10px] sm:text-sm">
@@ -403,18 +402,18 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               {activeFace && gameState === 'showing_sequence' && (
                 <div className="absolute top-0 left-0 right-0 flex items-center justify-center pointer-events-none z-50 -mt-6 sm:-mt-8">
                   <span className="text-[1.8rem] sm:text-[3rem] font-black text-white/90 drop-shadow-[0_0_30px_rgba(255,255,255,1)] tracking-[0.3em] uppercase">
-                    {activeFace === 'U' ? 'BLANCO' : 
-                     activeFace === 'D' ? 'AMARILLO' : 
-                     activeFace === 'R' ? 'NARANJA' : 
-                     activeFace === 'L' ? 'ROJO' : 
-                     activeFace === 'F' ? 'AZUL' : ''}
+                    {activeFace === 'U' ? 'BLANCO' :
+                      activeFace === 'D' ? 'AMARILLO' :
+                        activeFace === 'R' ? 'NARANJA' :
+                          activeFace === 'L' ? 'ROJO' :
+                            activeFace === 'F' ? 'AZUL' : ''}
                   </span>
                 </div>
               )}
-              <Cube3DViewer 
-                status={gameState === 'finished' ? 'eval_celebration' : 'gyro_active'} 
-                size={cubeSize} 
-                highlightFace={activeFace} 
+              <Cube3DViewer
+                status={gameState === 'finished' ? 'eval_celebration' : 'gyro_active'}
+                size={cubeSize}
+                highlightFace={activeFace}
                 demoMoves={activeFace && gameState === 'showing_sequence' ? [activeFace, `${activeFace}'`] : null}
                 demoKey={demoKey}
                 ignoreSensor={gameState !== 'waiting_for_user' && gameState !== 'idle'}
@@ -422,63 +421,62 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
             </div>
 
             <div className="absolute bottom-6 sm:bottom-8 text-center w-full z-10 px-4">
-               {gameState === 'idle' && (
-                  <button 
-                    onClick={startGame}
-                    disabled={!isConnected}
-                    className={`px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase text-xs sm:text-sm tracking-[0.25em] transition-all max-w-[280px] sm:max-w-none
-                      ${isConnected 
-                        ? 'bg-gradient-to-r from-[#a855f7] to-[#c084fc] hover:scale-105 shadow-[0_0_30px_rgba(168,85,247,0.4)] text-white cursor-pointer' 
-                        : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/10'
-                      }`}
-                  >
-                    {isConnected ? 'INICIAR PRUEBA' : 'CONECTA EL CUBO PRIMERO'}
-                  </button>
-               )}
-               {gameState === 'finished' && (
-                  <button 
-                    onClick={handleFinishTest}
-                    className="px-8 py-4 bg-white text-black font-black uppercase text-sm tracking-[0.3em] rounded-2xl hover:bg-[#a855f7] hover:text-white hover:scale-105 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)] cursor-pointer"
-                  >
-                    FINALIZAR PRUEBA
-                  </button>
-               )}
+              {gameState === 'idle' && (
+                <button
+                  onClick={startGame}
+                  disabled={!isConnected}
+                  className={`px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase text-xs sm:text-sm tracking-[0.25em] transition-all max-w-[280px] sm:max-w-none
+                      ${isConnected
+                      ? 'bg-gradient-to-r from-[#a855f7] to-[#c084fc] hover:scale-105 shadow-[0_0_30px_rgba(168,85,247,0.4)] text-white cursor-pointer'
+                      : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/10'
+                    }`}
+                >
+                  {isConnected ? 'INICIAR PRUEBA' : 'CONECTA EL CUBO PRIMERO'}
+                </button>
+              )}
+              {gameState === 'finished' && (
+                <button
+                  onClick={handleFinishTest}
+                  className="px-8 py-4 bg-white text-black font-black uppercase text-sm tracking-[0.3em] rounded-2xl hover:bg-[#a855f7] hover:text-white hover:scale-105 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)] cursor-pointer"
+                >
+                  FINALIZAR PRUEBA
+                </button>
+              )}
             </div>
           </div>
 
-        {/* PANEL DERECHO: TELEMETRÍA (Solo visible en debug/clínico en desktop) */}
-        <div className="hidden lg:flex w-96 bg-[#13161e] border-l border-white/5 p-6 flex-col min-h-0">
-          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/40 mb-4 pb-4 border-b border-white/5 shrink-0">
-            Telemetría en Vivo
-          </h3>
-          
-          <div className="flex-1 overflow-y-auto pr-2 space-y-2 font-mono text-xs custom-scrollbar min-h-0">
-            {telemetry.length === 0 ? (
-              <div className="text-white/20 italic">Esperando movimientos del cubo inteligente...</div>
-            ) : (
-              telemetry.map((t, i) => (
-                <div key={i} className={`p-3 rounded-lg border flex flex-col gap-1.5 ${
-                  t.isCorrect 
-                    ? 'bg-[#39FF14]/5 border-[#39FF14]/20' 
+          {/* PANEL DERECHO: TELEMETRÍA (Solo visible en debug/clínico en desktop) */}
+          <div className="hidden lg:flex w-96 bg-[#13161e] border-l border-white/5 p-6 flex-col min-h-0">
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/40 mb-4 pb-4 border-b border-white/5 shrink-0">
+              Telemetría en Vivo
+            </h3>
+
+            <div className="flex-1 overflow-y-auto pr-2 space-y-2 font-mono text-xs custom-scrollbar min-h-0">
+              {telemetry.length === 0 ? (
+                <div className="text-white/20 italic">Esperando movimientos del cubo inteligente...</div>
+              ) : (
+                telemetry.map((t, i) => (
+                  <div key={i} className={`p-3 rounded-lg border flex flex-col gap-1.5 ${t.isCorrect
+                    ? 'bg-[#39FF14]/5 border-[#39FF14]/20'
                     : 'bg-[#FF5F1F]/5 border-[#FF5F1F]/20'
-                }`}>
-                  <div className="flex justify-between items-center text-white/60">
-                    <span className="font-black">Lvl {t.level} (Intento {t.trial})</span>
-                    <span className="font-bold">{t.latencyMs}ms</span>
+                    }`}>
+                    <div className="flex justify-between items-center text-white/60">
+                      <span className="font-black">Lvl {t.level} (Intento {t.trial})</span>
+                      <span className="font-bold">{t.latencyMs}ms</span>
+                    </div>
+                    <div className="flex justify-between items-center font-bold">
+                      <span>Esperado: {t.expectedFace}</span>
+                      <span className={t.isCorrect ? 'text-[#39FF14]' : 'text-[#FF5F1F]'}>
+                        Girado: {t.userFace}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center font-bold">
-                    <span>Esperado: {t.expectedFace}</span>
-                    <span className={t.isCorrect ? 'text-[#39FF14]' : 'text-[#FF5F1F]'}>
-                      Girado: {t.userFace}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </>
   );
 }

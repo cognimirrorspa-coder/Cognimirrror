@@ -75,7 +75,7 @@ function generateDeck() {
   });
 }
 
-export default function ReactionGame({ onExit, activePatientId, addSession, getPatient, sessionMeta, sessionStartTime, isWarmup = false, isDemoMode = false, etiquetaEstudio = null, idSujeto = null, onTelemetryUpdate }) {
+export default function ReactionGame({ onExit, activePatientId, addSession, getPatient, sessionMeta, sessionStartTime, isWarmup = false, isDemoMode = false, etiquetaEstudio = null, idSujeto = null, onTelemetryUpdate, omissionTimeoutMs = 1200 }) {
   const { subscribeToMoves, isConnected, openScanner } = useBluetoothCube();
   const { cubeRotation: globalRotation } = useCubeState();
   const { deactivate: deactivateJoicube } = useJoicube();
@@ -192,9 +192,10 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         stageRef.current = 'stimulus';
         timerRef.current = performance.now();
 
-        // Si es NOGO, esperamos la ventana de inhibición completa de 800ms
+        // Si es NOGO, esperamos la ventana de inhibición seleccionada (1200ms por defecto)
         if (target.type === 'NOGO') {
           nogoTimeoutRef.current = setTimeout(() => {
+            const now = new Date();
             // Inhibición Exitosa (No movió)
             setFlash('green');
             setResults(prev => [...prev, { 
@@ -205,7 +206,10 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
               actualFace: null,
               fail: false, 
               time: null,
-              status: 'Ok'
+              status: 'Ok',
+              timestampIso: now.toISOString(),
+              timeString: now.toLocaleTimeString('es-CL', { hour12: false }) + '.' + String(now.getMilliseconds()).padStart(3, '0'),
+              timestampUnix: now.getTime()
             }]);
             
             // Logica Rachas: Acierto NOGO
@@ -219,12 +223,13 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
             stageRef.current = 'waiting';
             setRound(r => r + 1);
             setTimeout(() => setFlash(null), 300);
-          }, 800); 
+          }, omissionTimeoutMs); 
         } 
-        // Si es GO, le damos un hard timeout de 800ms para responder rápido
+        // Si es GO, le damos el timeout configurable (1200ms por defecto) para responder
         else if (target.type === 'GO') {
           
           goTimeoutRef.current = setTimeout(() => {
+            const now = new Date();
             // Límite final excedido (No respondió correctamente a tiempo)
             setFlash('black'); 
             setShake(s => s + 1);
@@ -240,14 +245,26 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
                  copy[existsIdx].status = 'Omisión / Lento';
                  return copy;
                }
-               return [...prev, { round: round + 1, type: 'GO', expected: target.id, actualFace: null, time: null, errors: 0, timeout: true, status: 'Omisión / Lento' }];
+               return [...prev, { 
+                 round: round + 1, 
+                 type: 'GO', 
+                 expected: target.id, 
+                 actualFace: null, 
+                 time: null, 
+                 errors: 0, 
+                 timeout: true, 
+                 status: 'Omisión / Lento',
+                 timestampIso: now.toISOString(),
+                 timeString: now.toLocaleTimeString('es-CL', { hour12: false }) + '.' + String(now.getMilliseconds()).padStart(3, '0'),
+                 timestampUnix: now.getTime()
+               }];
             });
 
             setStage('waiting');
             stageRef.current = 'waiting';
             setRound(r => r + 1);
             setTimeout(() => setFlash(null), 300);
-          }, 800);
+          }, omissionTimeoutMs);
         }
 
       }, waitTime);
@@ -334,6 +351,13 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
     const rt = performance.now() - timerRef.current;
     const target = targetRef.current;
     const currentMove = movimiento.replace("'", ""); // Limpiamos giros antihorarios
+    const now = new Date();
+    const timeInfo = {
+      timestampIso: now.toISOString(),
+      timeString: now.toLocaleTimeString('es-CL', { hour12: false }) + '.' + String(now.getMilliseconds()).padStart(3, '0'),
+      timestampUnix: now.getTime(),
+      rawMoveNotation: movimiento
+    };
 
     if (target.type === 'NOGO') {
       // FALLLO DE INHIBICIÓN SI SE MUEVE
@@ -349,7 +373,8 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         actualFace: currentMove,
         fail: true, 
         time: Math.round(rt), // Velocidad de Impulso (Clínico)
-        status: 'Fallo de Inhibición'
+        status: 'Fallo de Inhibición',
+        ...timeInfo
       }]);
       
       // Reset Racha por fallo No-Go
@@ -388,7 +413,8 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
             actualFace: target.id,
             time: Math.round(rt), 
             errors: hasError ? 1 : 0, 
-            status: hasError ? 'Corregido' : 'Ok' 
+            status: hasError ? 'Corregido' : 'Ok',
+            ...timeInfo
           }];
         });
 
@@ -408,7 +434,8 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
           actualFace: currentMove,
           time: Math.round(rt), 
           errors: 1, 
-          status: 'Error de Lado' 
+          status: 'Error de Lado',
+          ...timeInfo
         }]);
 
         // Reset racha por error de mano

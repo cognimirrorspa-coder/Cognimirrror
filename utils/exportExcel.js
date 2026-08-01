@@ -132,6 +132,7 @@ export async function exportReactionMirrorExcel({ playerName, date, metrics, pos
   });
   sheet2.columns = [
     { key: 'turn', header: 'Turno', width: 10 },
+    { key: 'timestamp', header: 'Hora / Segundo Exacto', width: 22 },
     { key: 'type', header: 'Tipo', width: 10 },
     { key: 'expected', header: 'Cara Esperada', width: 18 },
     { key: 'actual', header: 'Cara Girada', width: 16 },
@@ -140,7 +141,7 @@ export async function exportReactionMirrorExcel({ playerName, date, metrics, pos
     { key: 'status', header: 'Estado', width: 24 },
   ];
 
-  applyHeader(sheet2.getRow(1), ['Turno', 'Tipo', 'Cara Esperada', 'Cara Girada', 'RT Neto (ms)', 'Correcto', 'Estado']);
+  applyHeader(sheet2.getRow(1), ['Turno', 'Hora / Segundo Exacto', 'Tipo', 'Cara Esperada', 'Cara Girada', 'RT Neto (ms)', 'Correcto', 'Estado']);
 
   const faceLabel = f => f === 'L' ? 'Roja (L)' : f === 'R' ? 'Naranja (R)' : f || '—';
 
@@ -153,8 +154,10 @@ export async function exportReactionMirrorExcel({ playerName, date, metrics, pos
     const correct = isNew ? (t.status === 'Ok' || t.status === 'Corregido') : t.isCorrect;
     const status = isNew ? (t.status || '') : (t.isFalseStart ? 'Falso Arranque' : t.isOmission ? 'Omisión' : t.firstMoveWrong ? 'Corregido' : 'Ok');
 
+    const timeStr = t.timeString || (t.timestampIso ? new Date(t.timestampIso).toLocaleTimeString('es-CL', { hour12: false }) : '—');
     const r = sheet2.addRow([
       (isNew ? t.round : t.turn) || i + 1,
+      timeStr,
       type,
       expected,
       actual,
@@ -170,12 +173,12 @@ export async function exportReactionMirrorExcel({ playerName, date, metrics, pos
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
-    const correctCell = r.getCell(6);
+    const correctCell = r.getCell(7);
     correctCell.font = { bold: true, color: { argb: correct ? 'FF059669' : 'FFE11D48' }, name: 'Calibri' };
     r.height = 17;
   });
 
-  sheet2.autoFilter = { from: 'A1', to: 'G1' };
+  sheet2.autoFilter = { from: 'A1', to: 'H1' };
 
   // Generar y descargar
   const buffer = await workbook.xlsx.writeBuffer();
@@ -473,6 +476,97 @@ export async function exportAllMemoryHistoryExcel(historyList) {
   const a = document.createElement('a');
   a.href = url;
   a.download = `CogniMirror_Historial_MemoryMirror_Clinico_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════════
+// EXPORTADOR DE TELEMETRÍA CRUDA INALTERABLE (HARDWARE BLE LOG)
+// ════════════════════════════════════════════════════════════
+export async function exportRawTelemetryExcel({ sessionData, playerName }) {
+  if (!sessionData) return;
+
+  const ExcelJS = (await import('exceljs')).default;
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'CogniMirror Hardware Audit Engine';
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet('Telemetría Cruda BLE', {
+    properties: { tabColor: { argb: 'FF0EA5E9' } }
+  });
+
+  // Título e info de inalterabilidad
+  sheet.mergeCells('A1:G1');
+  const titleCell = sheet.getCell('A1');
+  titleCell.value = 'CogniMirror — Registro Inalterable de Telemetría Cruda (BLE Hardware Log)';
+  Object.assign(titleCell, cellStyle(true, BLUE_CORP, WHITE, 14));
+  sheet.getRow(1).height = 28;
+
+  sheet.mergeCells('A2:G2');
+  const subCell = sheet.getCell('A2');
+  subCell.value = `ID Sesión: ${sessionData.id || sessionData.sessionId || 'N/A'}   |   Paciente: ${playerName || sessionData.playerName || 'Anónimo'}   |   Fecha ISO: ${sessionData.date || new Date().toISOString()}`;
+  Object.assign(subCell, cellStyle(false, BLUE_LIGHT, BLUE_CORP, 10));
+  sheet.getRow(2).height = 20;
+
+  sheet.addRow([]);
+
+  const rawHeaders = [
+    'Giro N°',
+    'Marca de Tiempo ISO 8601',
+    'Hora Exacta (HH:mm:ss.SSS)',
+    'Unix Timestamp (ms)',
+    'Notación Cruda BLE Hardware',
+    'Latencia Motor (ms)',
+    'Estado Validación Clinica'
+  ];
+
+  applyHeader(sheet.addRow(rawHeaders), rawHeaders);
+
+  const turns = sessionData.rawTurnsData || sessionData.telemetry || [];
+
+  turns.forEach((t, idx) => {
+    const timeIso = t.timestampIso || (t.timestamp ? new Date(t.timestamp).toISOString() : new Date().toISOString());
+    const timeStr = t.timeString || new Date(timeIso).toLocaleTimeString('es-CL', { hour12: false }) + '.' + String(new Date(timeIso).getMilliseconds()).padStart(3, '0');
+    const timeUnix = t.timestampUnix || t.timestamp || new Date(timeIso).getTime();
+    const rawMove = t.rawMoveNotation || t.actualFace || t.userFace || t.expected || t.expectedFace || '---';
+    const latency = t.time ?? t.latencyMs ?? '---';
+    const status = t.status || (t.isCorrect ? 'Ok' : 'Error');
+
+    const r = sheet.addRow([
+      t.round || t.level || idx + 1,
+      timeIso,
+      timeStr,
+      timeUnix,
+      rawMove,
+      latency,
+      status
+    ]);
+
+    const bg = idx % 2 === 0 ? WHITE : GRAY_ROW;
+    r.eachCell(cell => {
+      Object.assign(cell, cellStyle(false, bg));
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    r.height = 17;
+  });
+
+  sheet.columns.forEach(col => {
+    let maxLen = 14;
+    col.eachCell({ includeEmpty: true }, cell => {
+      const val = cell.value ? String(cell.value) : '';
+      if (val.length > maxLen) maxLen = val.length;
+    });
+    col.width = Math.min(36, maxLen + 4);
+  });
+
+  sheet.autoFilter = { from: `A4`, to: `G4` };
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `CogniMirror_TelemetriaCruda_Inalterable_${(playerName || 'Anonimo').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }

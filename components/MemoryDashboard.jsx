@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { Brain, Zap, Target, LayoutGrid } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { exportRawTelemetryExcel, exportAllMemoryHistoryExcel } from '../utils/exportExcel';
 
 function analyzeMemoryData(telemetry = [], maxLevel = 2) {
   const avg = (arr) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
@@ -131,6 +132,21 @@ export default function MemoryDashboard({ record, onRestart, onExit }) {
 
   const handlePrint = () => window.print();
 
+  const handleExportRawTelemetry = async () => {
+    await exportRawTelemetryExcel({
+      sessionData: {
+        id: recordId || 'sesion-' + Date.now(),
+        date,
+        telemetry
+      },
+      playerName
+    });
+  };
+
+  const handleExportExcel = async () => {
+    await exportAllMemoryHistoryExcel([record]);
+  };
+
   const d = date ? new Date(date) : new Date();
   const formattedDate = `${d.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })} a las ${d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`;
 
@@ -171,8 +187,11 @@ export default function MemoryDashboard({ record, onRestart, onExit }) {
               🔄 Rehacer
             </button>
           )}
-          <button onClick={handlePrint} className="px-4 py-2 rounded-xl bg-slate-800 font-bold text-white hover:bg-slate-900 shadow-sm transition-all text-sm">
-            🖨️ PDF
+          <button onClick={handleExportExcel} className="px-4 py-2 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-700 shadow-sm transition-all text-sm flex items-center gap-2">
+            📊 Excel Clínico
+          </button>
+          <button onClick={handleExportRawTelemetry} className="px-4 py-2 rounded-xl bg-sky-600 font-bold text-white hover:bg-sky-700 shadow-sm transition-all text-sm flex items-center gap-2" title="Descargar log crudo e inalterable de sensores BLE para auditoría">
+            🛡️ Telemetría Cruda
           </button>
           <button onClick={onExit} className="px-4 py-2 rounded-xl bg-purple-600 font-bold text-white hover:bg-purple-700 shadow shadow-purple-200 transition-all text-sm">
             ← Finalizar

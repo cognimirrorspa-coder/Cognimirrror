@@ -145,7 +145,7 @@ function CountdownPhase({ onComplete }) {
 }
 
 // ── ESTADO 1: MENÚ ──────────────────────────────────────────
-function StepMenu({ onStartWarmup, onStartOfficial, onHistory, activePatient, setActivePatientId, patients, createPatient }) {
+function StepMenu({ onStartWarmup, onStartOfficial, onHistory, activePatient, setActivePatientId, patients, createPatient, omissionTimeoutMs, setOmissionTimeoutMs }) {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const {
     isConnected,
@@ -192,6 +192,32 @@ function StepMenu({ onStartWarmup, onStartOfficial, onHistory, activePatient, se
       </div>
 
       <div className="relative z-10 w-full max-w-sm flex flex-col gap-4">
+        {/* Configuración de Tiempo de Omisión (Evaluador) */}
+        <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl flex flex-col items-start gap-1.5 text-left">
+          <label className="text-[10px] font-black text-purple-300 uppercase tracking-widest flex items-center gap-1.5">
+            <span>⏱️</span> Límite de Omisión (Evaluador)
+          </label>
+          <div className="grid grid-cols-4 gap-1.5 w-full mt-1">
+            {[800, 1000, 1200, 1500].map((timeVal) => (
+              <button
+                key={timeVal}
+                type="button"
+                onClick={() => setOmissionTimeoutMs(timeVal)}
+                className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all border ${
+                  omissionTimeoutMs === timeVal
+                    ? 'bg-purple-600/30 border-purple-400 text-purple-200 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                    : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
+                }`}
+              >
+                {timeVal / 1000}s {timeVal === 1200 ? '★' : ''}
+              </button>
+            ))}
+          </div>
+          <span className="text-[9px] text-slate-400 font-mono mt-0.5">
+            Defecto: 1.2s (★). Configura la ventana de respuesta antes de considerar omisión.
+          </span>
+        </div>
+
         <PatientSelector 
           patients={patients}
           onSelect={setActivePatientId}
@@ -396,6 +422,7 @@ export default function ReactionGameView({ onExit, onGameReady, subjectId, etiqu
   const [selectedEvolutionPatient, setSelectedEvolutionPatient] = useState(null);
   const [sessionMeta, setSessionMeta] = useState(null);
   const [sessionStartTime, setSessionStartTime] = useState(null);
+  const [omissionTimeoutMs, setOmissionTimeoutMs] = useState(1200); // 1.2s por defecto recomendados por evaluador
 
 
 
@@ -478,6 +505,8 @@ export default function ReactionGameView({ onExit, onGameReady, subjectId, etiqu
 
       {step === 'menu' && (
         <StepMenu 
+          omissionTimeoutMs={omissionTimeoutMs}
+          setOmissionTimeoutMs={setOmissionTimeoutMs}
           onStartWarmup={() => {
             if (typeof window !== 'undefined') {
               localStorage.setItem('cognimirror_kiosco_active', 'true');
@@ -555,6 +584,7 @@ export default function ReactionGameView({ onExit, onGameReady, subjectId, etiqu
       )}
       {step === 'playing' && (
         <ReactionGame
+          omissionTimeoutMs={omissionTimeoutMs}
           onExit={(savedSession, patientObj) => { 
             if (savedSession) {
               setSelectedRecord({ ...savedSession, playerName: activePatient.name, patient: patientObj });

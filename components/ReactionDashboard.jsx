@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { Brain, Zap, Activity, Eye, TrendingUp } from 'lucide-react';
 import { ComposedChart, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { exportReactionMirrorExcel } from '../utils/exportExcel';
+import { exportReactionMirrorExcel, exportRawTelemetryExcel } from '../utils/exportExcel';
 import { analyzeData, calcPostInhibitorySlow } from '../utils/analytics';
 
 // ─────────────────────────────────────────────────────────────
@@ -217,7 +217,23 @@ export default function ReactionDashboard({
 
   const handleExportExcel = async () => {
     await exportReactionMirrorExcel({
-      playerName, date, metrics: m, postInhibitory: pis, rawTurnsData: actualTurnsData, chartElementId: 'reaction-chart'
+      playerName,
+      date,
+      metrics: m,
+      postInhibitory: pis,
+      rawTurnsData: actualTurnsData,
+      chartElementId: 'turn-chart-container'
+    });
+  };
+
+  const handleExportRawTelemetry = async () => {
+    await exportRawTelemetryExcel({
+      sessionData: {
+        id: recordId || 'sesion-' + Date.now(),
+        date,
+        rawTurnsData: actualTurnsData
+      },
+      playerName
     });
   };
 
@@ -422,7 +438,10 @@ export default function ReactionDashboard({
             🖨️ PDF
           </button>
           <button onClick={handleExportExcel} className="px-4 py-2 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-700 shadow-sm transition-all text-sm flex items-center gap-2">
-            📊 Excel
+            📊 Excel Clínico
+          </button>
+          <button onClick={handleExportRawTelemetry} className="px-4 py-2 rounded-xl bg-sky-600 font-bold text-white hover:bg-sky-700 shadow-sm transition-all text-sm flex items-center gap-2" title="Descargar log crudo e inalterable de sensores BLE para auditoría">
+            🛡️ Telemetría Cruda
           </button>
           <button onClick={onExit} className="px-4 py-2 rounded-xl bg-indigo-600 font-bold text-white hover:bg-indigo-700 shadow shadow-indigo-200 transition-all text-sm">
             ← Finalizar
