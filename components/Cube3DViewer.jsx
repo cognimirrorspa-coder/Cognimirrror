@@ -144,16 +144,14 @@ export default function Cube3DViewer({
       renderer.domElement.addEventListener('touchmove', onMove, { passive: true });
       window.addEventListener('touchend', onUp);
     }
-
-  const isRotatingFaceRef = useRef(false);
-
-  // ═══ MOTOR DE ROTACIÓN ═══
-  const rotateSingleFace = async (baseFace, angle90, steps) => {
-    while (isRotatingFaceRef.current) {
-      await new Promise(r => setTimeout(r, 16));
-    }
-    isRotatingFaceRef.current = true;
-    try {
+    // ═══ MOTOR DE ROTACIÓN ═══
+    let isRotatingLocal = false;
+    const rotateSingleFace = async (baseFace, angle90, steps) => {
+      while (isRotatingLocal) {
+        await new Promise(r => setTimeout(r, 16));
+      }
+      isRotatingLocal = true;
+      try {
       const cfg = MOVES_CONFIG[baseFace];
       if (!cfg) return;
 
@@ -218,7 +216,7 @@ export default function Cube3DViewer({
       });
       cubeGroup.remove(pivot);
     } finally {
-      isRotatingFaceRef.current = false;
+      isRotatingLocal = false;
     }
   };
 
@@ -415,10 +413,23 @@ export default function Cube3DViewer({
     const runDemo = async () => {
       if (isDemoRunningRef.current) return;
       isDemoRunningRef.current = true;
+      
+      // Esperar a que la cámara/cubo gire hacia la cara elegida (el lerp demora un poco)
+      await new Promise(r => setTimeout(r, 450));
+
       for (const m of demoMoves) {
+        // Girar 90 grados para mostrar la acción
         await three.rotateFace(m, 12);
-        // Pequeña pausa entre movimientos de la demo
-        await new Promise(r => setTimeout(r, 150));
+        
+        // Mantener la cara girada un momento para que se note
+        await new Promise(r => setTimeout(r, 200));
+
+        // Devolver la cara a su posición original para no desincronizar el gemelo digital
+        const reverseMove = m.includes("'") ? m.replace("'", "") : m + "'";
+        await three.rotateFace(reverseMove, 10);
+        
+        // Pausa antes del siguiente movimiento (si hubiera más de uno)
+        await new Promise(r => setTimeout(r, 100));
       }
       isDemoRunningRef.current = false;
       if (onDemoComplete) onDemoComplete();
