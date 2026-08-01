@@ -523,7 +523,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                 status={gameState === 'finished' ? 'eval_celebration' : 'gyro_active'}
                 size={cubeSize}
                 highlightFace={activeFace || userTurnFeedback?.face}
-                demoMoves={(activeFace && gameState === 'showing_sequence') || userTurnFeedback ? [(activeFace || userTurnFeedback.face), `${(activeFace || userTurnFeedback.face)}'`] : null}
+                demoMoves={null}
                 demoKey={demoKey}
                 moveHistory={gameState === 'showing_sequence' ? [] : undefined}
                 ignoreSensor={gameState !== 'waiting_for_user' && gameState !== 'idle'}

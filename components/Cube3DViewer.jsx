@@ -145,10 +145,15 @@ export default function Cube3DViewer({
       window.addEventListener('touchend', onUp);
     }
 
-    // ═══ MOTOR DE ROTACIÓN (Corregido con snap por quaterniones) ═══
-    // Recibe notación estándar: 'U', "U'", 'R2', 'L', etc.
-    // Los giros dobles (X2) se ejecutan como DOS giros de 90° encadenados.
-    const rotateSingleFace = async (baseFace, angle90, steps) => {
+  const isRotatingFaceRef = useRef(false);
+
+  // ═══ MOTOR DE ROTACIÓN ═══
+  const rotateSingleFace = async (baseFace, angle90, steps) => {
+    while (isRotatingFaceRef.current) {
+      await new Promise(r => setTimeout(r, 16));
+    }
+    isRotatingFaceRef.current = true;
+    try {
       const cfg = MOVES_CONFIG[baseFace];
       if (!cfg) return;
 
@@ -212,7 +217,10 @@ export default function Cube3DViewer({
         c.updateMatrixWorld(true);
       });
       cubeGroup.remove(pivot);
-    };
+    } finally {
+      isRotatingFaceRef.current = false;
+    }
+  };
 
     const rotateFace = async (notation, steps = 18) => {
       // Resolver movimientos compuestos (M, E, S)
