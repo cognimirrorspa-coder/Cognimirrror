@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const VALID_FACES = ['U', 'D', 'R', 'L', 'F'];
+const VALID_FACES = ['U', 'D', 'R', 'L', 'F', 'B'];
 
 export function useVisuospatialTest(isConnected = true, requireBluetooth = true) {
   const [gameState, setGameState] = useState('idle'); // idle, showing_sequence, waiting_for_user, finished

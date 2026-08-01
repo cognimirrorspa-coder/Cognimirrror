@@ -19,6 +19,17 @@ const MOVES_CONFIG = {
   'B':  { axis: 'z', val: -1, angle:  Math.PI / 2 },
 };
 
+// Posiciones de cámara cinematográficas suaves para enfocar cada cara sin brusquedad (soporta giros de 180°)
+const TARGET_CAMERA_POSITIONS = {
+  U: new THREE.Vector3(3.5, 6.2, 5.2),   // Blanco / Up
+  D: new THREE.Vector3(3.5, -6.2, 5.2),  // Amarillo / Down
+  R: new THREE.Vector3(7.2, 2.5, 3.2),   // Naranja / Right
+  L: new THREE.Vector3(-7.2, 2.5, 3.2),  // Rojo / Left
+  F: new THREE.Vector3(0, 2.2, 8.2),     // Azul / Front
+  B: new THREE.Vector3(0, 2.2, -8.2),    // Verde / Back (Giro suave de 180°)
+  DEFAULT: new THREE.Vector3(4, 4, 8)
+};
+
 // M = L + R' (capa central en el eje X)
 // Descomponemos M en dos caras: L (horario) y R' (antihorario)
 const COMPOUND_MOVES = {
@@ -90,6 +101,9 @@ export default function Cube3DViewer({
             new THREE.MeshPhongMaterial({ color: z === 1 ? COLORS.F : COLORS.CORE, shininess: 50 }),
             new THREE.MeshPhongMaterial({ color: z === -1 ? COLORS.B : COLORS.CORE, shininess: 50 }),
           ];
+          // Guardar color base original en userData para evitar deformaciones por transparencia
+          mats.forEach(m => { m.userData.baseColor = m.color.clone(); });
+
           const cubie = new THREE.Mesh(geo, mats);
           cubie.position.set(x, y, z);
           cubeGroup.add(cubie);
@@ -236,16 +250,14 @@ export default function Cube3DViewer({
       const isIdle = (now - lastInteractionRef.current > 3000) && !isDraggingRef.current;
       
       if (!isDraggingRef.current) {
-        if (highlightFaceRef.current === 'D') {
-          // Inclinar cámara hacia abajo para mostrar claramente la cara AMARILLA (Abajo - D)
-          camera.position.lerp(new THREE.Vector3(4, -4.2, 6.5), 0.08);
-          camera.lookAt(0, 0, 0);
-        } else if (highlightFaceRef.current === 'U') {
-          // Inclinar cámara hacia arriba para mostrar claramente la cara BLANCA (Arriba - U)
-          camera.position.lerp(new THREE.Vector3(4, 5.5, 6.5), 0.08);
-          camera.lookAt(0, 0, 0);
-        } else if (isIdle) {
-          camera.position.lerp(new THREE.Vector3(4, 4, 8), 0.05);
+        const activeFaceKey = highlightFaceRef.current;
+        const targetPos = (activeFaceKey && TARGET_CAMERA_POSITIONS[activeFaceKey]) 
+          ? TARGET_CAMERA_POSITIONS[activeFaceKey] 
+          : TARGET_CAMERA_POSITIONS.DEFAULT;
+
+        if (activeFaceKey || isIdle) {
+          // Lerp suave (0.045) para giros fluidos y sin brusquedad incluso en giros de 180° (cara B)
+          camera.position.lerp(targetPos, 0.045);
           camera.lookAt(0, 0, 0);
         }
       }
@@ -296,7 +308,7 @@ export default function Cube3DViewer({
     }
   }, [moveHistory, isLocked, ignoreSensor]);
 
-  // ═══ HIGHLIGHT FACE (SIMON SAYS) ═══
+  // ═══ HIGHLIGHT FACE (SIMON SAYS - SÓLIDO SIN DEFORMACIÓN POR TRANSPARENCIA) ═══
   useEffect(() => {
     highlightFaceRef.current = highlightFace;
     if (!threeRef.current) return;
@@ -306,27 +318,31 @@ export default function Cube3DViewer({
     allCubies.forEach(cubie => {
       if (Array.isArray(cubie.material)) {
         cubie.material.forEach((mat, idx) => {
+          const baseColor = mat.userData.baseColor || mat.color;
+
           if (highlightFace) {
              const mapIdx = { 'R': 0, 'L': 1, 'U': 2, 'D': 3, 'F': 4, 'B': 5 };
-             if (idx === mapIdx[highlightFace] && mat.color.getHex() !== COLORS.CORE) {
-               // Cara iluminada
-               mat.emissive.setHex(mat.color.getHex());
-               mat.emissiveIntensity = 2.0; // Alto brillo
+             if (idx === mapIdx[highlightFace] && baseColor.getHex() !== COLORS.CORE) {
+               // Cara Iluminada: Sólida, sin transparencia, con alto brillo emissive
+               mat.color.copy(baseColor);
+               mat.emissive.copy(baseColor);
+               mat.emissiveIntensity = 1.8;
                mat.opacity = 1.0;
                mat.transparent = false;
-             } else if (mat.color.getHex() !== COLORS.CORE) {
-               // Caras apagadas para crear alto contraste
+             } else if (baseColor.getHex() !== COLORS.CORE) {
+               // Caras Apagadas: Sólidas atenudadas al 22% para evitar ver huecos internos
+               mat.color.copy(baseColor).multiplyScalar(0.22);
                mat.emissive.setHex(0x000000);
-               mat.opacity = 0.15; // Muy tenue
-               mat.transparent = true;
+               mat.opacity = 1.0;
+               mat.transparent = false;
              }
           } else {
-             // Reset al estado normal
+             // Reset al estado normal sólido
+             mat.color.copy(baseColor);
              mat.emissive.setHex(0x000000);
              mat.opacity = 1.0;
              mat.transparent = false;
           }
-          // FUNDAMENTAL: Forzar recompilación del material al cambiar opacidad/transparencia
           mat.needsUpdate = true;
         });
       }

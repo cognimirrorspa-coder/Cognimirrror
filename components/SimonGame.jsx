@@ -10,7 +10,8 @@ const FACE_FREQUENCIES = {
   D: 554, // Do#
   R: 659, // Mi
   L: 880, // La (Octava)
-  F: 330  // Mi (Grave)
+  F: 330, // Mi (Grave)
+  B: 523  // Do
 };
 
 const FACE_METADATA = {
@@ -18,7 +19,8 @@ const FACE_METADATA = {
   D: { name: 'AMARILLO', position: 'Abajo (D)', color: 'bg-yellow-400 text-black border-yellow-500', text: 'text-yellow-400', badge: '🟡 AMARILLO (Cara Abajo)' },
   R: { name: 'NARANJA', position: 'Derecha (R)', color: 'bg-orange-500 text-white border-orange-600', text: 'text-orange-500', badge: '🟠 NARANJA (Mano Derecha)' },
   L: { name: 'ROJO', position: 'Izquierda (L)', color: 'bg-red-500 text-white border-red-600', text: 'text-red-500', badge: '🔴 ROJO (Mano Izquierda)' },
-  F: { name: 'AZUL', position: 'Frente (F)', color: 'bg-blue-600 text-white border-blue-700', text: 'text-blue-500', badge: '🔵 AZUL (Cara Frente)' }
+  F: { name: 'AZUL', position: 'Frente (F)', color: 'bg-blue-600 text-white border-blue-700', text: 'text-blue-500', badge: '🔵 AZUL (Cara Frente)' },
+  B: { name: 'VERDE', position: 'Atrás (B - Giro 180°)', color: 'bg-emerald-600 text-white border-emerald-700', text: 'text-emerald-400', badge: '🟢 VERDE (Cara de Atrás)' }
 };
 
 // Singleton para el motor de audio Web Audio API
@@ -201,11 +203,12 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
       const keyUpper = e.key.toUpperCase();
       let face = null;
 
-      if (e.key === 'ArrowRight' || keyUpper === 'L') face = 'R';
-      else if (e.key === 'ArrowLeft' || keyUpper === 'A') face = 'L';
+      if (e.key === 'ArrowRight' || keyUpper === 'R') face = 'R';
+      else if (e.key === 'ArrowLeft' || keyUpper === 'L') face = 'L';
       else if (e.key === 'ArrowUp' || keyUpper === 'U') face = 'U';
       else if (e.key === 'ArrowDown' || keyUpper === 'D') face = 'D';
       else if (e.key === ' ' || e.key === 'Enter' || keyUpper === 'F') face = 'F';
+      else if (keyUpper === 'B') face = 'B';
 
       if (face) {
         triggerUserInputFeedback(face);
