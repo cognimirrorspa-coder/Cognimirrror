@@ -259,21 +259,21 @@ export default function Cube3DViewer({
         if (activeFaceKey === 'B') {
           targetY = Math.PI; // Giro suave de 180° en Y para ver la cara Verde de atrás
         } else if (activeFaceKey === 'L') {
-          targetY = Math.PI / 3.2; // Giro suave de +56° para enfocar la cara Roja
+          targetY = Math.PI / 3.2; // Giro suave de +56° para enfocar la cara Roja (L)
         } else if (activeFaceKey === 'R') {
-          targetY = -Math.PI / 3.2; // Giro suave de -56° para enfocar la cara Naranja
+          targetY = -Math.PI / 3.2; // Giro suave de -56° para enfocar la cara Naranja (R)
         } else if (activeFaceKey === 'U') {
-          targetX = -Math.PI / 5; // Inclinación suave hacia abajo para enfocar la cara Blanca
+          targetX = Math.PI / 3.5; // Inclinación suave hacia abajo para enfocar la cara Blanca (U) arriba
         } else if (activeFaceKey === 'D') {
-          targetX = Math.PI / 5; // Inclinación suave hacia arriba para enfocar la cara Amarilla
+          targetX = -Math.PI / 3.5; // Inclinación suave hacia arriba para enfocar la cara Amarilla (D) abajo
         } else if (activeFaceKey === 'F') {
           targetY = 0;
           targetX = 0;
         }
 
-        // Suavizado fluido de la rotación del grupo del cubo en 3D (lerp 0.06)
-        cubeGroup.rotation.y += (targetY - cubeGroup.rotation.y) * 0.06;
-        cubeGroup.rotation.x += (targetX - cubeGroup.rotation.x) * 0.06;
+        // Suavizado fluido de la rotación del grupo del cubo en 3D (lerp 0.038)
+        cubeGroup.rotation.y += (targetY - cubeGroup.rotation.y) * 0.038;
+        cubeGroup.rotation.x += (targetX - cubeGroup.rotation.x) * 0.038;
 
         // Cámara 100% fija en perspectiva isométrica constante (SIN ZOOM NI TELETRANSPORTE)
         camera.position.set(4.5, 4.0, 7.5);

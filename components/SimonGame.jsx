@@ -65,7 +65,7 @@ const playTone = (frequency, type = 'triangle', duration = 0.4) => {
 };
 
 export default function SimonGame({ onExit, playerName, sessionMeta, sessionStartTime, onTelemetryUpdate, isDemoMode = false }) {
-  const { isConnected, subscribeToMoves, openScanner } = useBluetoothCube();
+  const { isConnected, subscribeToMoves, connectCube } = useBluetoothCube();
 
   const wasConnectedAtStartRef = useRef(isConnected);
   const requireBluetooth = wasConnectedAtStartRef.current;
@@ -105,6 +105,20 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
   const [showErrorFlash, setShowErrorFlash] = useState(false);
   const [cubeSize, setCubeSize] = useState(300);
   const [userTurnFeedback, setUserTurnFeedback] = useState(null); // Feedback visual instantáneo de giro del usuario
+  const [isUserAlertPhase, setIsUserAlertPhase] = useState(false);
+
+  // Alerta de 1.6s para el turno del usuario
+  useEffect(() => {
+    if (gameState === 'waiting_for_user') {
+      setIsUserAlertPhase(true);
+      const timer = setTimeout(() => {
+        setIsUserAlertPhase(false);
+      }, 1600);
+      return () => clearTimeout(timer);
+    } else {
+      setIsUserAlertPhase(false);
+    }
+  }, [gameState]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -184,12 +198,39 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
     }
   };
 
+  // Detector de 2 giros de la cara ROJA (L / Left) para iniciar prueba manos libres
+  const redTurnCountRef = useRef(0);
+  const redTurnTimerRef = useRef(null);
+
+  const checkRedGestureToStart = (face) => {
+    if (gameState !== 'idle') return;
+    const cleanFace = face.replace("'", "");
+    if (cleanFace === 'L') { // Cara Roja (L / Left)
+      redTurnCountRef.current += 1;
+      if (redTurnTimerRef.current) clearTimeout(redTurnTimerRef.current);
+
+      if (redTurnCountRef.current >= 2) {
+        redTurnCountRef.current = 0;
+        console.log('[SimonGame] Gesto detectado: 2 giros de cara Roja. Iniciando prueba...');
+        playTone(523, 'triangle', 0.5);
+        startGame();
+        return;
+      }
+
+      redTurnTimerRef.current = setTimeout(() => {
+        redTurnCountRef.current = 0;
+      }, 2000);
+    }
+  };
+
   // Suscripción activa a giros BLE del hardware
   useEffect(() => {
     const unsub = subscribeToMoves((movimiento) => {
       const face = movimiento.replace("'", "");
       if (gameState === 'waiting_for_user') {
         triggerUserInputFeedback(face);
+      } else if (gameState === 'idle') {
+        checkRedGestureToStart(face);
       } else {
         handleCubeInput(face);
       }
@@ -200,7 +241,6 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
   // Atajos de teclado para simulación de giros en SimonGame (Memory Mirror)
   useEffect(() => {
     const onKey = (e) => {
-      if (gameState !== 'waiting_for_user') return;
       const keyUpper = e.key.toUpperCase();
       let face = null;
 
@@ -212,7 +252,11 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
       else if (keyUpper === 'B') face = 'B';
 
       if (face) {
-        triggerUserInputFeedback(face);
+        if (gameState === 'waiting_for_user') {
+          triggerUserInputFeedback(face);
+        } else if (gameState === 'idle') {
+          checkRedGestureToStart(face);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
@@ -288,7 +332,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
           </p>
 
           <button
-            onClick={openScanner}
+            onClick={connectCube}
             className="w-full py-4.5 bg-gradient-to-r from-red-600 to-pink-600 hover:shadow-[0_0_30px_rgba(220,38,38,0.3)] hover:scale-105 active:scale-95 transition-all text-white font-black uppercase text-[10px] tracking-widest rounded-2xl cursor-pointer mb-4 animate-pulse"
           >
             Reconectar Cubo
@@ -329,8 +373,9 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
         {showErrorFlash && (
           <div className="absolute inset-0 bg-red-600/30 z-[100] pointer-events-none transition-opacity duration-300" />
         )}
+
         {/* HEADER */}
-        <header className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 bg-[#0a0c10] text-center sm:text-left flex-shrink-0">
+        <header className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 bg-[#0a0c10] text-center sm:text-left flex-shrink-0 z-20">
           <div className="flex items-center gap-3">
             <h1 className="text-lg sm:text-xl font-black italic uppercase tracking-widest flex items-center gap-2">
               <span className="text-[#a855f7]">MEMORY MIRROR</span>
@@ -358,22 +403,20 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
           {/* PANEL IZQUIERDO: GEMELO DIGITAL Y ESTADO */}
           <div className="flex-1 flex flex-col items-center justify-center relative p-4 sm:p-8 min-h-0">
 
+            {/* HEADER TEXTS WHEN CUBE IS VISIBLE */}
             <div className="absolute top-4 sm:top-8 text-center w-full z-10 px-4">
               {gameState === 'idle' && (
                 <p className="text-white/40 font-bold tracking-[0.25em] uppercase text-[10px] sm:text-sm">
                   MEMORIA VISOESPACIAL DE TRABAJO (TEST DE CORSI)
                 </p>
               )}
-              {gameState === 'showing_sequence' && (
-                <div className="flex flex-col items-center gap-2 sm:gap-3 animate-in fade-in zoom-in-95 duration-300">
-                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,255,255,0.4)] animate-pulse">
-                    <Eye size={28} />
-                  </div>
-                  <p className="text-[#00FFFF] font-black tracking-[0.3em] uppercase text-sm sm:text-xl drop-shadow-[0_0_12px_rgba(0,255,255,0.6)]">
-                    {showingIndex < 0 ? '👁️ OBSERVA LA SECUENCIA' : 'SECUENCIA EN EJECUCIÓN'}
+              {gameState === 'showing_sequence' && showingIndex >= 0 && (
+                <div className="flex flex-col items-center gap-1 sm:gap-2 animate-in fade-in zoom-in-95 duration-300">
+                  <p className="text-[#00FFFF] font-black tracking-[0.3em] uppercase text-sm sm:text-lg drop-shadow-[0_0_12px_rgba(0,255,255,0.6)]">
+                    SECUENCIA EN EJECUCIÓN
                   </p>
                   <span className="text-[10px] text-cyan-300/80 uppercase font-bold tracking-widest bg-cyan-950/80 px-3 py-0.5 rounded-full border border-cyan-500/30">
-                    {showingIndex < 0 ? 'Cubo Armado (Demostración Limpia)' : `Paso ${showingIndex + 1} de ${sequence.length}`}
+                    Paso {showingIndex + 1} de {sequence.length} (Cubo Armado)
                   </span>
                   <div className="flex gap-1.5 mt-1">
                     {sequence.map((_, i) => (
@@ -382,12 +425,15 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                   </div>
                 </div>
               )}
-              {gameState === 'waiting_for_user' && (
-                <div className="flex flex-col items-center gap-2 sm:gap-4">
+              {gameState === 'waiting_for_user' && !isUserAlertPhase && (
+                <div className="flex flex-col items-center gap-2 sm:gap-3 animate-in fade-in zoom-in-95 duration-300">
                   <p className="text-[#39FF14] font-black tracking-[0.3em] uppercase text-sm sm:text-xl drop-shadow-[0_0_10px_rgba(57,255,20,0.5)]">
                     TU TURNO (REPLICA)
                   </p>
-                  <div className="flex gap-1.5">
+                  <span className="text-[10px] text-emerald-300/80 uppercase font-bold tracking-widest bg-emerald-950/80 px-3 py-0.5 rounded-full border border-emerald-500/30">
+                    Gemelo Digital en Tiempo Real
+                  </span>
+                  <div className="flex gap-1.5 mt-1">
                     {sequence.map((_, i) => (
                       <div key={i} className={`w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${i < userIndex ? 'bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.8)]' : i === userIndex ? 'bg-[#39FF14]/50 animate-pulse border-2 border-[#39FF14]' : 'border-2 border-[#39FF14]/30 bg-transparent'}`} />
                     ))}
@@ -417,8 +463,38 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               )}
             </div>
 
+            {/* 1.6S DE TRANSICIÓN: ALERTA DE OBSERVACIÓN (CUBO OCULTO EN EL CENTRO) */}
+            {gameState === 'showing_sequence' && showingIndex < 0 && (
+              <div className="flex flex-col items-center justify-center gap-4 py-16 z-20 animate-in fade-in zoom-in-95 duration-500">
+                <div className="w-20 h-20 rounded-3xl bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shadow-[0_0_40px_rgba(0,255,255,0.5)] animate-bounce">
+                  <Eye size={44} />
+                </div>
+                <h2 className="text-[#00FFFF] font-black tracking-[0.3em] uppercase text-2xl sm:text-4xl drop-shadow-[0_0_20px_rgba(0,255,255,0.8)] text-center">
+                  👁️ OBSERVA LA SECUENCIA
+                </h2>
+                <p className="text-cyan-200/90 text-xs sm:text-sm font-bold tracking-widest bg-cyan-950/80 px-4 py-1.5 rounded-full border border-cyan-500/30 shadow-lg text-center">
+                  Prepárate... El cubo se mostrará completamente armado
+                </p>
+              </div>
+            )}
+
+            {/* 1.6S DE TRANSICIÓN: ALERTA DE TURNO DE USUARIO (CUBO OCULTO EN EL CENTRO) */}
+            {gameState === 'waiting_for_user' && isUserAlertPhase && (
+              <div className="flex flex-col items-center justify-center gap-4 py-16 z-20 animate-in fade-in zoom-in-95 duration-500">
+                <div className="w-20 h-20 rounded-3xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-[0_0_40px_rgba(57,255,20,0.5)] animate-pulse">
+                  <span className="text-3xl font-black">🎯</span>
+                </div>
+                <h2 className="text-[#39FF14] font-black tracking-[0.3em] uppercase text-2xl sm:text-4xl drop-shadow-[0_0_20px_rgba(57,255,20,0.8)] text-center">
+                  🎯 TU TURNO
+                </h2>
+                <p className="text-emerald-200/90 text-xs sm:text-sm font-bold tracking-widest bg-emerald-950/80 px-4 py-1.5 rounded-full border border-emerald-500/30 shadow-lg text-center">
+                  Replica la secuencia observada en tu cubo inteligente
+                </p>
+              </div>
+            )}
+
             {/* HUD PANEL: POSICIONADO ABAJO A LA DERECHA PARA EVITAR SUPERPOSICIÓN */}
-            {(activeMeta || userTurnFeedback) && showingIndex >= 0 && (
+            {(activeMeta || userTurnFeedback) && showingIndex >= 0 && !isUserAlertPhase && (
               <div className="absolute bottom-6 right-6 bg-[#13161e]/90 backdrop-blur-md border border-white/15 rounded-2xl p-4 flex items-center gap-3 w-64 shadow-2xl z-20 transition-all duration-300 animate-in fade-in zoom-in-95">
                 <div className={`w-12 h-12 rounded-xl ${(userTurnFeedback?.meta || activeMeta)?.color} shadow-lg flex items-center justify-center font-black text-xl border shrink-0 animate-pulse`}>
                   {(userTurnFeedback?.face || activeFace)}
@@ -437,31 +513,12 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               </div>
             )}
 
-            {/* ÁREA DEL CUBO 3D */}
-            <div style={{ width: `${cubeSize}px`, height: `${cubeSize}px` }} className="relative transition-all duration-300 flex items-center justify-center">
-              {/* Banner superior con notación + color explicativo */}
-              {activeFace && gameState === 'showing_sequence' && (
-                <div className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center pointer-events-none z-50 -mt-8 sm:-mt-10 animate-bounce">
-                  <span className="text-2xl sm:text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(255,255,255,1)] tracking-[0.2em] uppercase">
-                    {FACE_METADATA[activeFace]?.badge || activeFace}
-                  </span>
-                  <span className="text-[10px] sm:text-xs font-bold text-cyan-300 tracking-widest uppercase mt-1 bg-black/60 px-3 py-1 rounded-full border border-cyan-400/30">
-                    {FACE_METADATA[activeFace]?.position}
-                  </span>
-                </div>
-              )}
-
-              {userTurnFeedback && gameState === 'waiting_for_user' && (
-                <div className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center pointer-events-none z-50 -mt-8 sm:-mt-10">
-                  <span className="text-xl sm:text-3xl font-black text-emerald-400 drop-shadow-[0_0_25px_rgba(57,255,20,0.9)] tracking-[0.2em] uppercase">
-                    ¡GIRASTE: {userTurnFeedback.meta.name}!
-                  </span>
-                  <span className="text-[10px] sm:text-xs font-bold text-white tracking-widest uppercase mt-1 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40">
-                    {userTurnFeedback.meta.position}
-                  </span>
-                </div>
-              )}
-
+            {/* ÁREA DEL CUBO 3D (OCULTO DURANTE ALERTAS DE TRANSICIÓN DE 1.6S) */}
+            <div className={`relative transition-all duration-300 flex items-center justify-center ${
+              (gameState === 'showing_sequence' && showingIndex < 0) || (gameState === 'waiting_for_user' && isUserAlertPhase)
+                ? 'opacity-0 pointer-events-none hidden'
+                : 'opacity-100'
+            }`}>
               <Cube3DViewer
                 status={gameState === 'finished' ? 'eval_celebration' : 'gyro_active'}
                 size={cubeSize}
@@ -473,19 +530,30 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               />
             </div>
 
-            <div className="absolute bottom-6 sm:bottom-8 text-center w-full z-10 px-4">
+            {/* CONTROLES / BOTONES INFERIORES */}
+            <div className="absolute bottom-6 sm:bottom-8 text-center w-full z-10 px-4 flex flex-col items-center gap-2">
               {gameState === 'idle' && (
-                <button
-                  onClick={startGame}
-                  disabled={!isConnected}
-                  className={`px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase text-xs sm:text-sm tracking-[0.25em] transition-all max-w-[280px] sm:max-w-none
-                      ${isConnected
-                      ? 'bg-gradient-to-r from-[#a855f7] to-[#c084fc] hover:scale-105 shadow-[0_0_30px_rgba(168,85,247,0.4)] text-white cursor-pointer'
-                      : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/10'
-                    }`}
-                >
-                  {isConnected ? 'INICIAR PRUEBA' : 'CONECTA EL CUBO PRIMERO'}
-                </button>
+                <>
+                  <button
+                    onClick={isConnected ? startGame : connectCube}
+                    className={`px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase text-xs sm:text-sm tracking-[0.25em] transition-all max-w-[280px] sm:max-w-none cursor-pointer
+                        ${isConnected
+                        ? 'bg-gradient-to-r from-[#a855f7] to-[#c084fc] hover:scale-105 shadow-[0_0_30px_rgba(168,85,247,0.4)] text-white'
+                        : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:scale-105 shadow-[0_0_30px_rgba(6,182,212,0.4)] text-white animate-pulse'
+                      }`}
+                  >
+                    {isConnected ? '🚀 INICIAR PRUEBA' : '⚡ CONECTAR CUBO SMART BLE'}
+                  </button>
+                  {isConnected ? (
+                    <span className="text-[11px] text-purple-300/70 font-mono font-bold tracking-wider animate-pulse bg-purple-950/40 px-3 py-1 rounded-full border border-purple-500/20">
+                      🔴 O gira 2 veces la cara ROJA (L) del cubo para iniciar
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-cyan-300/70 font-mono font-bold tracking-wider bg-cyan-950/40 px-3 py-1 rounded-full border border-cyan-500/20">
+                      Haz clic en el botón para vincular el cubo GAN por Bluetooth
+                    </span>
+                  )}
+                </>
               )}
               {gameState === 'finished' && (
                 <button
@@ -498,7 +566,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
             </div>
           </div>
 
-          {/* PANEL DERECHO: TELEMETRÍA (Solo visible en debug/clínico en desktop) */}
+          {/* PANEL DERECHO: TELEMETRÍA */}
           <div className="hidden lg:flex w-96 bg-[#13161e] border-l border-white/5 p-6 flex-col min-h-0">
             <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/40 mb-4 pb-4 border-b border-white/5 shrink-0">
               Telemetría en Vivo

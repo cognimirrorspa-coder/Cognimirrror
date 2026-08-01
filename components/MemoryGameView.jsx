@@ -300,7 +300,7 @@ export default function MemoryGameView({ onExit, subjectId, etiquetaEstudio, isW
           medicamentos: 'No',
           observaciones: isWarmupUrl ? 'Sesión de práctica clínica' : 'Evaluación rápida de estudio'
         });
-        setStep('countdown');
+        setStep('playing');
       }
     };
 
@@ -392,13 +392,9 @@ export default function MemoryGameView({ onExit, subjectId, etiquetaEstudio, isW
           playerName={activePatient?.name || 'Paciente'} 
           onComplete={(data) => { 
             setSessionMeta(data); 
-            setStep('countdown'); 
+            setStep('playing'); 
           }} 
         />
-      )}
-
-      {step === 'countdown' && (
-        <CountdownPhase onComplete={() => setStep('playing')} />
       )}
 
       {step === 'playing' && (
