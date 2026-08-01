@@ -19,6 +19,7 @@ const deduplicateSessions = (sessions) => {
 export function usePatientsDB() {
   const [patients, setPatients] = useState([]);
   const [activePatientId, setActivePatientId] = useState(null);
+  const [loadingPatients, setLoadingPatients] = useState(true);
   const { user } = useAuth();
 
   const syncOfflineDataToSupabase = useCallback(async (psicologoId) => {
@@ -364,6 +365,8 @@ export function usePatientsDB() {
         }
       }
       setPatients([]);
+    } finally {
+      setLoadingPatients(false);
     }
   }, [user, syncOfflineDataToSupabase]);
 
@@ -719,6 +722,7 @@ export function usePatientsDB() {
 
   return {
     patients,
+    loadingPatients,
     activePatientId,
     setActivePatientId,
     createPatient,

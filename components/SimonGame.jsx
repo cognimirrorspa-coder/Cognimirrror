@@ -3,6 +3,7 @@ import { useVisuospatialTest } from '../hooks/useVisuospatialTest';
 import { useBluetoothCube } from '../contexts/BluetoothContext';
 import { useEffect, useRef, useState } from 'react';
 import Cube3DViewer from './Cube3DViewer';
+import { Eye, ShieldCheck, FileSpreadsheet } from 'lucide-react';
 
 // Representando Blanco, Amarillo, Rojo, Naranjo, Azul. La cara 'B' / Verde está desactivada.
 const FACE_FREQUENCIES = {
@@ -364,11 +365,17 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                 </p>
               )}
               {gameState === 'showing_sequence' && (
-                <div className="flex flex-col items-center gap-2 sm:gap-4">
-                  <p className="text-[#00FFFF] font-black tracking-[0.3em] uppercase text-sm sm:text-xl animate-pulse drop-shadow-[0_0_10px_rgba(0,255,255,0.5)]">
+                <div className="flex flex-col items-center gap-2 sm:gap-3 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,255,255,0.4)] animate-pulse">
+                    <Eye size={28} />
+                  </div>
+                  <p className="text-[#00FFFF] font-black tracking-[0.3em] uppercase text-sm sm:text-xl drop-shadow-[0_0_12px_rgba(0,255,255,0.6)]">
                     OBSERVA LA SECUENCIA
                   </p>
-                  <div className="flex gap-1.5">
+                  <span className="text-[10px] text-cyan-300/80 uppercase font-bold tracking-widest bg-cyan-950/60 px-3 py-0.5 rounded-full border border-cyan-500/20">
+                    Cubo Armado (Vista de Demostración)
+                  </span>
+                  <div className="flex gap-1.5 mt-1">
                     {sequence.map((_, i) => (
                       <div key={i} className={`w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${i <= showingIndex ? 'bg-[#00FFFF] shadow-[0_0_10px_rgba(0,255,255,0.8)] scale-110' : 'border-2 border-[#00FFFF]/30 bg-transparent'}`} />
                     ))}
@@ -461,6 +468,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                 highlightFace={activeFace || userTurnFeedback?.face}
                 demoMoves={(activeFace && gameState === 'showing_sequence') || userTurnFeedback ? [(activeFace || userTurnFeedback.face), `${(activeFace || userTurnFeedback.face)}'`] : null}
                 demoKey={demoKey}
+                moveHistory={gameState === 'showing_sequence' ? [] : undefined}
                 ignoreSensor={gameState !== 'waiting_for_user' && gameState !== 'idle'}
               />
             </div>

@@ -9,7 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export default function PatientDirectory() {
   const router = useRouter();
-  const { patients, createPatient } = usePatientsDB();
+  const { patients, loadingPatients, createPatient } = usePatientsDB();
   const { signOut } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -48,12 +48,18 @@ export default function PatientDirectory() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 border-b border-white/5 pb-8">
           <div className="w-full md:w-auto flex-1">
             <div className="flex justify-between items-center w-full mb-6">
-              <Link href="/dashboard" className="inline-flex items-center gap-2 text-white/30 hover:text-white text-xs tracking-widest uppercase font-bold transition-colors">
+              <button 
+                onClick={() => {
+                  if (typeof window !== 'undefined') localStorage.removeItem('cognimirror_kiosco_active');
+                  router.push('/dashboard');
+                }} 
+                className="inline-flex items-center gap-2 text-white/40 hover:text-white text-xs tracking-widest uppercase font-bold transition-colors cursor-pointer"
+              >
                 <ArrowLeft size={14} /> Regresar a Panel
-              </Link>
+              </button>
               <button 
                 onClick={signOut} 
-                className="inline-flex items-center gap-2 text-red-400/60 hover:text-red-400 text-xs tracking-widest uppercase font-bold transition-colors bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/20 px-3 py-1.5 rounded"
+                className="inline-flex items-center gap-2 text-red-400/60 hover:text-red-400 text-xs tracking-widest uppercase font-bold transition-colors bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/20 px-3 py-1.5 rounded cursor-pointer"
               >
                 🔒 Cerrar Sesión
               </button>
@@ -81,7 +87,7 @@ export default function PatientDirectory() {
             </div>
             <button 
               onClick={() => setShowAddModal(true)}
-              className="group relative px-6 py-3 bg-transparent border border-white/20 text-white font-bold text-sm tracking-wide overflow-hidden flex items-center gap-2 hover:border-blue-500/50 transition-colors"
+              className="group relative px-6 py-3 bg-transparent border border-white/20 text-white font-bold text-sm tracking-wide overflow-hidden flex items-center gap-2 hover:border-blue-500/50 transition-colors cursor-pointer"
             >
               <div className="absolute inset-0 bg-blue-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
               <Plus size={16} className="relative z-10 text-blue-400" /> 
@@ -90,8 +96,16 @@ export default function PatientDirectory() {
           </div>
         </header>
 
-        {/* Lista de Pacientes - Diseño "Bento" Híbrido Horizontal */}
-        {filteredPatients.length === 0 ? (
+        {/* Lista de Pacientes con Spinner de Carga */}
+        {loadingPatients ? (
+          <div className="flex flex-col items-center justify-center py-32 border border-white/5 bg-white/[0.01]">
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+              <Brain size={32} className="animate-spin text-blue-400" />
+            </div>
+            <h3 className="text-xl font-black text-white uppercase tracking-wider mb-1">Cargando Directorio Clínico...</h3>
+            <p className="text-slate-500 text-xs font-mono animate-pulse">Sincronizando perfiles y sesiones con Supabase Cloud</p>
+          </div>
+        ) : filteredPatients.length === 0 ? (
           <div className="text-center py-32 border border-white/5 bg-white/[0.01]">
             <Users className="mx-auto text-white/10 mb-6" size={64} />
             <h3 className="text-2xl font-black tracking-tight text-white/40 mb-2">Sin Resultados</h3>

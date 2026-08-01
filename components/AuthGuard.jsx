@@ -80,13 +80,22 @@ export default function AuthGuard({ children }) {
     setPinError(false);
   };
 
-  // Pantalla de carga estética durante la verificación de sesión
+  // 1. Si es ruta pública o semi-abierta (/patients, /, /login), renderizar de inmediato sin bloquear en pantalla de carga
+  if (isPublicRoute) {
+    if (!loading && user && safePath === '/login') {
+      router.replace('/dashboard');
+      return null;
+    }
+    return children;
+  }
+
+  // 2. Pantalla de carga estética para rutas estrictamente privadas mientras verifica sesión
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#07080f] flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 rounded-full border-4 border-indigo-500/10 border-t-indigo-500 animate-spin" />
-        <div className="text-white/40 text-xs font-black tracking-widest uppercase animate-pulse">
-          Verificando Sesión de Especialista...
+      <div className="min-h-screen bg-[#07080f] flex flex-col items-center justify-center gap-4 text-white font-sans">
+        <div className="w-12 h-12 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+        <div className="text-indigo-300/60 text-xs font-black tracking-widest uppercase animate-pulse">
+          Verificando Sesión...
         </div>
       </div>
     );
