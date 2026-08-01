@@ -1,0 +1,283 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   CAPA DE UTILIDADES Y ANIMACIONES BASE
+   ========================================================================== */
+@layer utilities {
+  @keyframes shake {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+      transform: translateX(-10px);
+    }
+    20%, 40%, 60%, 80% {
+      transform: translateX(10px);
+    }
+  }
+
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  .glass-panel {
+    background: rgba(16, 19, 26, 0.4);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-panel-active {
+    background: rgba(16, 19, 26, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .electric-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(11, 15, 25, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .thin-stroke-grid {
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* --- ESTADOS BASE DE ANIMACIÓN ON-SCROLL --- */
+  .reveal-hidden {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+
+  .reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* --- ESTADOS PARA CASCADA (STAGGER) EN TARJETAS --- */
+  .stagger-item {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1), 
+                transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+
+  .stagger-item.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   1. ARQUITECTURA GLOBAL DE SCROLL SNAP Y LAYOUT
+   ========================================================================== */
+
+@media screen and (min-width: 768px) {
+  /* El viewport (html) es el único contenedor de scroll magnético del sistema */
+  html {
+    scroll-snap-type: y proximity !important;
+    scroll-padding-top: 85px !important;
+    scroll-behavior: smooth !important;
+    overscroll-behavior-y: none !important;
+  }
+
+  /* Evitar que contenedores intermedios bloqueen o intercepten el imán del scroll */
+  body, #root, main, div[class*="overflow-x-hidden"], div[class*="min-h-screen"] {
+    overflow-y: visible !important;
+    overflow-x: clip !important;
+  }
+
+  /* Centralización magnética suave para secciones estándar (respetando menú superior de 85px) */
+  section {
+    scroll-snap-align: center !important;
+    scroll-margin-top: 85px !important;
+    scroll-snap-stop: normal !important;
+    min-height: calc(100vh - 85px) !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    position: relative !important;
+  }
+}
+
+/* ==========================================================================
+   2. TIPOGRAFÍA CORPORATIVA PARA FONDOS OSCUROS
+   ========================================================================== */
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+section h1,
+section h2,
+section h3 {
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+section p,
+section li {
+  line-height: 1.7;
+  font-weight: 450;
+  max-width: 60ch;
+  word-spacing: 0.05em;
+}
+
+.text-center p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ==========================================================================
+   3. CALIBRACIÓN ESPECÍFICA DE ENCUADRES POR ORDEN DE PANTALLA
+   ========================================================================== */
+
+@media screen and (min-width: 768px) {
+  /* --- 3.1. Resguardo Global de Pantallas Compactas (Laptops < 950px) --- */
+  @media (max-height: 950px) {
+    section {
+      padding-top: 2.5rem !important;
+      padding-bottom: 2.5rem !important;
+    }
+    section .mb-16 {
+      margin-bottom: 1.5rem !important;
+    }
+  }
+
+  /* --- 3.2. Primer Encuadre (Hero / Pantalla Principal) --- */
+  /* Anclaje al techo (scroll 0) para evitar auto-scroll al abrir la web */
+  body, #root > div {
+    scroll-snap-align: start !important;
+  }
+
+  section:first-of-type,
+  section:first-child {
+    scroll-snap-align: none !important;
+    padding-top: 1rem !important;
+    padding-bottom: 2rem !important;
+    min-height: calc(100vh - 100px) !important;
+  }
+
+  /* Elevación y centrado óptico del bloque de contenido y logo */
+  section:first-of-type .grid {
+    min-height: calc(100vh - 140px) !important;
+    padding-top: 0 !important;
+    align-content: center !important;
+  }
+
+  section:first-of-type .lg\:col-span-7 {
+    padding-top: 0 !important;
+  }
+
+  section:first-of-type .space-y-8 > * + * {
+    margin-top: 1.25rem !important;
+  }
+
+  section:first-of-type .pt-8 {
+    padding-top: 1.25rem !important;
+  }
+
+  /* Alineación simétrica del Cerebro 3D con el texto */
+  section:first-of-type .w-full.lg\:w-1\/2 {
+    top: -2% !important;
+  }
+
+  /* --- 3.3. Segundo Encuadre (#experiencia-phygital) --- */
+  /* Calibración milimétrica a la Imagen 2 de referencia (píldora visible y márgenes limpios) */
+  #experiencia-phygital {
+    padding-top: 2.25rem !important;
+    padding-bottom: 2rem !important;
+    scroll-margin-top: 85px !important;
+    min-height: calc(100vh - 85px) !important;
+  }
+
+  #experiencia-phygital .inline-flex {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  #experiencia-phygital .mb-16 {
+    margin-bottom: 1rem !important;
+  }
+
+  #experiencia-phygital .space-y-4 > * + * {
+    margin-top: 0.35rem !important;
+  }
+
+  #experiencia-phygital h2 {
+    font-size: clamp(1.4rem, 2.1vw, 2.1rem) !important;
+    line-height: 1.15 !important;
+  }
+
+  #experiencia-phygital p {
+    font-size: clamp(0.8rem, 0.9vw, 0.95rem) !important;
+    line-height: 1.45 !important;
+  }
+
+  #experiencia-phygital .aspect-\[9\/16\] {
+    max-width: 185px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  #experiencia-phygital .pt-12 {
+    padding-top: 1.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  #experiencia-phygital .gap-8,
+  #experiencia-phygital .lg\:gap-12 {
+    gap: 1.25rem !important;
+  }
+
+  /* --- 3.4. Quinto Encuadre (#what-we-do / La Solución) --- */
+  /* Anclaje al techo (start) respetando el menú para que el título principal sea 100% visible
+     al actuar el autoscroll magnético, manteniendo la información agrupada de forma natural */
+  #what-we-do {
+    scroll-snap-align: start !important;
+    scroll-margin-top: 85px !important;
+    padding-top: 1.5rem !important;
+  }
+}
+
+/* ==========================================================================
+   4. COMPORTAMIENTO EN DISPOSITIVOS MÓVILES (RESPONSIVE)
+   ========================================================================== */
+
+@media screen and (max-width: 767px) {
+  html, body, #root, main, div[class*="overflow-x-hidden"], div[class*="min-h-screen"] {
+    scroll-snap-type: none !important;
+    overflow-y: auto !important;
+  }
+
+  section {
+    scroll-snap-align: none !important;
+    scroll-snap-stop: normal !important;
+    min-height: auto !important;
+    padding-top: 4rem !important;
+    padding-bottom: 4rem !important;
+    display: block !important;
+  }
+
+  section p,
+  section li {
+    line-height: 1.6;
+    max-width: 100%;
+  }
+}

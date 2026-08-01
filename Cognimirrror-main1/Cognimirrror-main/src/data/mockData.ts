@@ -1,0 +1,180 @@
+//mockData.ts
+
+import { Institution, Therapist, Patient, Achievement, GameSession } from '../types';
+
+export const mockAchievements: Achievement[] = [
+  {
+    id: '1',
+    title: 'Primer Paso',
+    description: 'Completaste tu primera sesión',
+    icon: '🎯',
+    unlockedAt: new Date(),
+  },
+  {
+    id: '2',
+    title: 'Estratega',
+    description: 'Resolviste el cubo en menos de 50 movimientos',
+    icon: '🧠',
+    progress: 3,
+    goal: 5,
+  },
+  {
+    id: '3',
+    title: 'Velocista',
+    description: 'Completa un nivel en menos de 2 minutos',
+    icon: '⚡',
+    progress: 1,
+    goal: 3,
+  },
+  {
+    id: '4',
+    title: 'Persistente',
+    description: 'Juega 7 días seguidos',
+    icon: '🔥',
+    progress: 4,
+    goal: 7,
+  },
+  {
+    id: '5',
+    title: 'Maestro del Cubo',
+    description: 'Completa 20 sesiones de Cubo Rubik',
+    icon: '👑',
+    progress: 12,
+    goal: 20,
+  },
+];
+
+export const mockSessions: GameSession[] = [
+  {
+    id: '1',
+    gameType: 'rubik',
+    startTime: new Date(Date.now() - 86400000),
+    endTime: new Date(Date.now() - 86400000 + 180000),
+    duration: 180,
+    moves: 45,
+    efficiency: 85,
+    completed: true,
+    metrics: {
+      strategy: 'Capa por capa',
+      errors: 3,
+      hints: 2,
+    },
+  },
+  {
+    id: '2',
+    gameType: 'rubik',
+    startTime: new Date(Date.now() - 172800000),
+    endTime: new Date(Date.now() - 172800000 + 240000),
+    duration: 240,
+    moves: 52,
+    efficiency: 78,
+    completed: true,
+    metrics: {
+      strategy: 'Método principiante',
+      errors: 5,
+      hints: 4,
+    },
+  },
+  {
+    id: '3',
+    gameType: 'rubik',
+    startTime: new Date(Date.now() - 259200000),
+    endTime: new Date(Date.now() - 259200000 + 300000),
+    duration: 300,
+    moves: 60,
+    efficiency: 70,
+    completed: false,
+    metrics: {
+      strategy: 'Exploración libre',
+      errors: 8,
+      hints: 6,
+    },
+  },
+];
+
+export const mockInstitutions: Institution[] = [
+  {
+    id: 'inst-1',
+    email: 'instituto@cogntech.com',
+    password: '123456',
+    type: 'institucional',
+    name: 'Centro de Desarrollo Integral',
+    therapists: ['ther-1', 'ther-2'],
+    patients: ['pat-1', 'pat-2', 'pat-3'],
+    createdAt: new Date(),
+  },
+];
+
+export const mockTherapists: Therapist[] = [
+  {
+    id: 'ther-1',
+    email: 'ana.garcia@cogntech.com',
+    password: '123456',
+    type: 'terapeuta',
+    name: 'Ana García López',
+    institutionId: 'inst-1',
+    patients: ['pat-1', 'pat-2'],
+    createdAt: new Date(),
+  },
+  {
+    id: 'ther-2',
+    email: 'carlos.ruiz@cogntech.com',
+    password: '123456',
+    type: 'terapeuta',
+    name: 'Carlos Ruiz Mendoza',
+    institutionId: 'inst-1',
+    patients: ['pat-3'],
+    createdAt: new Date(),
+  },
+];
+
+export const mockPatients: Patient[] = [
+  {
+    id: 'pat-1',
+    email: 'lucas@cogntech.com',
+    password: '123456',
+    type: 'paciente',
+    name: 'Lucas Martínez',
+    parentEmails: ['padre.lucas@email.com', 'madre.lucas@email.com'],
+    therapistId: 'ther-1',
+    institutionId: 'inst-1',
+    age: 8,
+    diagnosis: ['TEA'],
+    progress: 65,
+    achievements: mockAchievements,
+    sessions: mockSessions,
+    createdAt: new Date(),
+  },
+  {
+    id: 'pat-2',
+    email: 'sofia@cogntech.com',
+    password: '123456',
+    type: 'paciente',
+    name: 'Sofía Hernández',
+    parentEmails: ['tutor.sofia@email.com'],
+    therapistId: 'ther-1',
+    institutionId: 'inst-1',
+    age: 9,
+    diagnosis: ['TDAH'],
+    progress: 45,
+    achievements: mockAchievements.slice(0, 3),
+    sessions: mockSessions.slice(0, 2),
+    createdAt: new Date(),
+  },
+  {
+    id: 'pat-3',
+    email: 'mateo@cogntech.com',
+    password: '123456',
+    type: 'paciente',
+    name: 'Mateo Rodríguez',
+    parentEmails: ['familia.mateo@email.com'],
+    therapistId: 'ther-2',
+    institutionId: 'inst-1',
+    age: 7,
+    diagnosis: ['TEA', 'TDAH'],
+    progress: 30,
+    achievements: mockAchievements.slice(0, 2),
+    sessions: mockSessions.slice(0, 1),
+    createdAt: new Date(),
+  },
+];
