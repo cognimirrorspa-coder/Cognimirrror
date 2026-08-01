@@ -1,21 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-// Cliente de base de datos origen (Producción)
-const supabaseSource = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false }
-});
-
-// Cliente de almacenamiento destino (Staging u otro bucket remoto si está configurado)
-const targetUrl = process.env.BACKUP_TARGET_SUPABASE_URL || supabaseUrl;
-const targetKey = process.env.BACKUP_TARGET_SUPABASE_SERVICE_ROLE_KEY || supabaseKey;
-
-const supabaseTarget = createClient(targetUrl, targetKey, {
-  auth: { persistSession: false }
-});
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Soportamos tanto GET como POST para facilitar pruebas desde el navegador o Postman
 export async function GET(request) {
@@ -28,6 +15,21 @@ export async function POST(request) {
 
 async function handleGenerateBackup(request) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+
+    // Cliente de base de datos origen (Producción)
+    const supabaseSource = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false }
+    });
+
+    // Cliente de almacenamiento destino (Staging u otro bucket remoto si está configurado)
+    const targetUrl = process.env.BACKUP_TARGET_SUPABASE_URL || supabaseUrl;
+    const targetKey = process.env.BACKUP_TARGET_SUPABASE_SERVICE_ROLE_KEY || supabaseKey;
+
+    const supabaseTarget = createClient(targetUrl, targetKey, {
+      auth: { persistSession: false }
+    });
     // 1. Extraer los datos de la base de datos de producción para el grupo específico
     let pacientes;
     const { data: dataPacientes, error: errPacientes } = await supabaseSource

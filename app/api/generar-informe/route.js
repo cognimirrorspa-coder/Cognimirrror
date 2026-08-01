@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
-import { supabase } from '../../../utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request) {
   try {
