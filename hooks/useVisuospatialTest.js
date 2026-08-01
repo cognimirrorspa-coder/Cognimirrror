@@ -66,7 +66,7 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
 
   /**
    * Reproducción de Secuencia (Gemelo Digital)
-   * Recorre la secuencia actual encendiendo/apagando caras.
+   * Recorre la secuencia actual encendiendo/apagando caras tras un retrazo inicial de observación de 1.8s.
    */
   useEffect(() => {
     if (requireBluetooth && !isConnected) return; // Si no hay conexión, pausar reproducción
@@ -74,49 +74,55 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
     if (gameState === 'showing_sequence' && sequence.length > 0) {
       let index = 0;
       let isMounted = true;
+      setActiveFace(null);
+      setShowingIndex(-1);
 
-      const playNext = () => {
+      // Alerta de 1.8s ("OBSERVA LA SECUENCIA EN EL CUBO ARMADO") antes de iniciar los movimientos
+      const initialDelayTimeout = setTimeout(() => {
         if (!isMounted) return;
-        
-        if (index < sequence.length) {
-          // Encender cara
-          setActiveFace(sequence[index]);
-          setShowingIndex(index);
-          playbackTimeoutRef.current = setTimeout(() => {
-            if (!isMounted) return;
-            // Apagar cara
-            setActiveFace(null);
-            playbackTimeoutRef.current = setTimeout(() => {
-              index++;
-              playNext();
-            }, 400); // Se mantiene apagada por 400ms
-          }, 800); // Se mantiene encendida por 800ms
-        } else {
-          // Terminó la reproducción de la secuencia
-          setActiveFace(null);
-          setShowingIndex(-1);
-          setGameState('waiting_for_user');
-          setUserIndex(0);
-          
-          // Limpiar caché de input para nueva respuesta del usuario
-          lastInputFaceRef.current = null;
-          lastInputTimeRef.current = 0;
-          
-          // Timestamp crítico: Comienza el reloj para la latencia del primer input del usuario
-          lastEventTimeRef.current = performance.now();
-        }
-      };
 
-      // Limpiar cualquier timeout residual antes de arrancar
-      if (playbackTimeoutRef.current) clearTimeout(playbackTimeoutRef.current);
-      playNext();
+        const playNext = () => {
+          if (!isMounted) return;
+          
+          if (index < sequence.length) {
+            // Encender cara
+            setActiveFace(sequence[index]);
+            setShowingIndex(index);
+            playbackTimeoutRef.current = setTimeout(() => {
+              if (!isMounted) return;
+              // Apagar cara
+              setActiveFace(null);
+              playbackTimeoutRef.current = setTimeout(() => {
+                index++;
+                playNext();
+              }, 450); // Se mantiene apagada por 450ms
+            }, 900); // Se mantiene encendida por 900ms para lectura clara
+          } else {
+            // Terminó la reproducción de la secuencia
+            setActiveFace(null);
+            setShowingIndex(-1);
+            setGameState('waiting_for_user');
+            setUserIndex(0);
+            
+            // Limpiar caché de input para nueva respuesta del usuario
+            lastInputFaceRef.current = null;
+            lastInputTimeRef.current = 0;
+            
+            // Timestamp crítico: Comienza el reloj para la latencia del primer input del usuario
+            lastEventTimeRef.current = performance.now();
+          }
+        };
+
+        playNext();
+      }, 1800);
 
       return () => {
         isMounted = false;
+        clearTimeout(initialDelayTimeout);
         if (playbackTimeoutRef.current) clearTimeout(playbackTimeoutRef.current);
       };
     }
-  }, [gameState, sequence, isConnected]);
+  }, [gameState, sequence, isConnected, requireBluetooth]);
 
   /**
    * Manejador de Input del Usuario

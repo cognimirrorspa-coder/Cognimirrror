@@ -196,7 +196,7 @@ export default function Cube3DViewer({
       cubeGroup.remove(pivot);
     };
 
-    const rotateFace = async (notation, steps = 12) => {
+    const rotateFace = async (notation, steps = 18) => {
       // Resolver movimientos compuestos (M, E, S)
       if (COMPOUND_MOVES[notation]) {
         for (const sub of COMPOUND_MOVES[notation]) {
@@ -253,15 +253,31 @@ export default function Cube3DViewer({
       
       if (!isDraggingRef.current) {
         const activeFaceKey = highlightFaceRef.current;
-        const targetPos = (activeFaceKey && TARGET_CAMERA_POSITIONS[activeFaceKey]) 
-          ? TARGET_CAMERA_POSITIONS[activeFaceKey] 
-          : TARGET_CAMERA_POSITIONS.DEFAULT;
+        let targetY = 0;
+        let targetX = 0;
 
-        if (activeFaceKey || isIdle) {
-          // Lerp suave (0.045) para giros fluidos y sin brusquedad incluso en giros de 180° (cara B)
-          camera.position.lerp(targetPos, 0.045);
-          camera.lookAt(0, 0, 0);
+        if (activeFaceKey === 'B') {
+          targetY = Math.PI; // Giro suave de 180° en Y para ver la cara Verde de atrás
+        } else if (activeFaceKey === 'L') {
+          targetY = Math.PI / 3.2; // Giro suave de +56° para enfocar la cara Roja
+        } else if (activeFaceKey === 'R') {
+          targetY = -Math.PI / 3.2; // Giro suave de -56° para enfocar la cara Naranja
+        } else if (activeFaceKey === 'U') {
+          targetX = -Math.PI / 5; // Inclinación suave hacia abajo para enfocar la cara Blanca
+        } else if (activeFaceKey === 'D') {
+          targetX = Math.PI / 5; // Inclinación suave hacia arriba para enfocar la cara Amarilla
+        } else if (activeFaceKey === 'F') {
+          targetY = 0;
+          targetX = 0;
         }
+
+        // Suavizado fluido de la rotación del grupo del cubo en 3D (lerp 0.06)
+        cubeGroup.rotation.y += (targetY - cubeGroup.rotation.y) * 0.06;
+        cubeGroup.rotation.x += (targetX - cubeGroup.rotation.x) * 0.06;
+
+        // Cámara 100% fija en perspectiva isométrica constante (SIN ZOOM NI TELETRANSPORTE)
+        camera.position.set(4.5, 4.0, 7.5);
+        camera.lookAt(0, 0, 0);
       }
       renderer.render(scene, camera);
     };

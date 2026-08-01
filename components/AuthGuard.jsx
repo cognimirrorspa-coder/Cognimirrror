@@ -92,9 +92,22 @@ export default function AuthGuard({ children }) {
   // 2. Pantalla de carga estética para rutas estrictamente privadas mientras verifica sesión
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#07080f] flex flex-col items-center justify-center gap-4 text-white font-sans">
+      <div 
+        style={{ 
+          backgroundColor: '#07080f', 
+          color: '#ffffff', 
+          minHeight: '100vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          gap: '16px',
+          fontFamily: 'sans-serif'
+        }}
+        className="min-h-screen bg-[#07080f] flex flex-col items-center justify-center gap-4 text-white font-sans"
+      >
         <div className="w-12 h-12 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-        <div className="text-indigo-300/60 text-xs font-black tracking-widest uppercase animate-pulse">
+        <div style={{ color: 'rgba(165, 180, 252, 0.6)', fontSize: '12px', fontWeight: '900', letterSpacing: '0.1em', textTransform: 'uppercase' }} className="text-indigo-300/60 text-xs font-black tracking-widest uppercase animate-pulse">
           Verificando Sesión...
         </div>
       </div>

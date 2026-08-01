@@ -370,10 +370,10 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                     <Eye size={28} />
                   </div>
                   <p className="text-[#00FFFF] font-black tracking-[0.3em] uppercase text-sm sm:text-xl drop-shadow-[0_0_12px_rgba(0,255,255,0.6)]">
-                    OBSERVA LA SECUENCIA
+                    {showingIndex < 0 ? '👁️ OBSERVA LA SECUENCIA' : 'SECUENCIA EN EJECUCIÓN'}
                   </p>
-                  <span className="text-[10px] text-cyan-300/80 uppercase font-bold tracking-widest bg-cyan-950/60 px-3 py-0.5 rounded-full border border-cyan-500/20">
-                    Cubo Armado (Vista de Demostración)
+                  <span className="text-[10px] text-cyan-300/80 uppercase font-bold tracking-widest bg-cyan-950/80 px-3 py-0.5 rounded-full border border-cyan-500/30">
+                    {showingIndex < 0 ? 'Cubo Armado (Demostración Limpia)' : `Paso ${showingIndex + 1} de ${sequence.length}`}
                   </span>
                   <div className="flex gap-1.5 mt-1">
                     {sequence.map((_, i) => (
@@ -417,20 +417,20 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               )}
             </div>
 
-            {/* HUD PANEL: MUESTRA LA CARA ACTIVA O EL GIRO DEL USUARIO */}
-            {(activeMeta || userTurnFeedback) && (
-              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 md:left-8 md:top-1/2 md:-translate-y-1/2 md:bottom-auto md:translate-x-0 bg-[#13161e]/90 backdrop-blur-md border border-white/15 rounded-2xl p-4 flex md:flex-col items-center gap-3 w-72 md:w-52 shadow-2xl z-20 transition-all duration-300 animate-in fade-in zoom-in-95">
-                <span className="text-[10px] font-black tracking-widest text-white/50 uppercase">
-                  {userTurnFeedback ? 'Giro Detectado' : 'Cara en Secuencia'}
-                </span>
-                <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl ${(userTurnFeedback?.meta || activeMeta)?.color} shadow-2xl flex items-center justify-center font-black text-xl md:text-3xl border-2 shrink-0 animate-pulse`}>
+            {/* HUD PANEL: POSICIONADO ABAJO A LA DERECHA PARA EVITAR SUPERPOSICIÓN */}
+            {(activeMeta || userTurnFeedback) && showingIndex >= 0 && (
+              <div className="absolute bottom-6 right-6 bg-[#13161e]/90 backdrop-blur-md border border-white/15 rounded-2xl p-4 flex items-center gap-3 w-64 shadow-2xl z-20 transition-all duration-300 animate-in fade-in zoom-in-95">
+                <div className={`w-12 h-12 rounded-xl ${(userTurnFeedback?.meta || activeMeta)?.color} shadow-lg flex items-center justify-center font-black text-xl border shrink-0 animate-pulse`}>
                   {(userTurnFeedback?.face || activeFace)}
                 </div>
-                <div className="text-left md:text-center">
-                  <p className={`font-black uppercase tracking-wider text-xs md:text-sm ${(userTurnFeedback?.meta || activeMeta)?.text}`}>
+                <div className="text-left">
+                  <span className="text-[9px] font-black tracking-widest text-white/50 uppercase block">
+                    {userTurnFeedback ? 'Giro Detectado' : 'Cara Activa'}
+                  </span>
+                  <p className={`font-black uppercase tracking-wider text-xs ${(userTurnFeedback?.meta || activeMeta)?.text}`}>
                     {(userTurnFeedback?.meta || activeMeta)?.name}
                   </p>
-                  <p className="text-[10px] text-white/70 font-mono mt-1 font-bold">
+                  <p className="text-[10px] text-white/70 font-mono font-bold">
                     {(userTurnFeedback?.meta || activeMeta)?.position}
                   </p>
                 </div>
