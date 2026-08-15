@@ -306,7 +306,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="md:col-span-6 text-left space-y-4">
-              <h3 className="text-2xl md:text-3xl font-bold text-white">Informes MINEDUC a un Clic</h3>
+              <h3 className="text-2xl md:text-3xl font-bold text-white">Informes MINEDUC a un Clik</h3>
               <p className="text-base text-slate-400 font-light leading-relaxed">
                 Generación automática de reportes estandarizados, listos para auditoría y cumplimiento normativo del Decreto 170.
               </p>
