@@ -8,6 +8,7 @@ import { useJoicube } from '../../contexts/JoicubeContext';
 import Cube3DViewer from '../../components/Cube3DViewer';
 import MoveFeedOverlay from '../../components/MoveFeedOverlay';
 import { useAuth } from '../../contexts/AuthContext';
+import CoordinadorDashboard from '../../components/CoordinadorDashboard';
 
 // ─── Utilidad: formatear tiempo ───────────────────────────────
 function formatTime(ms) {
@@ -17,7 +18,7 @@ function formatTime(ms) {
   return `${m}:${s}.${mil}`;
 }
 
-export default function ClassicDashboard() {
+function ClassicDashboard() {
   const { isConnected, device, connectBLE, batteryLevel, subscribeToMoves, broadcastMove, calibrateGyro } = useBluetoothCube();
   const { moveHistory, cubeRotation, resetCubeState } = useCubeState();
   const joicube = useJoicube();
@@ -326,7 +327,7 @@ export default function ClassicDashboard() {
       <div className="dashboard-body">
         {/* Panel Lateral (Sidebar) */}
         <aside className="sidebar">
-          <div className="sidebar-logo">🧊 <span>Cogni</span>Mirror</div>
+          <div className="sidebar-logo"><span>Cogni</span>Mirror</div>
           
           {user && (
             <div className="sidebar-user">
@@ -348,18 +349,18 @@ export default function ClassicDashboard() {
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}>
-                  ⚠️ Sin Conexión
+                  Sin Conexión
                 </div>
               )}
             </div>
           )}
 
-          {/* Gestión Clínica */}
+          {/* Gestión Escolar */}
           <div className="sidebar-section">
-            <div className="sidebar-section-title">Gestión Clínica</div>
+            <div className="sidebar-section-title">Gestión Escolar</div>
             <nav className="sidebar-menu">
-              <Link href="/patients" className="sidebar-link">👥 Directorio Pacientes</Link>
-              <Link href="/export" className="sidebar-link">📥 Exportar e Informes</Link>
+              <Link href="/students" className="sidebar-link">Directorio Estudiantes</Link>
+              <Link href="/export" className="sidebar-link">Exportar e Informes</Link>
             </nav>
           </div>
 
@@ -367,9 +368,9 @@ export default function ClassicDashboard() {
           <div className="sidebar-section">
             <div className="sidebar-section-title">Evaluaciones</div>
             <nav className="sidebar-menu">
-              <Link href="/reaction-game" className="sidebar-link">⚡ Reaction Mirror (Local)</Link>
-              <Link href="/simon-game" className="sidebar-link">🧬 Memory Mirror (Local)</Link>
-              <Link href="/export?tab=remote" className="sidebar-link">🌐 Evaluación Remota</Link>
+              <Link href="/reaction-game" className="sidebar-link">Reaction Mirror (Local)</Link>
+              <Link href="/simon-game" className="sidebar-link">Memory Mirror (Local)</Link>
+              <Link href="/export?tab=remote" className="sidebar-link">Evaluación Remota</Link>
             </nav>
           </div>
 
@@ -378,10 +379,10 @@ export default function ClassicDashboard() {
             <div className="sidebar-section-title">Estudio Clínico</div>
             <nav className="sidebar-menu">
               <Link href="/evaluador" className="sidebar-link evaluador-destacado">
-                ⚙️ Modo Evaluador
+                Modo Evaluador
               </Link>
               <Link href="/defensa" className="sidebar-link">
-                📊 Diapositivas Defensa
+                Diapositivas Defensa
               </Link>
             </nav>
           </div>
@@ -393,7 +394,7 @@ export default function ClassicDashboard() {
               <span>{isConnected ? device : 'Conectar Cubo'}</span>
             </div>
             <button onClick={signOut} className="sidebar-btn-salir">
-              🔒 Cerrar Sesión
+              Cerrar Sesión
             </button>
           </div>
         </aside>
@@ -425,14 +426,14 @@ export default function ClassicDashboard() {
               <div className="sg-big-move" id="sg-big-move">U</div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
                 <button className="sg-btn" onClick={() => { const s = stateRef.current; s.sgIndex++; renderSgStep(); }}>Siguiente →</button>
-                <button className="sg-btn" style={{color:'red'}} onClick={finishScramble}>✕ Cancelar</button>
+                <button className="sg-btn" style={{color:'red'}} onClick={finishScramble}>Cancelar</button>
               </div>
             </div>
 
              <div className="cube-overlay">
-              <button className="cube-btn" onClick={startGuidedScramble} style={{ background: 'var(--accent)', color: 'white' }}>🔀 Scramble</button>
-              <button className="cube-btn" onClick={() => { resetCubeState(); resetStats(); }} style={{ color: 'var(--green)' }}>🧩 Resolver</button>
-              <button className="cube-btn" onClick={calibrateGyro}>⚓ Calibrar</button>
+              <button className="cube-btn" onClick={startGuidedScramble} style={{ background: 'var(--accent)', color: 'white' }}>Scramble</button>
+              <button className="cube-btn" onClick={() => { resetCubeState(); resetStats(); }} style={{ color: 'var(--green)' }}>Resolver</button>
+              <button className="cube-btn" onClick={calibrateGyro}>Calibrar</button>
               
               <button 
                 className="cube-btn" 
@@ -452,7 +453,7 @@ export default function ClassicDashboard() {
                 }}
                 title={isPresentationRemoteActive ? 'Mando activo - Gira el cubo para pasar diapositivas globales' : 'Usar cubo para pasar diapositivas globales'}
               >
-                {isPresentationRemoteActive ? '📺 Mando PPT ON' : '📺 Mando PPT'}
+                {isPresentationRemoteActive ? 'Mando PPT ON' : 'Mando PPT'}
               </button>
 
               {/* ── Botón Joicube ── */}
@@ -556,23 +557,23 @@ export default function ClassicDashboard() {
               </div>
             </div>
 
-            {/* ── Tab Movimientos (historial de chips) ── */}
+            {/* Tab Movimientos (historial de chips) */}
             <div className={`tab-content ${activeTab === 'moves' ? 'active' : ''}`}>
               <div className="stat-card">
-                <h3>📋 Secuencia Completa</h3>
+                <h3>Secuencia Completa</h3>
                 <div id="move-log-full" style={{ background:'rgba(0,0,0,.3)', borderRadius:8, padding:10, minHeight:80, maxHeight:240, overflowY:'auto', fontFamily:'Courier New,monospace', fontSize:'.85rem', lineHeight:1.8, wordBreak:'break-all' }}>
                   <span style={{ color:'var(--muted)', fontStyle:'italic' }}>Gira el cubo para ver la secuencia...</span>
                 </div>
               </div>
               <div className="stat-card">
-                <h3>🔢 TPS en Vivo</h3>
+                <h3>TPS en Vivo</h3>
                 <div className="stat-row"><span className="label">TPS Actual</span><span className="value" id="st-tps">0.00</span></div>
                 <div className="stat-row"><span className="label">Horario (CW)</span><span className="value" id="st-cw">0</span></div>
                 <div className="stat-row"><span className="label">Antihorario (CCW)</span><span className="value" id="st-ccw">0</span></div>
               </div>
             </div>
 
-            {/* ── Tab BLE Diagnóstico ── */}
+            {/* Tab BLE Diagnóstico */}
             <div className={`tab-content ${activeTab === 'ble' ? 'active' : ''}`}>
               <div style={{ padding: '4px 0 12px' }}>
                 <MoveFeedOverlay />
@@ -584,4 +585,23 @@ export default function ClassicDashboard() {
     </div>
     </>
   );
+}
+
+export default function Dashboard() {
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030303] flex flex-col items-center justify-center text-slate-500 gap-3">
+        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-mono animate-pulse">Cargando perfil de usuario...</span>
+      </div>
+    );
+  }
+
+  if (profile?.rol === 'coordinador_pie') {
+    return <CoordinadorDashboard />;
+  }
+
+  return <ClassicDashboard />;
 }

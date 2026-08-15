@@ -9,7 +9,7 @@ import { useBluetoothCube } from '../contexts/BluetoothContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import PasscodeModal from './PasscodeModal';
 import { usePatientsDB } from '../hooks/usePatientsDB';
-import PatientSelector from './PatientSelector';
+import StudentSelector from './StudentSelector';
 import ConfirmModal from './ConfirmModal';
 import { Brain } from 'lucide-react';
 
@@ -80,7 +80,7 @@ function StepMenu({ onNext, onHistory, activePatient, setActivePatientId, patien
       </div>
 
       <div className="relative z-10 w-full max-w-sm flex flex-col gap-4">
-        <PatientSelector 
+        <StudentSelector 
           patients={patients}
           onSelect={setActivePatientId}
           onCreate={async (name) => {

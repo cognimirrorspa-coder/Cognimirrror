@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function PatientSelector({ patients, onSelect, onCreate }) {
+export default function StudentSelector({ patients: students, onSelect, onCreate }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
 
@@ -34,11 +34,11 @@ export default function PatientSelector({ patients, onSelect, onCreate }) {
                 className="w-full px-5 py-4 rounded-xl bg-white/5 border border-white/10 text-white appearance-none cursor-pointer text-lg font-semibold focus:outline-none focus:border-purple-500 transition-colors"
               >
                 <option value="" disabled className="text-gray-500 bg-gray-900">
-                  Seleccionar Paciente Existente...
+                  Seleccionar Estudiante Existente...
                 </option>
-                {patients.map(p => (
-                  <option key={p.id} value={p.id} className="bg-gray-900 text-white">
-                    {p.name} ({p.sessions?.length || 0} sesiones)
+                {students.map(s => (
+                  <option key={s.id} value={s.id} className="bg-gray-900 text-white">
+                    {s.name} ({s.sessions?.length || 0} sesiones)
                   </option>
                 ))}
               </select>
@@ -55,9 +55,9 @@ export default function PatientSelector({ patients, onSelect, onCreate }) {
 
             <button
               onClick={() => setIsCreating(true)}
-              className="w-full py-4 rounded-xl font-bold text-purple-400 hover:text-white hover:bg-purple-500/20 transition-all border border-purple-500/30 border-dashed"
+              className="w-full py-4 rounded-xl font-bold text-purple-400 hover:text-white hover:bg-purple-500/20 transition-all border border-purple-500/30 border-dashed cursor-pointer"
             >
-              + Crear Nuevo Paciente
+              + Registrar Nuevo Estudiante
             </button>
           </motion.div>
         ) : (
@@ -72,7 +72,7 @@ export default function PatientSelector({ patients, onSelect, onCreate }) {
             <input 
               type="text"
               autoFocus
-              placeholder="Nombre del Nuevo Paciente"
+              placeholder="Nombre del Nuevo Estudiante"
               value={newName}
               onChange={e => setNewName(e.target.value)}
               className="w-full px-5 py-4 rounded-xl bg-white/10 border border-purple-500/50 text-white placeholder-white/30 text-center text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all font-semibold"
@@ -81,14 +81,14 @@ export default function PatientSelector({ patients, onSelect, onCreate }) {
               <button
                 type="button"
                 onClick={() => setIsCreating(false)}
-                className="flex-1 py-3 rounded-xl font-bold text-white/40 hover:text-white hover:bg-white/10 transition-all border border-white/5"
+                className="flex-1 py-3 rounded-xl font-bold text-white/40 hover:text-white hover:bg-white/10 transition-all border border-white/5 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={!newName.trim()}
-                className="flex-1 py-3 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer"
               >
                 Crear y Seleccionar
               </button>

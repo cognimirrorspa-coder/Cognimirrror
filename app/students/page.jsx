@@ -4,33 +4,32 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePatientsDB } from '../../hooks/usePatientsDB';
 import { Users, Plus, Brain, Zap, ArrowLeft, Calendar, Search, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function PatientDirectory() {
+export default function StudentDirectory() {
   const router = useRouter();
-  const { patients, loadingPatients, createPatient } = usePatientsDB();
+  const { patients: students, loadingPatients, createPatient: createStudent } = usePatientsDB();
   const { signOut } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newPatientName, setNewPatientName] = useState('');
-  const [newPatientIdSujeto, setNewPatientIdSujeto] = useState('');
+  const [newStudentName, setNewStudentName] = useState('');
+  const [newStudentIdSujeto, setNewStudentIdSujeto] = useState('');
 
-  const filteredPatients = patients.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (p.idSujeto && p.idSujeto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    p.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (s.idSujeto && s.idSujeto.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    s.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddPatient = async (e) => {
+  const handleAddStudent = async (e) => {
     e.preventDefault();
-    if (!newPatientName.trim()) return;
-    const p = await createPatient(newPatientName, newPatientIdSujeto.trim() || null);
-    setNewPatientName('');
-    setNewPatientIdSujeto('');
+    if (!newStudentName.trim()) return;
+    const s = await createStudent(newStudentName, newStudentIdSujeto.trim() || null);
+    setNewStudentName('');
+    setNewStudentIdSujeto('');
     setShowAddModal(false);
-    if (p && p.id) {
-      router.push(`/patients/${p.id}`);
+    if (s && s.id) {
+      router.push(`/students/${s.id}`);
     }
   };
 
@@ -61,14 +60,14 @@ export default function PatientDirectory() {
                 onClick={signOut} 
                 className="inline-flex items-center gap-2 text-red-400/60 hover:text-red-400 text-xs tracking-widest uppercase font-bold transition-colors bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/20 px-3 py-1.5 rounded cursor-pointer"
               >
-                🔒 Cerrar Sesión
+                Cerrar Sesión
               </button>
             </div>
             <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white/90 to-white/30">
-              Directorio.
+              Estudiantes.
             </h1>
             <p className="text-slate-400 mt-2 text-sm max-w-md leading-relaxed">
-              Sistema de gestión longitudinal. Selecciona un perfil para acceder a su evolución cognitiva y métricas de desempeño.
+              Directorio de gestión escolar PIE. Selecciona el perfil de un alumno para acceder a su evolución y métricas de desempeño cognitivo.
             </p>
           </div>
           
@@ -79,7 +78,7 @@ export default function PatientDirectory() {
               </div>
               <input 
                 type="text" 
-                placeholder="Buscar identificador..." 
+                placeholder="Buscar estudiante o ID..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white/[0.02] border border-white/10 rounded-none px-4 py-3 pl-11 text-white text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.04] transition-all placeholder:text-slate-600 font-mono"
@@ -96,65 +95,73 @@ export default function PatientDirectory() {
           </div>
         </header>
 
-        {/* Lista de Pacientes con Spinner de Carga */}
+        {/* Lista de Estudiantes con Spinner de Carga */}
         {loadingPatients ? (
           <div className="flex flex-col items-center justify-center py-32 border border-white/5 bg-white/[0.01]">
             <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
               <Brain size={32} className="animate-spin text-blue-400" />
             </div>
-            <h3 className="text-xl font-black text-white uppercase tracking-wider mb-1">Cargando Directorio Clínico...</h3>
-            <p className="text-slate-500 text-xs font-mono animate-pulse">Sincronizando perfiles y sesiones con Supabase Cloud</p>
+            <h3 className="text-xl font-black text-white uppercase tracking-wider mb-1">Cargando Directorio...</h3>
+            <p className="text-slate-500 text-xs font-mono animate-pulse">Sincronizando estudiantes y sesiones con Supabase</p>
           </div>
-        ) : filteredPatients.length === 0 ? (
+        ) : filteredStudents.length === 0 ? (
           <div className="text-center py-32 border border-white/5 bg-white/[0.01]">
             <Users className="mx-auto text-white/10 mb-6" size={64} />
             <h3 className="text-2xl font-black tracking-tight text-white/40 mb-2">Sin Resultados</h3>
-            <p className="text-white/20 text-sm">No se encontraron perfiles clínicos en la base de datos.</p>
+            <p className="text-white/20 text-sm">No se encontraron perfiles de estudiantes en este colegio.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredPatients.map(patient => {
-              const reactionCount = patient.sessions.filter(s => (s.testType || 'reaction') === 'reaction').length;
-              const memoryCount = patient.sessions.filter(s => s.testType === 'memory').length;
+            {filteredStudents.map(student => {
+              const reactionCount = student.sessions.filter(s => (s.testType || 'reaction') === 'reaction').length;
+              const memoryCount = student.sessions.filter(s => s.testType === 'memory').length;
               
               return (
                 <div 
-                  key={patient.id} 
-                  onClick={() => router.push(`/patients/${patient.id}`)}
+                  key={student.id} 
+                  onClick={() => router.push(`/students/${student.id}`)}
                   className="group relative bg-white/[0.02] border border-white/5 p-6 cursor-pointer overflow-hidden transition-all duration-500 hover:bg-white/[0.04] hover:border-blue-500/30"
                 >
-                  {/* Deco Hover Line */}
                   <div className="absolute top-0 left-0 w-1 h-0 bg-blue-500 group-hover:h-full transition-all duration-500 ease-out" />
                   
                   <div className="flex items-start justify-between relative z-10">
                     <div className="flex items-center gap-5">
                       <div className="w-14 h-14 bg-black border border-white/10 flex items-center justify-center font-serif text-2xl text-white/60 group-hover:text-white group-hover:border-blue-500/40 transition-colors shadow-inner">
-                        {patient.name.charAt(0).toUpperCase()}
+                        {student.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-xl font-bold tracking-tight text-white group-hover:text-blue-100 transition-colors">{patient.name}</h3>
-                          {patient.idSujeto && (
+                          <h3 className="text-xl font-bold tracking-tight text-white group-hover:text-blue-100 transition-colors">{student.name}</h3>
+                          {student.idSujeto && (
                             <span className="px-2 py-0.5 bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[10px] font-black rounded-md tracking-wider uppercase font-mono">
-                              {patient.idSujeto}
+                              {student.idSujeto}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-slate-500 font-mono mt-1">
                           <Calendar size={10} />
-                          {new Date(patient.createdAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })}
+                          {new Date(student.createdAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })}
                         </div>
+                        
+                        {/* Mostrar diagnóstico NEE si existe */}
+                        {student.diagnosticoNee && (
+                          <div className="mt-1.5">
+                            <span className="px-2 py-0.5 bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] rounded font-semibold">
+                              NEE: {student.diagnosticoNee}
+                            </span>
+                          </div>
+                        )}
+
                         <div 
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(patient.id);
-                            alert(`UUID de ${patient.name} copiado al portapapeles!`);
+                            navigator.clipboard.writeText(student.id);
+                            alert(`ID de ${student.name} copiado al portapapeles!`);
                           }}
-                          className="mt-2 text-[10px] font-mono text-slate-500 hover:text-blue-400 hover:border-blue-500/20 transition-all flex items-center gap-1 cursor-pointer bg-white/[0.02] border border-white/10 px-2 py-1 rounded-md"
-                          title="Click para copiar UUID"
+                          className="mt-2 text-[10px] font-mono text-slate-500 hover:text-blue-400 hover:border-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer bg-white/[0.02] border border-white/10 px-2 py-1 rounded-md w-fit"
+                          title="Click para copiar ID"
                         >
-                          <span>UUID: {patient.id}</span>
-                          <span>📋</span>
+                          <span>ID Alumno: {student.id.substring(0, 18)}...</span>
                         </div>
                       </div>
                     </div>
@@ -164,13 +171,13 @@ export default function PatientDirectory() {
                   <div className="mt-8 grid grid-cols-2 gap-3 relative z-10">
                     <div className="bg-black/40 border border-white/5 p-3 flex items-center justify-between group-hover:border-blue-500/20 transition-colors">
                       <span className="text-xs font-semibold text-slate-400 flex items-center gap-2">
-                        <Zap size={12} className="text-blue-500" /> REACTION
+                        <Zap size={12} className="text-blue-500" /> REACCIÓN
                       </span>
                       <span className="font-mono text-sm font-bold text-white/80">{reactionCount}</span>
                     </div>
                     <div className="bg-black/40 border border-white/5 p-3 flex items-center justify-between group-hover:border-purple-500/20 transition-colors">
                       <span className="text-xs font-semibold text-slate-400 flex items-center gap-2">
-                        <Brain size={12} className="text-purple-500" /> MEMORY
+                        <Brain size={12} className="text-purple-500" /> MEMORIA
                       </span>
                       <span className="font-mono text-sm font-bold text-white/80">{memoryCount}</span>
                     </div>
@@ -181,36 +188,36 @@ export default function PatientDirectory() {
           </div>
         )}
 
-        {/* Modal Crear Paciente (Minimalista) */}
+        {/* Modal Crear Estudiante (PIE) */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowAddModal(false)} />
             <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-lg p-8 relative z-10 shadow-2xl">
               <div className="mb-8 border-b border-white/10 pb-6">
-                <h2 className="text-xl font-black tracking-tighter text-white">Nuevo Perfil Clínico</h2>
-                <p className="text-sm text-slate-500 mt-1">Ingresa el identificador o nombre del paciente.</p>
+                <h2 className="text-xl font-black tracking-tighter text-white">Nuevo Perfil de Estudiante</h2>
+                <p className="text-sm text-slate-500 mt-1">Ingresa el identificador o nombre completo del alumno.</p>
               </div>
               
-              <form onSubmit={handleAddPatient}>
+              <form onSubmit={handleAddStudent}>
                 <div className="mb-6">
                   <label className="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Nombre Completo</label>
                   <input 
                     type="text" 
-                    value={newPatientName}
-                    onChange={(e) => setNewPatientName(e.target.value)}
-                    placeholder="Ej: Juan Pérez"
+                    value={newStudentName}
+                    onChange={(e) => setNewStudentName(e.target.value)}
+                    placeholder="Ej: Carolina González"
                     className="w-full bg-white/[0.02] border border-white/10 px-4 py-3 text-lg font-medium text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-white/20"
                     autoFocus
                     required
                   />
                 </div>
                 <div className="mb-8">
-                  <label className="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">ID Sujeto (Estudio / Excel)</label>
+                  <label className="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">RUN / Código Interno (Opcional)</label>
                   <input 
                     type="text" 
-                    value={newPatientIdSujeto}
-                    onChange={(e) => setNewPatientIdSujeto(e.target.value)}
-                    placeholder="Ej: S-01 (Opcional)"
+                    value={newStudentIdSujeto}
+                    onChange={(e) => setNewStudentIdSujeto(e.target.value)}
+                    placeholder="Ej: 21.345.678-K"
                     className="w-full bg-white/[0.02] border border-white/10 px-4 py-3 text-lg font-mono text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-white/20"
                   />
                 </div>

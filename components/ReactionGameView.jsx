@@ -11,9 +11,9 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PasscodeModal from './PasscodeModal';
 import { usePatientsDB } from '../hooks/usePatientsDB';
-import PatientSelector from './PatientSelector';
+import StudentSelector from './StudentSelector';
 import ConfirmModal from './ConfirmModal';
-import PatientEvolutionDashboard from './PatientEvolutionDashboard';
+import StudentEvolutionDashboard from './StudentEvolutionDashboard';
 import { Zap } from 'lucide-react';
 
 function CountdownPhase({ onComplete }) {
@@ -218,7 +218,7 @@ function StepMenu({ onStartWarmup, onStartOfficial, onHistory, activePatient, se
           </span>
         </div>
 
-        <PatientSelector 
+        <StudentSelector 
           patients={patients}
           onSelect={setActivePatientId}
           onCreate={async (name) => {
@@ -552,7 +552,7 @@ export default function ReactionGameView({ onExit, onGameReady, subjectId, etiqu
       )}
 
       {step === 'patient_evolution' && selectedEvolutionPatient && (
-        <PatientEvolutionDashboard 
+        <StudentEvolutionDashboard 
           patient={selectedEvolutionPatient} 
           onBack={() => triggerSecurity(() => setStep('history'))} 
         />

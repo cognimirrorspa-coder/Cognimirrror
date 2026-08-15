@@ -20,11 +20,11 @@ export function usePatientsDB() {
   const [patients, setPatients] = useState([]);
   const [activePatientId, setActivePatientId] = useState(null);
   const [loadingPatients, setLoadingPatients] = useState(true);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const syncOfflineDataToSupabase = useCallback(async (psicologoId) => {
     if (isSyncingGlobal) {
-      console.log('[Sync] Sincronización ya en curso. Omitiendo llamada concurrente.');
+      console.log('[Sync] Sincronización ya en curso. Omitiendo llamada de sincronización.');
       return;
     }
     if (typeof window === 'undefined' || !navigator.onLine) return;
@@ -37,7 +37,7 @@ export function usePatientsDB() {
       let hasChanges = false;
       const patientIdMap = {};
 
-      // 1. Sincronizar perfiles de pacientes locales creados offline
+      // 1. Sincronizar perfiles de pacientes creados offline
       for (let i = 0; i < localPatients.length; i++) {
         const p = localPatients[i];
         if (p.id.startsWith('local-')) {
@@ -53,7 +53,11 @@ export function usePatientsDB() {
               apellido, 
               id_sujeto: p.idSujeto || null, 
               grupo_id: 'grupo_brayan',
-              psicologo_id: psicologoId
+              psicologo_id: psicologoId,
+              colegio_id: profile?.colegio_id || null,
+              fecha_nacimiento: p.fechaNacimiento || null,
+              diagnostico_nee: p.diagnosticoNee || null,
+              historial_clinico: p.historialClinico || []
             }])
             .select()
             .single();
@@ -62,6 +66,7 @@ export function usePatientsDB() {
             patientIdMap[p.id] = newP.id;
             p.id = newP.id;
             p.psicologo_id = psicologoId;
+            p.colegio_id = profile?.colegio_id || null;
             hasChanges = true;
             console.log(`[Sync] Paciente ${p.name} sincronizado con UUID: ${newP.id}`);
           } else {
@@ -94,50 +99,19 @@ export function usePatientsDB() {
                   id_sujeto: s.idSujeto || null,
                   intento_valido: s.intentoValido !== false,
                   grupo_id: 'grupo_brayan',
-                  psicologo_id: psicologoId
+                  psicologo_id: psicologoId,
+                  colegio_id: profile?.colegio_id || null,
+                  especialista_id: psicologoId
                 }])
                 .select()
                 .single();
 
               if (!sErr && newS) {
-                const telemetry = s.rawTurnsData || [];
-                if (telemetry.length > 0) {
-                  try {
-                    if (s.testType === 'reaction') {
-                      const rows = telemetry.map(t => ({
-                        id_sesion: newS.id,
-                        nivel: t.round || t.level || 0,
-                        tiempo_reaccion_ms: t.time !== undefined ? t.time : (t.latencyMs !== undefined ? t.latencyMs : null),
-                        cara_esperada: t.expected || t.expectedFace,
-                        cara_girada: t.actualFace || t.userFace || null,
-                        es_correcto: t.status === 'Ok' || t.status === 'Corregido' || t.isCorrect || false,
-                        timestamp_local: new Date(t.timestamp || Date.now()).toISOString()
-                      }));
-                      await supabase.from('resultados_juego_reaccion').insert(rows);
-                    } else if (s.testType === 'memory') {
-                      const rows = telemetry.map(t => ({
-                        id_sesion: newS.id,
-                        nivel: t.level || 0,
-                        intento: t.trial || 'A',
-                        cara_esperada: t.expectedFace || t.expected || null,
-                        cara_girada: t.userFace || t.actualFace || null,
-                        es_correcto: t.isCorrect !== undefined ? t.isCorrect : (t.status === 'Ok' || t.status === 'Corregido'),
-                        latencia_ms: t.latencyMs !== undefined ? t.latencyMs : (t.time || null),
-                        array_latencias_intra: t.moveLatencies || null,
-                        tipo_error: t.errorType || null,
-                        timestamp_local: new Date(t.timestamp || Date.now()).toISOString()
-                      }));
-                      await supabase.from('resultados_juego_memoria').insert(rows);
-                    }
-                  } catch (telemetryErr) {
-                    console.warn('[Sync] Error al insertar telemetría relacional:', telemetryErr);
-                  }
-                }
                 s.sessionId = newS.id;
                 hasChanges = true;
-                console.log(`[Sync] Sesión (${s.testType}) de ${p.name} sincronizada en Supabase.`);
+                console.log(`[Sync] Sesión (${s.testType}) sincronizada con UUID: ${newS.id}`);
               } else {
-                console.warn(`[Sync] Error al insertar sesión en Supabase:`, sErr);
+                console.warn('[Sync] Error sincronizando sesión:', sErr);
               }
             }
           }
@@ -147,6 +121,7 @@ export function usePatientsDB() {
       if (hasChanges) {
         const cleanPatients = localPatients.map(p => ({
           ...p,
+          id: patientIdMap[p.id] || p.id,
           sessions: deduplicateSessions(p.sessions)
         }));
         localStorage.setItem('cognimirror_offline_patients', JSON.stringify(cleanPatients));
@@ -156,7 +131,7 @@ export function usePatientsDB() {
     } finally {
       isSyncingGlobal = false;
     }
-  }, []);
+  }, [profile]);
 
   const fetchPatients = useCallback(async () => {
     if (!user) return;
@@ -167,25 +142,29 @@ export function usePatientsDB() {
     }
 
     try {
-      const { data: pacientesData, error: errPacientes } = await supabase
-        .from('pacientes')
-        .select('*')
-        .eq('grupo_id', 'grupo_brayan')
-        .eq('psicologo_id', user.id)
+      let queryPacientes = supabase.from('pacientes').select('*');
+      let querySesiones = supabase.from('sesiones_clinicas').select('*');
+
+      // Filtrado por colegio_id si existe, o fallback por psicologo_id
+      if (profile && profile.colegio_id) {
+        queryPacientes = queryPacientes.eq('colegio_id', profile.colegio_id);
+        querySesiones = querySesiones.eq('colegio_id', profile.colegio_id);
+      } else {
+        queryPacientes = queryPacientes.eq('psicologo_id', user.id);
+        querySesiones = querySesiones.eq('psicologo_id', user.id);
+      }
+
+      const { data: pacientesData, error: errPacientes } = await queryPacientes
         .order('creado_en', { ascending: false });
 
       if (errPacientes) throw errPacientes;
 
-      const { data: sesionesData, error: errSesiones } = await supabase
-        .from('sesiones_clinicas')
-        .select('*')
-        .eq('grupo_id', 'grupo_brayan')
-        .eq('psicologo_id', user.id)
+      const { data: sesionesData, error: errSesiones } = await querySesiones
         .order('fecha_sesion', { ascending: true });
         
       if (errSesiones) throw errSesiones;
 
-      // Consulta de telemetría atómica para compatibilidad con registros antiguos
+      // Consulta de telemetría atómica
       const { data: reaccionData } = await supabase
         .from('resultados_juego_reaccion')
         .select('*');
@@ -199,13 +178,16 @@ export function usePatientsDB() {
         name: `${p.nombre} ${p.apellido}`.trim(),
         idSujeto: p.id_sujeto,
         createdAt: p.creado_en,
+        colegioId: p.colegio_id,
+        fechaNacimiento: p.fecha_nacimiento,
+        diagnosticoNee: p.diagnostico_nee,
+        historialClinico: p.historial_clinico || [],
         sessions: deduplicateSessions(
           sesionesData
             .filter(s => s.id_paciente === p.id)
             .map(s => {
               let rawTurns = s.estadisticas_json?.rawTurnsData || [];
               
-              // Reconstrucción desde BD relacional si no existe en el JSON consolidado (datos históricos)
               if (rawTurns.length === 0) {
                 if (s.tipo_test === 'reaction') {
                   const filtrados = reaccionData?.filter(r => r.id_sesion === s.id) || [];
@@ -255,127 +237,46 @@ export function usePatientsDB() {
         )
       }));
 
-      // Fallback local inteligente para recuperar telemetrías perdidas de ayer en este navegador
-      try {
-        const localData = typeof window !== 'undefined' ? localStorage.getItem('cognimirror_offline_patients') : null;
-        if (localData) {
-          const localPatients = JSON.parse(localData);
-          mapPatients = mapPatients.map(sp => {
-            const lp = localPatients.find(x => x.name.trim().toLowerCase() === sp.name.trim().toLowerCase());
-            if (!lp) return sp;
-
-            return {
-              ...sp,
-              sessions: deduplicateSessions(
-                sp.sessions.map(ss => {
-                  if (ss.rawTurnsData && ss.rawTurnsData.length > 0) return ss;
-                  
-                  // Si la sesión de Supabase no tiene telemetría, la buscamos en el localStorage local por coincidencia de fecha o intento
-                  const localSession = lp.sessions?.find(ls => 
-                    ls.testType === ss.testType && 
-                    (ls.attemptNumber === ss.attemptNumber || Math.abs(new Date(ls.date) - new Date(ss.date)) < 30000)
-                  );
-
-                  if (localSession && localSession.rawTurnsData && localSession.rawTurnsData.length > 0) {
-                    console.log(`[Auto-Merge] Inyectada telemetría local de ayer para la sesión ${ss.sessionId} de ${sp.name}`);
-                    const telemetry = localSession.rawTurnsData;
-                    const statsPayload = {
-                      ...(ss.stats || {}),
-                      rawTurnsData: telemetry
-                    };
-                    
-                    // Auto-sincronización silenciosa y transparente en Supabase
-                    supabase.from('sesiones_clinicas')
-                      .update({ estadisticas_json: statsPayload })
-                      .eq('id', ss.sessionId)
-                      .then(({ error }) => {
-                        if (!error) console.log(`[Auto-Sync] Subida telemetría histórica de sesión ${ss.sessionId} a Supabase.`);
-                      });
-
-                    // Insertar en tablas relacionales para completitud
-                    if (ss.testType === 'reaction') {
-                      const rows = telemetry.map(t => ({
-                        id_sesion: ss.sessionId,
-                        nivel: t.round || t.level || 0,
-                        tiempo_reaccion_ms: t.time !== undefined ? t.time : (t.latencyMs !== undefined ? t.latencyMs : null),
-                        cara_esperada: t.expected || t.expectedFace,
-                        cara_girada: t.actualFace || t.userFace || null,
-                        es_correcto: t.status === 'Ok' || t.status === 'Corregido' || t.isCorrect || false,
-                        timestamp_local: new Date(t.timestamp || Date.now()).toISOString()
-                      }));
-                      supabase.from('resultados_juego_reaccion').insert(rows).then(() => {});
-                    } else if (ss.testType === 'memory') {
-                      const rows = telemetry.map(t => ({
-                        id_sesion: ss.sessionId,
-                        nivel: t.level || 0,
-                        intento: t.trial || 'A',
-                        cara_esperada: t.expectedFace || t.expected || null,
-                        cara_girada: t.userFace || t.actualFace || null,
-                        es_correcto: t.isCorrect !== undefined ? t.isCorrect : (t.status === 'Ok' || t.status === 'Corregido'),
-                        latencia_ms: t.latencyMs !== undefined ? t.latencyMs : (t.time || null),
-                        array_latencias_intra: t.moveLatencies || null,
-                        tipo_error: t.errorType || null,
-                        timestamp_local: new Date(t.timestamp || Date.now()).toISOString()
-                      }));
-                      supabase.from('resultados_juego_memoria').insert(rows).then(() => {});
-                    }
-
-                    return {
-                      ...ss,
-                      rawTurnsData: telemetry
-                    };
-                  }
-                  return ss;
-                })
-              )
-            };
-          });
-        }
-      } catch (errLocal) {
-        console.warn("[Auto-Merge] Error al sincronizar datos locales:", errLocal);
-      }
-
-      // Guardar base de datos offline consolidada
-      if (typeof window !== 'undefined') {
-        const cleanData = mapPatients.map(p => ({
-          ...p,
-          sessions: deduplicateSessions(p.sessions)
-        }));
-        localStorage.setItem('cognimirror_offline_patients', JSON.stringify(cleanData));
-      }
-
-      setPatients(mapPatients);
-    } catch (error) {
-      console.warn('[Offline Mode] Sin conexión a internet o red inestable. Cargando datos locales desde el almacenamiento offline.');
-      // Fallback a localStorage offline
+      // Unir los locales que no se han sincronizado (offline)
       if (typeof window !== 'undefined') {
         const stored = localStorage.getItem('cognimirror_offline_patients');
         if (stored) {
-          try {
-            const parsed = JSON.parse(stored);
-            const cleanData = parsed.map(p => ({
-              ...p,
-              sessions: deduplicateSessions(p.sessions)
-            }));
-            setPatients(cleanData);
-            return;
-          } catch (e) {
-            console.error('[Offline Mode] Error parsing offline patients:', e);
-          }
+          const localOnly = JSON.parse(stored).filter(lp => lp.id.startsWith('local-'));
+          mapPatients = [...localOnly, ...mapPatients];
         }
       }
-      setPatients([]);
-    } finally {
+
+      setPatients(mapPatients);
+      setLoadingPatients(false);
+    } catch (error) {
+      console.error('[usePatientsDB] Error consultando pacientes/sesiones:', error.message);
+      // Cargar del local storage en caso de desconexión extrema
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('cognimirror_offline_patients');
+        if (stored) {
+          setPatients(JSON.parse(stored));
+        }
+      }
       setLoadingPatients(false);
     }
-  }, [user, syncOfflineDataToSupabase]);
+  }, [user, profile, syncOfflineDataToSupabase]);
 
+  // Cargar datos al montar o cambiar el usuario
   useEffect(() => {
-    fetchPatients();
+    if (user) {
+      setLoadingPatients(true);
+      fetchPatients();
+    } else {
+      setPatients([]);
+      setLoadingPatients(false);
+    }
+  }, [user, profile, fetchPatients]);
 
+  // Sincronizar estado online/offline del navegador
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const handleOnline = () => {
-        console.log('[Network] Conexión a internet restablecida en el lobby. Sincronizando datos offline...');
+        console.log('[Network] Conexión recuperada, sincronizando base de datos...');
         fetchPatients();
       };
       window.addEventListener('online', handleOnline);
@@ -389,12 +290,17 @@ export function usePatientsDB() {
     const nombre = partes[0];
     const apellido = partes.length > 1 ? partes.slice(1).join(' ') : '';
     const tempId = 'local-' + Math.random().toString(36).substr(2, 9);
+    
     const newPatient = {
       id: tempId,
       name: name.trim(),
       idSujeto: idSujeto,
       createdAt: new Date().toISOString(),
       psicologo_id: user.id,
+      colegioId: profile?.colegio_id || null,
+      fechaNacimiento: null,
+      diagnosticoNee: null,
+      historialClinico: [],
       sessions: []
     };
 
@@ -406,7 +312,8 @@ export function usePatientsDB() {
           apellido, 
           id_sujeto: idSujeto, 
           grupo_id: 'grupo_brayan',
-          psicologo_id: user.id
+          psicologo_id: user.id,
+          colegio_id: profile?.colegio_id || null
         }])
         .select()
         .single();
@@ -419,6 +326,10 @@ export function usePatientsDB() {
         idSujeto: data.id_sujeto,
         createdAt: data.creado_en,
         psicologo_id: data.psicologo_id,
+        colegioId: data.colegio_id,
+        fechaNacimiento: data.fecha_nacimiento,
+        diagnosticoNee: data.diagnostico_nee,
+        historialClinico: data.historial_clinico || [],
         sessions: []
       };
 
@@ -440,6 +351,67 @@ export function usePatientsDB() {
         return updated;
       });
       return newPatient;
+    }
+  }, [user, profile]);
+
+  const updatePatient = useCallback(async (patientId, updates) => {
+    if (!user) return null;
+    
+    try {
+      const dbUpdates = {
+        fecha_nacimiento: updates.fechaNacimiento !== undefined ? updates.fechaNacimiento : null,
+        diagnostico_nee: updates.diagnosticoNee !== undefined ? updates.diagnosticoNee : null,
+        historial_clinico: updates.historialClinico !== undefined ? updates.historialClinico : []
+      };
+
+      if (!patientId.startsWith('local-')) {
+        const { data, error } = await supabase
+          .from('pacientes')
+          .update(dbUpdates)
+          .eq('id', patientId)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setPatients(prev => prev.map(p => {
+          if (p.id === patientId) {
+            return {
+              ...p,
+              fechaNacimiento: data.fecha_nacimiento,
+              diagnosticoNee: data.diagnostico_nee,
+              historialClinico: data.historial_clinico || []
+            };
+          }
+          return p;
+        }));
+      } else {
+        // Actualizar localmente si es offline
+        setPatients(prev => prev.map(p => {
+          if (p.id === patientId) {
+            return {
+              ...p,
+              fechaNacimiento: updates.fechaNacimiento,
+              diagnosticoNee: updates.diagnosticoNee,
+              historialClinico: updates.historialClinico || []
+            };
+          }
+          return p;
+        }));
+      }
+
+      // Sincronizar local storage
+      setPatients(current => {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cognimirror_offline_patients', JSON.stringify(current));
+        }
+        return current;
+      });
+
+      return true;
+    } catch (err) {
+      console.error('[usePatientsDB] Error actualizando paciente:', err.message);
+      return false;
     }
   }, [user]);
 
@@ -480,7 +452,6 @@ export function usePatientsDB() {
         rawTurnsData: telemetryData
       };
 
-      // Si el paciente es local, no podemos insertarlo en Supabase sin su paciente
       if (patientId.startsWith('local-')) {
         throw new Error('El paciente es local. Guardando la sesión en local storage.');
       }
@@ -497,7 +468,9 @@ export function usePatientsDB() {
           id_sujeto: sessionData.idSujeto || sessionData.id_sujeto || null,
           intento_valido: sessionData.intentoValido !== undefined ? sessionData.intentoValido : true,
           grupo_id: 'grupo_brayan',
-          psicologo_id: user?.id || null
+          psicologo_id: user?.id || null,
+          colegio_id: profile?.colegio_id || null,
+          especialista_id: user?.id || null
         }])
         .select()
         .single();
@@ -622,7 +595,7 @@ export function usePatientsDB() {
 
       return localSession;
     }
-  }, [patients, user]);
+  }, [patients, user, profile]);
 
   const deletePatient = useCallback(async (patientId) => {
     try {
@@ -726,6 +699,7 @@ export function usePatientsDB() {
     activePatientId,
     setActivePatientId,
     createPatient,
+    updatePatient,
     addSession,
     deletePatient,
     deleteSession,

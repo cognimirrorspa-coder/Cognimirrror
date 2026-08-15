@@ -1383,7 +1383,7 @@ export default function ExportCenter() {
                 {/* Botón de Informe cuando termina */}
                 {((liveTelemetry && (liveTelemetry.stage === 'finished' || liveTelemetry.gameState === 'finished')) || savedSessionId) && (
                   <Link
-                    href={`/patients/${activeControlEval.id_paciente}`}
+                    href={`/students/${activeControlEval.id_paciente}`}
                     onClick={() => setActiveControlEval(null)}
                     className="w-full text-center py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:brightness-110 text-black font-black text-xs uppercase tracking-wider rounded transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-1.5 shadow-lg shadow-green-500/10"
                   >

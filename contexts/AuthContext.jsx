@@ -3,11 +3,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 
-// =========================================================================
-// MODO BYPASS DE CONTINGENCIA LOCAL (FÁCIL DE DESACTIVAR O ELIMINAR)
-// =========================================================================
-// Cambia ENABLE_OFFLINE_BYPASS a `false` cuando recuperes el acceso 2FA de GitHub
-// para volver a utilizar la autenticación real de Supabase Auth.
 const ENABLE_OFFLINE_BYPASS = false;
 
 const BYPASS_EMAIL = 'evaluador@cognimirror.com';
@@ -24,10 +19,10 @@ const BYPASS_SESSION = {
   access_token: 'bypass-mock-token-1234567890',
   refresh_token: 'bypass-mock-token-1234567890'
 };
-// =========================================================================
 
 const AuthContext = createContext({
   user: null,
+  profile: null,
   loading: true,
   signIn: async () => {},
   signUp: async () => {},
@@ -36,21 +31,81 @@ const AuthContext = createContext({
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper para cargar perfil desde base de datos Supabase
+  const loadUserProfile = async (userObj) => {
+    if (!userObj) {
+      setProfile(null);
+      return null;
+    }
+
+    // Mock para usuarios bypass locales
+    if (userObj.id === '00000000-0000-0000-0000-000000000000' || userObj.email === 'coordinador@colegio.com') {
+      const isCoordinator = userObj.email === 'coordinador@colegio.com';
+      const mockProfile = {
+        id: userObj.id,
+        email: userObj.email,
+        nombre_completo: isCoordinator ? 'Coordinador PIE Demostración' : 'Ps. Evaluador de Prueba',
+        colegio_id: 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08',
+        rol: isCoordinator ? 'coordinador_pie' : 'especialista'
+      };
+      setProfile(mockProfile);
+      return mockProfile;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('perfiles')
+        .select('*')
+        .eq('id', userObj.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        setProfile(data);
+        return data;
+      } else {
+        // Fallback: buscar en especialistas_bypass
+        const { data: bypassUser } = await supabase
+          .from('especialistas_bypass')
+          .select('*')
+          .eq('id', userObj.id)
+          .maybeSingle();
+
+        if (bypassUser) {
+          const fallbackProfile = {
+            id: bypassUser.id,
+            email: bypassUser.email,
+            nombre_completo: bypassUser.nombre_completo,
+            colegio_id: 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08',
+            rol: 'especialista'
+          };
+          setProfile(fallbackProfile);
+          return fallbackProfile;
+        }
+      }
+      setProfile(null);
+      return null;
+    } catch (err) {
+      console.error('[AuthContext] Error al cargar perfil:', err.message);
+      setProfile(null);
+      return null;
+    }
+  };
+
   useEffect(() => {
-    // Timeout de seguridad máximo para evitar bloqueos de UI (1000ms)
     const safetyTimer = setTimeout(() => {
       setLoading(false);
-    }, 1000);
+    }, 1500);
 
-    // 1. Obtener la sesión activa al inicializar
     const getInitialSession = async () => {
       try {
         const stored = typeof window !== 'undefined' ? localStorage.getItem('cognimirror_bypass_session') : null;
         if (stored) {
           const parsed = JSON.parse(stored);
           setUser(parsed.user);
+          await loadUserProfile(parsed.user);
           setLoading(false);
           clearTimeout(safetyTimer);
           return;
@@ -58,7 +113,13 @@ export function AuthProvider({ children }) {
 
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
-        setUser(session?.user ?? null);
+        if (session?.user) {
+          setUser(session.user);
+          await loadUserProfile(session.user);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
       } catch (e) {
         console.error('[AuthContext] Error obteniendo sesión inicial:', e.message);
       } finally {
@@ -69,15 +130,22 @@ export function AuthProvider({ children }) {
 
     getInitialSession();
 
-    // 2. Suscribirse a cambios en el estado de autenticación (login, logout, token refrescado)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const stored = localStorage.getItem('cognimirror_bypass_session');
       if (stored) {
-        setUser(JSON.parse(stored).user);
+        const parsed = JSON.parse(stored);
+        setUser(parsed.user);
+        await loadUserProfile(parsed.user);
         setLoading(false);
         return;
       }
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        await loadUserProfile(session.user);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
       setLoading(false);
     });
 
@@ -89,34 +157,36 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     setLoading(true);
     try {
-      // 1. Verificar las cuentas demo estáticas locales por defecto (evaluador/psicologo)
-      if (email === BYPASS_EMAIL || email === 'psicologo@clinica.com') {
+      // 1. Cuentas bypass de demostración
+      if (email === BYPASS_EMAIL || email === 'psicologo@clinica.com' || email === 'coordinador@colegio.com') {
         const passwordCorrect = (email === BYPASS_EMAIL && password === BYPASS_PASSWORD) || 
-                                (email === 'psicologo@clinica.com' && password === 'clinica2026');
+                                (email === 'psicologo@clinica.com' && password === 'clinica2026') ||
+                                (email === 'coordinador@colegio.com' && password === 'clinica2026');
         
         if (!passwordCorrect) {
           return { data: null, error: { message: 'Contraseña incorrecta para la cuenta de demostración.' } };
         }
         
-        const demoUser = {
-          id: '00000000-0000-0000-0000-000000000000',
+        const demoUserObj = {
+          id: email === 'coordinador@colegio.com' ? 'c001c001-c001-c001-c001-c001c001c001' : '00000000-0000-0000-0000-000000000000',
           email: email,
           user_metadata: {
-            full_name: email === BYPASS_EMAIL ? 'Ps. Evaluador de Prueba' : 'Ps. Especialista Clínico'
+            full_name: email === BYPASS_EMAIL ? 'Ps. Evaluador de Prueba' : (email === 'coordinador@colegio.com' ? 'Coordinador PIE Demostración' : 'Ps. Especialista Clínico')
           }
         };
-        const demoSession = {
-          user: demoUser,
+        const demoSessionObj = {
+          user: demoUserObj,
           access_token: 'bypass-mock-token-1234567890',
           refresh_token: 'bypass-mock-token-1234567890'
         };
         
-        localStorage.setItem('cognimirror_bypass_session', JSON.stringify(demoSession));
-        setUser(demoUser);
-        return { data: { user: demoUser, session: demoSession }, error: null };
+        localStorage.setItem('cognimirror_bypass_session', JSON.stringify(demoSessionObj));
+        setUser(demoUserObj);
+        await loadUserProfile(demoUserObj);
+        return { data: { user: demoUserObj, session: demoSessionObj }, error: null };
       }
 
-      // 2. Intentar login real contra Supabase Auth en la nube (el usuario creado en auth.users)
+      // 2. Autenticación real contra Supabase Auth
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -125,11 +195,12 @@ export function AuthProvider({ children }) {
       if (data && data.user && data.session) {
         localStorage.setItem('cognimirror_bypass_session', JSON.stringify(data.session));
         setUser(data.user);
+        await loadUserProfile(data.user);
         return { data, error: null };
       }
 
-      // 3. Fallback: Consultar si el especialista existe en la tabla de bypass persistente legacy
-      const { data: bypassUser, error: bypassError } = await supabase
+      // 3. Fallback: especialistas_bypass legacy
+      const { data: bypassUser } = await supabase
         .from('especialistas_bypass')
         .select('*')
         .eq('email', email)
@@ -155,11 +226,11 @@ export function AuthProvider({ children }) {
         
         localStorage.setItem('cognimirror_bypass_session', JSON.stringify(sessionObj));
         setUser(matchedUser);
+        await loadUserProfile(matchedUser);
         return { data: { user: matchedUser, session: sessionObj }, error: null };
       }
 
       if (authError) throw authError;
-
       return { data: null, error: { message: 'Usuario no encontrado en el sistema.' } };
     } catch (error) {
       console.error('[AuthContext] Error al iniciar sesión:', error.message);
@@ -172,7 +243,6 @@ export function AuthProvider({ children }) {
   const signUp = async (email, password, fullName) => {
     setLoading(true);
     try {
-      // 1. Registrar el usuario mediante nuestra API segura en el servidor
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -182,15 +252,12 @@ export function AuthProvider({ children }) {
       });
 
       const resData = await res.json();
-
       if (!res.ok || resData.error) {
-        throw new Error(resData.error || 'Error al intentar registrar usuario en la base de datos de autenticación.');
+        throw new Error(resData.error || 'Error al registrar usuario.');
       }
 
-      // 2. Si la creación en auth.users fue exitosa, iniciamos sesión automáticamente
       console.log('[AuthContext] Cuenta creada en Supabase Auth, iniciando sesión...');
       return await signIn(email, password);
-
     } catch (error) {
       console.error('[AuthContext] Error en el flujo de registro:', error.message);
       return { data: null, error };
@@ -204,6 +271,7 @@ export function AuthProvider({ children }) {
     try {
       localStorage.removeItem('cognimirror_bypass_session');
       setUser(null);
+      setProfile(null);
       try {
         await supabase.auth.signOut();
       } catch (e) {
@@ -217,7 +285,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
