@@ -145,13 +145,22 @@ export function usePatientsDB() {
       let queryPacientes = supabase.from('pacientes').select('*');
       let querySesiones = supabase.from('sesiones_clinicas').select('*');
 
-      // Filtrado por colegio_id si existe, o fallback por psicologo_id
+      // Filtrado inteligente: incluir registros del colegio actual, del colegio lab y los históricos (colegio_id IS NULL)
       if (profile && profile.colegio_id) {
-        queryPacientes = queryPacientes.eq('colegio_id', profile.colegio_id);
-        querySesiones = querySesiones.eq('colegio_id', profile.colegio_id);
-      } else {
-        queryPacientes = queryPacientes.eq('psicologo_id', user.id);
-        querySesiones = querySesiones.eq('psicologo_id', user.id);
+        const isLab = profile.email === 'br.castros@duocuc.cl' || 
+                      profile.email === 'cognimirrorspa@gmail.com' || 
+                      profile.email === 'evaluador@cognimirror.cl' ||
+                      profile.colegio_id === 'c0000000-0000-0000-0000-000000000001' ||
+                      profile.colegio_id === 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08';
+
+        if (isLab) {
+          // Para el equipo de investigación, cargar todos los pacientes históricos y del laboratorio
+          queryPacientes = queryPacientes.or(`colegio_id.eq.${profile.colegio_id},colegio_id.is.null,colegio_id.eq.c0000000-0000-0000-0000-000000000001,colegio_id.eq.d70a4c28-98e3-4c9b-8d07-ee2c2a3cef08`);
+          querySesiones = querySesiones.or(`colegio_id.eq.${profile.colegio_id},colegio_id.is.null,colegio_id.eq.c0000000-0000-0000-0000-000000000001,colegio_id.eq.d70a4c28-98e3-4c9b-8d07-ee2c2a3cef08`);
+        } else {
+          queryPacientes = queryPacientes.or(`colegio_id.eq.${profile.colegio_id},colegio_id.is.null`);
+          querySesiones = querySesiones.or(`colegio_id.eq.${profile.colegio_id},colegio_id.is.null`);
+        }
       }
 
       const { data: pacientesData, error: errPacientes } = await queryPacientes
