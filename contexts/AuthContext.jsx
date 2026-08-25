@@ -146,7 +146,7 @@ export function AuthProvider({ children }) {
     getInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const stored = localStorage.getItem('cognimirror_bypass_session');
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('cognimirror_bypass_session') : null;
       if (stored) {
         const parsed = JSON.parse(stored);
         setUser(parsed.user);
@@ -202,7 +202,9 @@ export function AuthProvider({ children }) {
           refresh_token: 'bypass-mock-token-1234567890'
         };
         
-        localStorage.setItem('cognimirror_bypass_session', JSON.stringify(demoSessionObj));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cognimirror_bypass_session', JSON.stringify(demoSessionObj));
+        }
         setUser(demoUserObj);
         await loadUserProfile(demoUserObj);
         return { data: { user: demoUserObj, session: demoSessionObj }, error: null };
@@ -216,7 +218,9 @@ export function AuthProvider({ children }) {
         });
 
         if (data && data.user && data.session) {
-          localStorage.setItem('cognimirror_bypass_session', JSON.stringify(data.session));
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('cognimirror_bypass_session', JSON.stringify(data.session));
+          }
           setUser(data.user);
           const userProf = await loadUserProfile(data.user);
 
@@ -314,6 +318,13 @@ export function AuthProvider({ children }) {
 
       if (typeof window !== 'undefined') {
         localStorage.removeItem('cognimirror_bypass_session');
+        // Limpiar todas las posibles claves de supabase auth en localStorage
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('supabase') || key.includes('cognimirror') || key.includes('auth')) {
+            localStorage.removeItem(key);
+          }
+        });
+        sessionStorage.clear();
       }
       setUser(null);
       setProfile(null);
@@ -325,7 +336,7 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
       if (typeof window !== 'undefined') {
-        window.location.replace('/login');
+        window.location.href = '/login';
       }
     }
   };

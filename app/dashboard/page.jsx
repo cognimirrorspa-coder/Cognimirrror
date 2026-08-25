@@ -264,7 +264,7 @@ function ClassicDashboard() {
         @keyframes spin { to { transform: rotate(360deg); } }
         :root { --bg:#0a0c10;--surface:#13161e;--card:#1a1e2a;--border:rgba(255,255,255,0.07);--accent:#2563eb;--green:#22c55e;--yellow:#fbbf24;--red:#ef4444;--text:#e2e8f0;--muted:#64748b; }
         .dashboard-body { background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:row; }
-        .sidebar { width:270px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 18px;flex-shrink:0;height:100%;z-index:10;box-sizing:border-box; }
+        .sidebar { width:270px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 18px;flex-shrink:0;height:100%;z-index:10;box-sizing:border-box;overflow-y:auto; }
         .sidebar-logo { font-size:1.2rem;font-weight:900;display:flex;align-items:center;gap:8px;margin-bottom:24px;color:var(--text);letter-spacing:-0.5px; }
         .sidebar-logo span { color:var(--accent); }
         .sidebar-user { background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:20px; }
@@ -336,7 +336,23 @@ function ClassicDashboard() {
                   ? (user.user_metadata?.full_name || profile?.nombre_completo) 
                   : `Ps. ${user.user_metadata?.full_name || profile?.nombre_completo || 'Especialista'}`}
               </div>
-              <div className="sidebar-user-role">Sesión Clínica Activa</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <div className="sidebar-user-role">Sesión Clínica Activa</div>
+                <button 
+                  onClick={() => signOut()}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#f87171',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Salir
+                </button>
+              </div>
               {isOfflineNetwork && (
                 <div style={{
                   display: 'inline-flex',
@@ -397,7 +413,7 @@ function ClassicDashboard() {
               <div className={`sidebar-ble-dot ${isConnected ? 'ok' : ''}`} />
               <span>{isConnected ? device : 'Conectar Cubo'}</span>
             </div>
-            <button onClick={signOut} className="sidebar-btn-salir">
+            <button onClick={() => signOut()} className="sidebar-btn-salir">
               Cerrar Sesión
             </button>
           </div>
@@ -406,14 +422,33 @@ function ClassicDashboard() {
         {/* Contenido Principal Derecho */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Barra Superior Simplificada */}
-          <header style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Monitoreo del Dispositivo
             </div>
-            <div className="header-stats" style={{ display: 'flex', gap: '20px', fontSize: '0.85rem' }}>
-              <div className="header-stat" style={{ color: 'var(--muted)' }}>Rotaciones: <strong id="hdr-moves" style={{ color: 'var(--text)' }}>0</strong></div>
-              <div className="header-stat" style={{ color: 'var(--muted)' }}>Tiempo: <strong id="hdr-time" style={{ color: 'var(--text)' }}>00:00.000</strong></div>
-              <div className="header-stat" style={{ color: 'var(--muted)' }}>TPS: <strong id="hdr-tps" style={{ color: 'var(--text)' }}>0.00</strong></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div className="header-stats" style={{ display: 'flex', gap: '20px', fontSize: '0.85rem' }}>
+                <div className="header-stat" style={{ color: 'var(--muted)' }}>Rotaciones: <strong id="hdr-moves" style={{ color: 'var(--text)' }}>0</strong></div>
+                <div className="header-stat" style={{ color: 'var(--muted)' }}>Tiempo: <strong id="hdr-time" style={{ color: 'var(--text)' }}>00:00.000</strong></div>
+                <div className="header-stat" style={{ color: 'var(--muted)' }}>TPS: <strong id="hdr-tps" style={{ color: 'var(--text)' }}>0.00</strong></div>
+              </div>
+              <button 
+                onClick={() => signOut()}
+                style={{
+                  padding: '6px 14px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#f87171',
+                  borderRadius: '8px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Cerrar Sesión
+              </button>
             </div>
           </header>
 
