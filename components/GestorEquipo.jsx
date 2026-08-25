@@ -5,6 +5,20 @@ import { supabase } from '../utils/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { Trash2, UserPlus, Mail, User, Shield, AlertTriangle, Loader2, CheckCircle2, XCircle, Power, UserCheck } from 'lucide-react';
 
+const ROLES_PREDEFINIDOS = [
+  { id: 'psicologo', label: 'Psicólogo(a)', cargoDefault: 'Psicólogo(a) PIE' },
+  { id: 'terapeuta', label: 'Terapeuta Ocupacional', cargoDefault: 'Terapeuta Ocupacional' },
+  { id: 'fonoaudiologo', label: 'Fonoaudiólogo(a)', cargoDefault: 'Fonoaudiólogo(a) PIE' },
+  { id: 'educador_diferencial', label: 'Educador(a) Diferencial', cargoDefault: 'Educador(a) Diferencial' },
+  { id: 'psicopedagogo', label: 'Psicopedagogo(a)', cargoDefault: 'Psicopedagogo(a) Institucional' },
+  { id: 'kinesiologo', label: 'Kinesiólogo(a)', cargoDefault: 'Kinesiólogo(a) Neurorehabilitación' },
+  { id: 'asistente_social', label: 'Trabajador(a) / Asistente Social', cargoDefault: 'Asistente Social PIE' },
+  { id: 'neurologo', label: 'Médico / Neurólogo(a)', cargoDefault: 'Neurólogo(a) Infantil / Asesor' },
+  { id: 'coordinador_pie', label: 'Coordinador(a) PIE', cargoDefault: 'Coordinador(a) General PIE' },
+  { id: 'director', label: 'Director(a) / Administrador(a)', cargoDefault: 'Director(a) Académico(a)' },
+  { id: 'otro', label: '+ Otro Rol / Personalizado', cargoDefault: 'Especialista Multidisciplinario' }
+];
+
 export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }) {
   const { profile } = useAuth();
   const [especialistas, setEspecialistas] = useState([]);
@@ -15,6 +29,7 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [rol, setRol] = useState('psicologo');
+  const [customRol, setCustomRol] = useState('');
   const [cargo, setCargo] = useState('Psicólogo(a) PIE');
   const [tempPassword, setTempPassword] = useState('');
   const [inviting, setInviting] = useState(false);
@@ -35,7 +50,6 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
       setEspecialistas(data || []);
     } catch (err) {
       console.warn('[GestorEquipo] Consulta en fallback:', err.message);
-      // Fallback si la tabla local está vacía
       setEspecialistas([]);
     } finally {
       setLoading(false);
@@ -49,11 +63,15 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
   // Actualizar cargo por defecto al cambiar de rol
   const handleRolChange = (newRol) => {
     setRol(newRol);
-    if (newRol === 'psicologo') setCargo('Psicólogo(a) PIE');
-    else if (newRol === 'terapeuta') setCargo('Terapeuta Ocupacional');
-    else if (newRol === 'coordinador_pie') setCargo('Coordinador(a) PIE');
-    else if (newRol === 'director') setCargo('Director(a) Académico(a)');
-    else setCargo('Especialista Clínico');
+    const found = ROLES_PREDEFINIDOS.find(r => r.id === newRol);
+    if (found) {
+      if (newRol === 'otro') {
+        setCustomRol('');
+        setCargo('');
+      } else {
+        setCargo(found.cargoDefault);
+      }
+    }
   };
 
   const handleInvite = async (e) => {
@@ -63,6 +81,9 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
     setErrorMsg('');
     setSuccessMsg('');
 
+    const finalRol = rol === 'otro' ? (customRol.trim().toLowerCase().replace(/\s+/g, '_') || 'especialista') : rol;
+    const finalCargo = cargo.trim() || (rol === 'otro' ? customRol.trim() : 'Especialista');
+
     try {
       const res = await fetch('/api/equipo/invitar', {
         method: 'POST',
@@ -70,8 +91,8 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
         body: JSON.stringify({
           nombre: nombre.trim(),
           email: email.trim().toLowerCase(),
-          rol,
-          cargo: cargo.trim(),
+          rol: finalRol,
+          cargo: finalCargo,
           tempPassword: tempPassword.trim() || null,
           colegio_id: colegioId,
           adminName: profile?.nombre_completo || 'Director / Coordinador'
@@ -86,6 +107,7 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
       setSuccessMsg('¡Profesional agregado al equipo con éxito!');
       setNombre('');
       setEmail('');
+      setCustomRol('');
       setTempPassword('');
       setTimeout(() => {
         setShowAddModal(false);
@@ -188,7 +210,7 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
           </div>
           <h4 className="text-white font-bold text-sm">Aún no hay profesionales registrados en este colegio</h4>
           <p className="text-slate-400 text-xs max-w-md">
-            Comienza armando el equipo PIE de {colegioNombre} agregando psicólogos, terapeutas o coordinadores clínicos.
+            Comienza armando el equipo multidisciplinario de {colegioNombre} agregando psicólogos, terapeutas, fonoaudiólogos o educadores.
           </p>
           <button
             onClick={() => setShowAddModal(true)}
@@ -217,7 +239,10 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
                     <div className={`w-8 h-8 rounded-full border flex items-center justify-center text-xs font-black shrink-0 ${
                       esp.rol === 'director' ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' :
                       esp.rol === 'coordinador_pie' ? 'bg-purple-500/15 border-purple-500/30 text-purple-300' :
-                      'bg-blue-500/15 border-blue-500/30 text-blue-300'
+                      esp.rol === 'fonoaudiologo' ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300' :
+                      esp.rol === 'educador_diferencial' ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300' :
+                      esp.rol === 'psicologo' ? 'bg-blue-500/15 border-blue-500/30 text-blue-300' :
+                      'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
                     }`}>
                       {esp.nombre_completo?.charAt(0) || 'P'}
                     </div>
@@ -230,10 +255,12 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
                     <span className={`px-2.5 py-1 rounded text-[10px] font-black uppercase font-mono border ${
                       esp.rol === 'director' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
                       esp.rol === 'coordinador_pie' ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' :
+                      esp.rol === 'fonoaudiologo' ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' :
+                      esp.rol === 'educador_diferencial' ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' :
                       esp.rol === 'psicologo' ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' :
                       'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                     }`}>
-                      {esp.rol}
+                      {esp.rol?.replace(/_/g, ' ')}
                     </span>
                   </td>
                   <td className="py-4 px-4 text-slate-300 font-semibold">{esp.cargo_texto || 'Profesional PIE'}</td>
@@ -315,7 +342,7 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
                 <input
                   type="text"
                   required
-                  placeholder="Ej: Ps. Valentina Rivas"
+                  placeholder="Ej: Ps. Valentina Rivas o Flga. Camila Soto"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   className="w-full bg-[#181c28] border border-white/10 focus:border-purple-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
@@ -336,7 +363,7 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
                     Rol en Sistema *
@@ -346,10 +373,9 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
                     onChange={(e) => handleRolChange(e.target.value)}
                     className="w-full bg-[#181c28] border border-white/10 focus:border-purple-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer"
                   >
-                    <option value="psicologo">Psicólogo(a)</option>
-                    <option value="terapeuta">Terapeuta</option>
-                    <option value="coordinador_pie">Coordinador PIE</option>
-                    <option value="director">Director(a)</option>
+                    {ROLES_PREDEFINIDOS.map(r => (
+                      <option key={r.id} value={r.id}>{r.label}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -359,12 +385,33 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
                   </label>
                   <input
                     type="text"
+                    placeholder="Ej: Fonoaudióloga PIE"
                     value={cargo}
                     onChange={(e) => setCargo(e.target.value)}
                     className="w-full bg-[#181c28] border border-white/10 focus:border-purple-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none"
                   />
                 </div>
               </div>
+
+              {/* Si seleccionó 'otro', habilitar campo para especificar el nuevo rol */}
+              {rol === 'otro' && (
+                <div className="animate-in fade-in duration-200">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-purple-400 block mb-1.5">
+                    Especificar Nombre del Rol Personalizado *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej: Psicopedagogo, Orientador, Docente PIE, etc."
+                    value={customRol}
+                    onChange={(e) => {
+                      setCustomRol(e.target.value);
+                      if (!cargo) setCargo(e.target.value);
+                    }}
+                    className="w-full bg-[#1e1a2f] border border-purple-500/50 focus:border-purple-400 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
