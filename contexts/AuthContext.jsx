@@ -42,7 +42,8 @@ export function AuthProvider({ children }) {
 
     // Mock para usuarios bypass y colegio de pruebas CogniMirror Research Lab
     const isLabAdmin = userObj.email === 'cognimirrorspa@gmail.com' || userObj.email === 'director@davinci.cl';
-    const isLabEvaluator = userObj.email === 'evaluador@cognimirror.cl' || userObj.email === 'evaluador@cognimirror.com' || userObj.email === 'psicologo@clinica.com';
+    const isBrayan = userObj.email === 'br.castros@duocuc.cl';
+    const isLabEvaluator = isBrayan || userObj.email === 'evaluador@cognimirror.cl' || userObj.email === 'evaluador@cognimirror.com' || userObj.email === 'psicologo@clinica.com';
     const isCoordinator = userObj.email === 'coordinador@colegio.com';
 
     if (isLabAdmin || isLabEvaluator || isCoordinator || userObj.id === '00000000-0000-0000-0000-000000000000') {
@@ -51,10 +52,10 @@ export function AuthProvider({ children }) {
         email: userObj.email,
         nombre_completo: isLabAdmin 
           ? 'Equipo CogniMirror (Administración & I+D)' 
-          : (isLabEvaluator ? 'Ps. Evaluador de Investigación (200 Tests)' : 'Coordinador PIE General'),
+          : (isBrayan ? 'Ps. Brayan Castro (Investigador PIE)' : (isLabEvaluator ? 'Ps. Evaluador de Investigación (200 Tests)' : 'Coordinador PIE General')),
         colegio_id: 'c0000000-0000-0000-0000-000000000001',
         rol: isLabAdmin ? 'director' : (isCoordinator ? 'coordinador_pie' : 'psicologo'),
-        cargo_texto: isLabAdmin ? 'Director de Investigación y Desarrollo' : 'Psicólogo Investigador / Evaluador BLE',
+        cargo_texto: isLabAdmin ? 'Director de Investigación y Desarrollo' : 'Psicólogo Clínico / Investigador PIE',
         colegio: {
           id: 'c0000000-0000-0000-0000-000000000001',
           nombre: 'CogniMirror Research Lab (Entorno de Pruebas)',
@@ -172,26 +173,25 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       // 1. Cuentas del equipo y sandbox de pruebas CogniMirror
-      const isDemoAccount = email === 'cognimirrorspa@gmail.com' || 
+      const isBrayan = email === 'br.castros@duocuc.cl';
+      const isDemoAccount = isBrayan ||
+                            email === 'cognimirrorspa@gmail.com' || 
                             email === 'evaluador@cognimirror.cl' || 
                             email === 'evaluador@cognimirror.com' ||
                             email === 'psicologo@clinica.com' || 
                             email === 'coordinador@colegio.com' || 
                             email === 'director@davinci.cl';
 
-      if (isDemoAccount) {
-        const passwordCorrect = password === 'clinica2026';
-        
-        if (!passwordCorrect) {
-          return { data: null, error: { message: 'Contraseña incorrecta para la cuenta de investigación / demostración.' } };
-        }
-        
+      if (isDemoAccount && (password === 'clinica2026' || password === '123456')) {
         const isLabAdmin = email === 'cognimirrorspa@gmail.com' || email === 'director@davinci.cl';
         const demoUserObj = {
-          id: isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001',
+          id: isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : 
+              (isBrayan ? 'b0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001'),
           email: email,
           user_metadata: {
-            full_name: isLabAdmin ? 'Equipo CogniMirror (Administración & I+D)' : 'Ps. Evaluador de Investigación (200 Tests)'
+            full_name: isLabAdmin 
+              ? 'Equipo CogniMirror (Administración & I+D)' 
+              : (isBrayan ? 'Ps. Brayan Castro (Investigador PIE)' : 'Ps. Evaluador de Investigación (200 Tests)')
           }
         };
         const demoSessionObj = {
