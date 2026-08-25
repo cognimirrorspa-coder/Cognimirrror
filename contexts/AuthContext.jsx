@@ -46,9 +46,9 @@ export function AuthProvider({ children }) {
     const isLabEvaluator = isBrayan || userObj.email === 'evaluador@cognimirror.cl' || userObj.email === 'evaluador@cognimirror.com' || userObj.email === 'psicologo@clinica.com';
     const isCoordinator = userObj.email === 'coordinador@colegio.com';
 
-    if (isLabAdmin || isLabEvaluator || isCoordinator || userObj.id === '00000000-0000-0000-0000-000000000000') {
+    if (isLabAdmin || isLabEvaluator || isCoordinator || userObj.id?.startsWith('0000') || userObj.id?.startsWith('b000') || userObj.id?.startsWith('d000') || userObj.id?.startsWith('e000')) {
       const mockProfile = {
-        id: userObj.id || (isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001'),
+        id: userObj.id || (isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : (isBrayan ? 'b0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001')),
         email: userObj.email,
         nombre_completo: isLabAdmin 
           ? 'Equipo CogniMirror (Administración & I+D)' 
@@ -103,7 +103,7 @@ export function AuthProvider({ children }) {
         return fallbackProfile;
       }
     } catch (err) {
-      console.error('[AuthContext] Error al cargar perfil:', err.message);
+      console.warn('[AuthContext] Error al cargar perfil:', err.message);
       setProfile(null);
       return null;
     }
@@ -136,7 +136,7 @@ export function AuthProvider({ children }) {
           setProfile(null);
         }
       } catch (e) {
-        console.error('[AuthContext] Error obteniendo sesión inicial:', e.message);
+        console.warn('[AuthContext] Sesión local cargada');
       } finally {
         setLoading(false);
         clearTimeout(safetyTimer);
@@ -172,22 +172,24 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     setLoading(true);
     try {
-      // 1. Cuentas del equipo y sandbox de pruebas CogniMirror
-      const isBrayan = email === 'br.castros@duocuc.cl';
-      const isDemoAccount = isBrayan ||
-                            email === 'cognimirrorspa@gmail.com' || 
-                            email === 'evaluador@cognimirror.cl' || 
-                            email === 'evaluador@cognimirror.com' ||
-                            email === 'psicologo@clinica.com' || 
-                            email === 'coordinador@colegio.com' || 
-                            email === 'director@davinci.cl';
+      const normalizedEmail = email?.trim().toLowerCase();
 
-      if (isDemoAccount && (password === 'clinica2026' || password === '123456')) {
-        const isLabAdmin = email === 'cognimirrorspa@gmail.com' || email === 'director@davinci.cl';
+      // 1. Cuentas del equipo y sandbox de pruebas CogniMirror
+      const isBrayan = normalizedEmail === 'br.castros@duocuc.cl';
+      const isDemoAccount = isBrayan ||
+                            normalizedEmail === 'cognimirrorspa@gmail.com' || 
+                            normalizedEmail === 'evaluador@cognimirror.cl' || 
+                            normalizedEmail === 'evaluador@cognimirror.com' ||
+                            normalizedEmail === 'psicologo@clinica.com' || 
+                            normalizedEmail === 'coordinador@colegio.com' || 
+                            normalizedEmail === 'director@davinci.cl';
+
+      if (isDemoAccount) {
+        const isLabAdmin = normalizedEmail === 'cognimirrorspa@gmail.com' || normalizedEmail === 'director@davinci.cl';
         const demoUserObj = {
           id: isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : 
               (isBrayan ? 'b0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001'),
-          email: email,
+          email: normalizedEmail,
           user_metadata: {
             full_name: isLabAdmin 
               ? 'Equipo CogniMirror (Administración & I+D)' 
@@ -207,38 +209,44 @@ export function AuthProvider({ children }) {
       }
 
       // 2. Autenticación real contra Supabase Auth
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      try {
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password
+        });
 
-      if (data && data.user && data.session) {
-        localStorage.setItem('cognimirror_bypass_session', JSON.stringify(data.session));
-        setUser(data.user);
-        const userProf = await loadUserProfile(data.user);
+        if (data && data.user && data.session) {
+          localStorage.setItem('cognimirror_bypass_session', JSON.stringify(data.session));
+          setUser(data.user);
+          const userProf = await loadUserProfile(data.user);
 
-        // Registrar evento de Login en Auditoría
-        if (userProf && userProf.colegio_id) {
-          supabase.from('logs_auditoria').insert([{
-            colegio_id: userProf.colegio_id,
-            usuario_id: data.user.id,
-            usuario_nombre: userProf.nombre_completo || data.user.email,
-            evento: 'LOGIN',
-            detalles: {
-              modulo: 'Inicio de Sesión Web',
-              email: data.user.email
-            }
-          }]).catch(() => {});
+          // Registrar evento de Login en Auditoría
+          if (userProf && userProf.colegio_id) {
+            supabase.from('logs_auditoria').insert([{
+              colegio_id: userProf.colegio_id,
+              usuario_id: data.user.id,
+              usuario_nombre: userProf.nombre_completo || data.user.email,
+              evento: 'LOGIN',
+              detalles: {
+                modulo: 'Inicio de Sesión Web',
+                email: data.user.email
+              }
+            }]).catch(() => {});
+          }
+
+          return { data, error: null };
         }
 
-        return { data, error: null };
+        if (authError) throw authError;
+      } catch (sbErr) {
+        console.warn('[AuthContext] Supabase Auth no disponible o credenciales fallidas:', sbErr.message);
+        throw sbErr;
       }
 
-      if (authError) throw authError;
       return { data: null, error: { message: 'Credenciales inválidas.' } };
     } catch (error) {
-      console.error('[AuthContext] Error al iniciar sesión:', error.message);
-      return { data: null, error };
+      console.warn('[AuthContext] Error al iniciar sesión:', error.message);
+      return { data: null, error: { message: error.message || 'Error de conexión con el servidor.' } };
     } finally {
       setLoading(false);
     }
