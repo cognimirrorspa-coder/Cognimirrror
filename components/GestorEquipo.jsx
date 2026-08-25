@@ -183,8 +183,8 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
         </div>
       ) : especialistas.length === 0 ? (
         <div className="py-12 bg-[#0b0d14] border border-white/5 rounded-2xl flex flex-col items-center justify-center text-center p-6 gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-xl font-bold">
-            
+          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+            <User size={22} />
           </div>
           <h4 className="text-white font-bold text-sm">Aún no hay profesionales registrados en este colegio</h4>
           <p className="text-slate-400 text-xs max-w-md">

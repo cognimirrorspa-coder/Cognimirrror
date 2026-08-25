@@ -4,10 +4,11 @@ import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MetaAnalisisScreen from './MetaAnalisisScreen';
 import { calcularSuperpoder, calcularBonoContexto, calcularSesgo } from '../utils/superpowerLogic';
+import { Brain, ShieldCheck, Zap, Activity, CheckCircle2, Gauge, BarChart2, CheckCircle, ArrowRight } from 'lucide-react';
 
 /**
  * COMPONENTE: ResultadosScreen
- * Diseñado para presentar el Perfil Cognitivo con estética Premium SaaS.
+ * Diseñado para presentar el Perfil Cognitivo con estética Clínica y SaaS Premium.
  */
 export default function ResultadosScreen({ 
   rawTurnsData = [], 
@@ -20,7 +21,7 @@ export default function ResultadosScreen({
 }) {
   const LATENCIA_HARDWARE = 150; // ms de ruido mecánico/BLE estimado
 
-  // 1. Determinar el "Superpoder"
+  // 1. Determinar el Perfil Neurocognitivo
   const superpower = useMemo(() => calcularSuperpoder(rawTurnsData), [rawTurnsData]);
 
   // ––– ESTADOS DE INTERACCIÓN CLÍNICA –––
@@ -98,129 +99,88 @@ export default function ResultadosScreen({
   const impulseStats = useMemo(() => {
     const impulses = rawTurnsData.filter(t => t.isImpulsivityError && t.reactionTimeMs > 0);
     if (impulses.length === 0) return null;
-
-    const times = impulses.map(t => t.reactionTimeMs);
-    const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
-    const min = Math.min(...times);
-    const max = Math.max(...times);
-    
-    return {
-      count: impulses.length,
-      avg,
-      min,
-      max,
-      delta: max - min
-    };
+    return { count: impulses.length };
   }, [rawTurnsData]);
 
-
-  // 5. Helper para Renderizar EVIDENCIA (Fórmulas)
-  const renderEvidence = (items) => (
-    <div className="flex flex-wrap items-center justify-center gap-2 mt-3 pt-3 border-t border-white/5">
-      {items.map((item, i) => (
-        <React.Fragment key={i}>
-          <span className="px-2 py-0.5 bg-white/5 rounded text-[10px] font-mono text-white/50 border border-white/5">
-            {item}
-          </span>
-          {i < items.length - 1 && <span className="text-[10px] text-white/20">+</span>}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-
+  const renderProfileIcon = () => {
+    const props = { size: 36, className: "text-white drop-shadow-md" };
+    switch (superpower.id) {
+      case 'Precision': return <Brain {...props} />;
+      case 'Freno': return <ShieldCheck {...props} />;
+      case 'Velocidad': return <Zap {...props} />;
+      case 'Ambidextrismo': return <Activity {...props} />;
+      case 'Metronomo': return <Gauge {...props} />;
+      default: return <CheckCircle2 {...props} />;
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-[#07080f] text-white z-[60] flex flex-col items-center justify-center p-6 overflow-y-auto">
-      {/* Orbe de luz dinámica en el fondo (Cambia según el superpoder) */}
-      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r ${superpower.color} opacity-10 blur-[120px] -z-10`} />
+    <div className="min-h-screen bg-[#07080f] text-white flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden font-sans">
+      {/* Fondo Glow Clínico */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
 
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-xl flex flex-col items-center text-center gap-10"
+        className="w-full max-w-2xl flex flex-col items-center text-center gap-8 relative z-10"
       >
-        {/* ICONO Y CABECERA */}
-        <div className="space-y-6">
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.05, 1],
-              rotate: [0, 2, -2, 0]
-            }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            className="text-7xl md:text-8xl drop-shadow-[0_0_25px_rgba(255,255,255,0.2)]"
-          >
-            {superpower.icon}
-          </motion.div>
+        {/* CABECERA CLÍNICA FORMAL */}
+        <div className="w-full space-y-6">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center shadow-lg shadow-blue-500/5">
+            {renderProfileIcon()}
+          </div>
           
-          <div className="space-y-4">
-            <p className="text-sm font-black uppercase tracking-[0.4em] text-white/40">Perfil Cognitivo Detectado</p>
-            <h1 className={`text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-r ${superpower.color} drop-shadow-sm`}>
+          <div className="space-y-3">
+            <p className="text-xs font-mono uppercase tracking-[0.3em] text-slate-400">Perfil Neurocognitivo Registrado</p>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">
               {superpower.titulo}
             </h1>
-            <p className="text-gray-300 text-sm md:text-base leading-relaxed max-w-md mx-auto line-clamp-3 font-medium">
+            <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-lg mx-auto font-normal">
               {superpower.descripcion}
             </p>
             
-            {/* Evidencia de Superpoder */}
-            <div className="mt-4 p-3 bg-black/20 rounded-xl border border-white/5 inline-block mx-auto">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Evidencia de Telemetría</p>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-white/60">
+            {/* Evidencia de Telemetría */}
+            <div className="mt-4 p-3 bg-white/[0.02] rounded-xl border border-white/5 inline-block mx-auto">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mb-1">Métricas de Telemetría</p>
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-300">
                 {superpower.id === 'Metronomo' && (
-                  <>{`[Var L: <40ms] + [Var R: <40ms] -> Consistencia Total`}</>
+                  <>{`[Var L: <40ms] + [Var R: <40ms] -> Regularidad Temporal`}</>
                 )}
                 {superpower.id === 'Velocidad' && (
-                  <>{`[Bruto: ${stats.avgTimeBruto}ms] - [Ruido BLE: ${LATENCIA_HARDWARE}ms] -> ${stats.avgTime}ms Netos`}</>
+                  <>{`[TR Bruto: ${stats.avgTimeBruto}ms] - [Hardware: ${LATENCIA_HARDWARE}ms] -> ${stats.avgTime}ms Netos`}</>
                 )}
-
                 {superpower.id === 'Precision' && (
-                  <>{`[Precisión: 100%] + [TR: >450ms] -> Control Analítico`}</>
+                  <>{`[Precisión: 100%] + [TR: >450ms] -> Control Deliberado`}</>
                 )}
                 {superpower.id === 'Freno' && (
-                  <>{`[No-Go Errors: 0] + [TR: ${stats.avgTime}ms] -> Freno Perfecto`}</>
+                  <>{`[Errores No-Go: 0] + [TR: ${stats.avgTime}ms] -> Supresión Óptima`}</>
                 )}
                 {superpower.id === 'Ambidextrismo' && (
-                  <>{`[Mano L: ${Math.round(stats.avgTime)}ms] ≈ [Mano R] -> Simetría`}</>
+                  <>{`[Mano L: ${Math.round(stats.avgTime)}ms] ≈ [Mano R] -> Simetría Bilateral`}</>
                 )}
                 {superpower.id === 'Flujo' && (
-                  <>{`[Racha: x${stats.maxCombo}] + [TR Estable] -> Estado de Flujo`}</>
+                  <>{`[Racha: x${stats.maxCombo}] + [TR Estable] -> Atención Sostenida`}</>
                 )}
               </div>
             </div>
           </div>
 
-          {/* PANEL DE BONO DE CONTEXTO */}
+          {/* MODULACIÓN DE CONTEXTO */}
           <AnimatePresence>
             {bonus && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className={`
-                  mt-6 p-4 rounded-2xl border backdrop-blur-md 
-                  text-xs font-bold leading-relaxed text-center max-w-md mx-auto
-                  ${bonus.tipo === 'warning' ? 'bg-amber-500/10 border-amber-500/30 text-amber-200/80' :
-                    bonus.tipo === 'info' ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-200/80' :
-                    'bg-emerald-500/10 border-emerald-500/30 text-emerald-200/80'}
+                  mt-4 p-4 rounded-xl border backdrop-blur-md 
+                  text-xs font-semibold leading-relaxed text-center max-w-md mx-auto
+                  ${bonus.tipo === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' :
+                    bonus.tipo === 'info' ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' :
+                    'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'}
                 `}
               >
                 <p>{bonus.texto}</p>
-                <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-center gap-2 opacity-60">
-                  {bonus.id === 'reserva' && (
-                    <span className="text-[9px] font-mono px-2 py-0.5 bg-black/20 rounded">
-                      [Sueño: {sessionMeta.horasSueno}h] + [TR: {stats.avgTime}ms] -> Compensación
-                    </span>
-                  )}
-                  {bonus.id === 'aislamiento' && (
-                    <span className="text-[9px] font-mono px-2 py-0.5 bg-black/20 rounded">
-                      [Ruido: {sessionMeta.nivelRuido}/10] + [Precisión: {stats.accuracy}%] -> Foco
-                    </span>
-                  )}
-                  {bonus.id === 'regulacion' && (
-                    <span className="text-[9px] font-mono px-2 py-0.5 bg-black/20 rounded">
-                      [Ánimo: {sessionMeta.estadoAnimo}] + [Errores No-Go: 0] -> Regulación
-                    </span>
-                  )}
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
