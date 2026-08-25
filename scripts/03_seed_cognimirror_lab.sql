@@ -39,48 +39,64 @@ CREATE TABLE IF NOT EXISTS public.logs_auditoria (
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. Asegurar e insertar el Colegio de Pruebas
-DELETE FROM public.perfiles WHERE email IN ('cognimirrorspa@gmail.com', 'evaluador@cognimirror.cl');
-DELETE FROM public.colegios WHERE rbd = '99999-9' OR id = 'c0000000-0000-0000-0000-000000000001';
+-- 4. Ejecución dinámica sin romper llaves foráneas existentes
+DO $$
+DECLARE
+    v_colegio_id UUID;
+BEGIN
+    -- Obtener o crear el colegio de pruebas
+    SELECT id INTO v_colegio_id FROM public.colegios WHERE rbd = '99999-9' LIMIT 1;
 
-INSERT INTO public.colegios (id, nombre, rbd, comuna, region)
-VALUES (
-  'c0000000-0000-0000-0000-000000000001',
-  'CogniMirror Research Lab (Entorno de Pruebas)',
-  '99999-9',
-  'Santiago',
-  'Metropolitana'
-);
+    IF v_colegio_id IS NULL THEN
+        INSERT INTO public.colegios (id, nombre, rbd, comuna, region)
+        VALUES (
+            gen_random_uuid(),
+            'CogniMirror Research Lab (Entorno de Pruebas)',
+            '99999-9',
+            'Santiago',
+            'Metropolitana'
+        )
+        RETURNING id INTO v_colegio_id;
+    ELSE
+        UPDATE public.colegios 
+        SET nombre = 'CogniMirror Research Lab (Entorno de Pruebas)'
+        WHERE id = v_colegio_id;
+    END IF;
 
--- 5. Insertar Perfil Director / Administrador
-INSERT INTO public.perfiles (id, colegio_id, email, nombre_completo, rol, cargo_texto, activo)
-VALUES (
-  'd0000000-0000-0000-0000-000000000001',
-  'c0000000-0000-0000-0000-000000000001',
-  'cognimirrorspa@gmail.com',
-  'Equipo CogniMirror (Administración & I+D)',
-  'director',
-  'Director de Investigación y Desarrollo',
-  TRUE
-);
+    -- Insertar / Actualizar Director (cognimirrorspa@gmail.com)
+    INSERT INTO public.perfiles (id, colegio_id, email, nombre_completo, rol, cargo_texto, activo)
+    VALUES (
+        'd0000000-0000-0000-0000-000000000001',
+        v_colegio_id,
+        'cognimirrorspa@gmail.com',
+        'Equipo CogniMirror (Administración & I+D)',
+        'director',
+        'Director de Investigación y Desarrollo',
+        TRUE
+    )
+    ON CONFLICT (id) DO UPDATE 
+    SET colegio_id = v_colegio_id, rol = 'director', email = 'cognimirrorspa@gmail.com';
 
--- 6. Insertar Perfil Evaluador (Para las 200 pruebas del cubo)
-INSERT INTO public.perfiles (id, colegio_id, email, nombre_completo, rol, cargo_texto, activo)
-VALUES (
-  'e0000000-0000-0000-0000-000000000001',
-  'c0000000-0000-0000-0000-000000000001',
-  'evaluador@cognimirror.cl',
-  'Ps. Evaluador de Investigación (200 Tests)',
-  'psicologo',
-  'Psicólogo Investigador / Evaluador BLE',
-  TRUE
-);
+    -- Insertar / Actualizar Evaluador (evaluador@cognimirror.cl)
+    INSERT INTO public.perfiles (id, colegio_id, email, nombre_completo, rol, cargo_texto, activo)
+    VALUES (
+        'e0000000-0000-0000-0000-000000000001',
+        v_colegio_id,
+        'evaluador@cognimirror.cl',
+        'Ps. Evaluador de Investigación (200 Tests)',
+        'psicologo',
+        'Psicólogo Investigador / Evaluador BLE',
+        TRUE
+    )
+    ON CONFLICT (id) DO UPDATE 
+    SET colegio_id = v_colegio_id, rol = 'psicologo', email = 'evaluador@cognimirror.cl';
 
--- 7. Registrar evento de auditoría inicial
-INSERT INTO public.logs_auditoria (colegio_id, usuario_nombre, evento, detalles)
-VALUES (
-  'c0000000-0000-0000-0000-000000000001',
-  'Sistema Central',
-  'CREAR_USUARIO',
-  '{"accion": "Inicializacion de entorno de validacion clinica CogniMirror Lab (200 pruebas)"}'::jsonb
-);
+    -- Registrar evento en auditoría
+    INSERT INTO public.logs_auditoria (colegio_id, usuario_nombre, evento, detalles)
+    VALUES (
+        v_colegio_id,
+        'Sistema Central',
+        'CREAR_USUARIO',
+        '{"accion": "Inicializacion de entorno de validacion clinica CogniMirror Lab (200 pruebas)"}'::jsonb
+    );
+END $$;
