@@ -1,7 +1,7 @@
 # CogniMirror: Plataforma Digital para la Evaluación Neuropsicológica Longitudinal y Monitoreo en Tiempo Real
 
 ## Descripción del Proyecto
-CogniMirror es un sistema clínico-tecnológico diseñado para la evaluación y estimulación de procesos cognitivos, atencionales y visoespaciales. Mediante la integración de un dispositivo físico inteligente (un cubo interactivo con sensores inerciales y conectividad Bluetooth Low Energy) y una aplicación web responsiva, la plataforma permite registrar telemetría fina y tiempos de reacción en milisegundos. El sistema está orientado a profesionales del área de la salud y educación, facilitando el diagnóstico y seguimiento longitudinal de pacientes y alumnos.
+CogniMirror es un sistema clínico-tecnológico diseñado para la evaluación y estimulación de procesos cognitivos, atencionales y visoespaciales. Mediante la integración de un dispositivo físico inteligente (un cubo interactivo con sensores inerciales y conectividad Bluetooth Low Energy) y una aplicación web responsiva, la plataforma permite registrar telemetría fina y tiempos de reacción en milisegundos. El sistema está orientado a profesionales del área de la salud y educación, facilitando el diagnóstico y seguimiento longitudinal de estudiantes y alumnos.
 
 ## Propósito y Objetivos
 El objetivo principal de CogniMirror es optimizar la recopilación de datos clínicos cuantitativos durante pruebas neuropsicológicas y visoespaciales. Al digitalizar y automatizar la recolección de métricas clave (tiempos de reacción, tasas de error, inercia motora, fatiga cognitiva y memoria de secuencias), se proporciona una herramienta objetiva que complementa la evaluación cualitativa tradicional.
@@ -19,8 +19,8 @@ El proyecto se enmarca en los sectores de:
 
 ## Módulos y Características Clave
 
-### 1. Directorio Longitudinal de Pacientes
-Panel de administración centralizado que permite registrar sujetos, visualizar su historial acumulado de evaluaciones y analizar su progreso longitudinal mediante gráficos dinámicos de evolución.
+### 1. Directorio Longitudinal de Estudiantes
+Panel de administración centralizado que permite registrar estudiantes, visualizar su historial acumulado de evaluaciones y analizar su progreso longitudinal mediante gráficos dinámicos de evolución.
 
 ### 2. Módulo Reaction Mirror (Tiempos de Reacción e Inhibición)
 * Prueba atencional basada en estímulos auditivos y visuales de tipo GO (acción) y NOGO (inhibición).
@@ -32,13 +32,13 @@ Panel de administración centralizado que permite registrar sujetos, visualizar 
 * Cuenta con soporte y refuerzo cognitivo mejorado (movimientos simulados en el cubo 3D, retroalimentación de pantalla con sacudidas visuales ante errores y texto gigante).
 
 ### 4. Telemonitoreo en Tiempo Real y Control Clínico Remoto
-* Generación de enlaces temporales seguros (Magic Links) para que el paciente realice las pruebas a distancia.
-* Sala de control clínico bidireccional donde el especialista puede monitorear en tiempo real la telemetría fina del paciente, ver el estado de su conexión y observar la orientación espacial del cubo a través de un gemelo digital en 3D basado en Three.js.
+* Generación de enlaces temporales seguros (Magic Links) para que el estudiante realice las pruebas a distancia.
+* Sala de control clínico bidireccional donde el especialista puede monitorear en tiempo real la telemetría fina del estudiante, ver el estado de su conexión y observar la orientación espacial del cubo a través de un gemelo digital en 3D basado en Three.js.
 * Envío de comandos clínicos remotos para iniciar, pausar, cancelar o cambiar el tipo de evaluación en vivo.
 
 ### 5. Generación de Reportes y Exportación de Datos
 * Exportación de datos masivos crudos en planillas Excel estructuradas (.xlsx) con desglose milimétrico de telemetría.
-* Generación de informes en formato PDF con el rendimiento del paciente y justificación de fondos para el director del establecimiento (conforme a las directrices del Decreto 170).
+* Generación de informes en formato PDF con el rendimiento del estudiante y justificación de fondos para el director del establecimiento (conforme a las directrices del Decreto 170).
 
 ### 6. Sistema de Respaldos Resiliente (Backup Microservicio)
 * Endpoint transaccional de copia de seguridad automatizada (/api/generar-backup) mediante Cron Jobs semanales.
@@ -78,9 +78,9 @@ Producto/
 │   ├── evaluador/        # Vista rápida para el especialista clínico (Excel Gold Standard)
 │   ├── export/           # Sala de control clínico y generación de PDF/Excel
 │   ├── login/            # Sistema de autenticación de contingencia y control de accesos
-│   ├── patients/         # Perfiles clínicos longitudinales de pacientes
+│   ├── students/         # Perfiles clínicos longitudinales de estudiantes
 │   ├── reaction-game/    # Interfaz de juego para Reaction Mirror (Local)
-│   ├── remote-eval/      # Interfaz de juego para el paciente a distancia (Magic Links)
+│   ├── remote-eval/      # Interfaz de juego para el estudiante a distancia (Magic Links)
 │   └── simon-game/       # Interfaz de juego para Memory Mirror (Local)
 ├── components/           # Componentes visuales y de renderizado 3D
 ├── contexts/             # Manejadores de estado global (Bluetooth, Auth, CubeState)

@@ -55,7 +55,7 @@ export function JoicubeProvider({ children }) {
     try {
       wsRef.current.send(JSON.stringify({ type: 'move', notation }));
     } catch (e) {
-      console.error('🕹️ [Joicube] Error enviando move:', e);
+      console.error('[Joicube] Error enviando move:', e);
     }
   }, []);
 
@@ -98,7 +98,7 @@ export function JoicubeProvider({ children }) {
 
     ws.onopen = async () => {
       _setStatus('active');
-      console.log('🕹️ [Joicube] Conectado al servidor de teclas');
+      console.log('[Joicube] Conectado al servidor de teclas');
 
       // Obtener lista de perfiles desde el servidor HTTP
       try {
@@ -107,7 +107,7 @@ export function JoicubeProvider({ children }) {
         if (data.profiles) setProfiles(data.profiles);
         if (data.profile) setCurrentProfile(data.profile);
       } catch (e) {
-        console.warn('🕹️ [Joicube] No se pudo obtener perfiles', e);
+        console.warn('[Joicube] No se pudo obtener perfiles', e);
       }
 
       // Suscribirse al feed BLE y reenviar cada movimiento al server de teclas
@@ -129,7 +129,7 @@ export function JoicubeProvider({ children }) {
         // Cierre inesperado
         if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
         _setStatus('idle');
-        console.warn('🕹️ [Joicube] Conexión perdida');
+        console.warn('[Joicube] Conexión perdida');
       }
     };
   }, [_setStatus, subscribeToMoves, sendMove]);

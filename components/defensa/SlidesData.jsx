@@ -386,7 +386,7 @@ export function getSlideComponent(index) {
         <div className="bg-white/[0.02] border border-white/5 p-6 rounded-2xl">
           <h3 className="font-bold text-white text-lg mb-2">Corsi Span</h3>
           <p className="text-slate-400 text-xs leading-relaxed">
-            Calcula el máximo nivel (longitud de secuencia) en el que el paciente completó exitosamente al menos un intento sin equivocarse.
+            Calcula el máximo nivel (longitud de secuencia) en el que el estudiante completó exitosamente al menos un intento sin equivocarse.
           </p>
         </div>
         <div className="bg-white/[0.02] border border-white/5 p-6 rounded-2xl">
@@ -423,7 +423,7 @@ export function getSlideComponent(index) {
             <li className="flex items-center gap-1.5"><CheckCircle size={10} className="text-purple-500" /> Autenticación y RLS</li>
             <li className="flex items-center gap-1.5"><CheckCircle size={10} className="text-purple-500" /> Hardware BLE</li>
             <li className="flex items-center gap-1.5"><CheckCircle size={10} className="text-purple-500" /> Métricas de Juegos</li>
-            <li className="flex items-center gap-1.5"><CheckCircle size={10} className="text-purple-500" /> Directorio Pacientes</li>
+            <li className="flex items-center gap-1.5"><CheckCircle size={10} className="text-purple-500" /> Directorio Estudiantes</li>
             <li className="flex items-center gap-1.5"><CheckCircle size={10} className="text-purple-500" /> Sincronización Offline</li>
             <li className="flex items-center gap-1.5"><CheckCircle size={10} className="text-purple-500" /> Reportes Decreto 170</li>
           </ul>

@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-
-const VALID_FACES = ['U', 'D', 'R', 'L', 'F', 'B'];
+// Caras activas: Blanco (U), Amarillo (D), Naranja (R), Rojo (L), Azul (F). Cara Verde / Atrás (B) excluida.
+const VALID_FACES = ['U', 'D', 'R', 'L', 'F'];
 
 export function useVisuospatialTest(isConnected = true, requireBluetooth = true) {
   const [gameState, setGameState] = useState('idle'); // idle, showing_sequence, waiting_for_user, finished
@@ -95,8 +94,8 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
               playbackTimeoutRef.current = setTimeout(() => {
                 index++;
                 playNext();
-              }, 450); // Se mantiene apagada por 450ms
-            }, 900); // Se mantiene encendida por 900ms para lectura clara
+              }, 600); // Se mantiene apagada por 600ms para separar claramente cada estímulo
+            }, 1300); // Se mantiene encendida por 1300ms para una lectura pausada y accesible
           } else {
             // Terminó la reproducción de la secuencia
             setActiveFace(null);

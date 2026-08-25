@@ -167,23 +167,23 @@ export default function ResultadosScreen({
               <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Evidencia de Telemetría</p>
               <div className="flex items-center gap-2 text-[10px] font-bold text-white/60">
                 {superpower.id === 'Metronomo' && (
-                  <>{`[Var L: <40ms] + [Var R: <40ms] ➔ Consistencia Total`}</>
+                  <>{`[Var L: <40ms] + [Var R: <40ms] -> Consistencia Total`}</>
                 )}
                 {superpower.id === 'Velocidad' && (
-                  <>{`[Bruto: ${stats.avgTimeBruto}ms] - [Ruido BLE: ${LATENCIA_HARDWARE}ms] ➔ ${stats.avgTime}ms Netos`}</>
+                  <>{`[Bruto: ${stats.avgTimeBruto}ms] - [Ruido BLE: ${LATENCIA_HARDWARE}ms] -> ${stats.avgTime}ms Netos`}</>
                 )}
 
                 {superpower.id === 'Precision' && (
-                  <>{`[Precisión: 100%] + [TR: >450ms] ➔ Control Analítico`}</>
+                  <>{`[Precisión: 100%] + [TR: >450ms] -> Control Analítico`}</>
                 )}
                 {superpower.id === 'Freno' && (
-                  <>{`[No-Go Errors: 0] + [TR: ${stats.avgTime}ms] ➔ Freno Perfecto`}</>
+                  <>{`[No-Go Errors: 0] + [TR: ${stats.avgTime}ms] -> Freno Perfecto`}</>
                 )}
                 {superpower.id === 'Ambidextrismo' && (
-                  <>{`[Mano L: ${Math.round(stats.avgTime)}ms] ≈ [Mano R] ➔ Simetría`}</>
+                  <>{`[Mano L: ${Math.round(stats.avgTime)}ms] ≈ [Mano R] -> Simetría`}</>
                 )}
                 {superpower.id === 'Flujo' && (
-                  <>{`[Racha: x${stats.maxCombo}] + [TR Estable] ➔ Estado de Flujo`}</>
+                  <>{`[Racha: x${stats.maxCombo}] + [TR Estable] -> Estado de Flujo`}</>
                 )}
               </div>
             </div>
@@ -207,17 +207,17 @@ export default function ResultadosScreen({
                 <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-center gap-2 opacity-60">
                   {bonus.id === 'reserva' && (
                     <span className="text-[9px] font-mono px-2 py-0.5 bg-black/20 rounded">
-                      [Sueño: {sessionMeta.horasSueno}h] + [TR: {stats.avgTime}ms] ➔ Compensación
+                      [Sueño: {sessionMeta.horasSueno}h] + [TR: {stats.avgTime}ms] -> Compensación
                     </span>
                   )}
                   {bonus.id === 'aislamiento' && (
                     <span className="text-[9px] font-mono px-2 py-0.5 bg-black/20 rounded">
-                      [Ruido: {sessionMeta.nivelRuido}/10] + [Precisión: {stats.accuracy}%] ➔ Foco
+                      [Ruido: {sessionMeta.nivelRuido}/10] + [Precisión: {stats.accuracy}%] -> Foco
                     </span>
                   )}
                   {bonus.id === 'regulacion' && (
                     <span className="text-[9px] font-mono px-2 py-0.5 bg-black/20 rounded">
-                      [Ánimo: {sessionMeta.estadoAnimo}] + [Errores No-Go: 0] ➔ Regulación
+                      [Ánimo: {sessionMeta.estadoAnimo}] + [Errores No-Go: 0] -> Regulación
                     </span>
                   )}
                 </div>
@@ -477,17 +477,17 @@ export default function ResultadosScreen({
             <div className="pt-2 flex items-center gap-2">
                {sesgo.id === 'Impulsividad' && (
                   <span className="text-[9px] font-mono px-2 py-0.5 bg-red-500/10 rounded border border-red-500/20 text-red-300/60">
-                    [Movimientos en NO-GO: Alta Frecuencia] ➔ Freno Fallido
+                    [Movimientos en NO-GO: Alta Frecuencia] -> Freno Fallido
                   </span>
                )}
                {sesgo.id === 'Fluctuacion' && (
                   <span className="text-[9px] font-mono px-2 py-0.5 bg-red-500/10 rounded border border-red-500/20 text-red-300/60">
-                    [T. Max - T. Min: {Math.max(...rawTurnsData.map(t => t.reactionTimeMs)) - Math.min(...rawTurnsData.filter(t => t.reactionTimeMs > 0).map(t => t.reactionTimeMs))}ms] ➔ Inconsistencia
+                    [T. Max - T. Min: {Math.max(...rawTurnsData.map(t => t.reactionTimeMs)) - Math.min(...rawTurnsData.filter(t => t.reactionTimeMs > 0).map(t => t.reactionTimeMs))}ms] -> Inconsistencia
                   </span>
                )}
                {sesgo.id === 'Asimetria' && (
                   <span className="text-[9px] font-mono px-2 py-0.5 bg-red-500/10 rounded border border-red-500/20 text-red-300/60">
-                    [Diferencia L/R: {'>'}80ms] ➔ Dependencia Lateral
+                    [Diferencia L/R: {'>'}80ms] -> Dependencia Lateral
                   </span>
                )}
             </div>
@@ -503,7 +503,7 @@ export default function ResultadosScreen({
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xl">⚠️</span>
+                
                 <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">
                   Análisis de Velocidad de Impulso
                 </p>
@@ -557,7 +557,7 @@ export default function ResultadosScreen({
             onClick={() => setMostrarTelemetria(!mostrarTelemetria)}
             className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400/60 hover:text-cyan-400 transition-colors mb-2"
           >
-            {mostrarTelemetria ? '✕ Ocultar Telemetría' : '⚡ Ver Telemetría Cruda (Modo Ingeniero)'}
+            {mostrarTelemetria ? '✕ Ocultar Telemetría' : 'Ver Telemetría Cruda (Modo Avanzado)'}
           </button>
 
           <AnimatePresence>
@@ -637,7 +637,7 @@ export default function ResultadosScreen({
                           return (
                             <g key={i}>
                               <circle cx={x} cy={y} r="3" fill="#22d3ee" />
-                              <text x={x} y={y - 5} fontSize="8" textAnchor="middle">⭐</text>
+                              
                             </g>
                           );
                         }
@@ -778,10 +778,10 @@ export default function ResultadosScreen({
                       return (
                         <div className="space-y-1">
                           <p className="text-[10px] text-white/40 leading-relaxed italic">
-                            🔴 {analyze(leftTurns, 'Tu hemisferio derecho (mano izquierda)')}
+                            {analyze(leftTurns, 'Tu hemisferio derecho (mano izquierda)')}
                           </p>
                           <p className="text-[10px] text-white/40 leading-relaxed italic">
-                            🟠 {analyze(rightTurns, 'Tu hemisferio izquierdo (mano derecha)')}
+                            {analyze(rightTurns, 'Tu hemisferio izquierdo (mano derecha)')}
                           </p>
                         </div>
                       );
@@ -810,7 +810,7 @@ export default function ResultadosScreen({
                   <div className="h-40 overflow-y-auto font-mono text-[9px] text-emerald-400/80 space-y-1 custom-scrollbar leading-tight">
                     {rawTurnsData.map((t, i) => (
                       <p key={i}>
-                        {`> [Aparición: ${t.isiMs || 0}ms] ➔ Estímulo: ${t.colorName || t.caraObjetivo} ➔ Reacción: ${t.reactionTimeMs}ms`}
+                        {`> [Aparición: ${t.isiMs || 0}ms] -> Estímulo: ${t.colorName || t.caraObjetivo} -> Reacción: ${t.reactionTimeMs}ms`}
                       </p>
                     ))}
                     <p className="animate-pulse text-white/30">{"> [LISTENING_FOR_NEW_SEQUENCE]..."}</p>

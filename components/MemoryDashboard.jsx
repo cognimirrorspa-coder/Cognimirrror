@@ -176,7 +176,7 @@ export default function MemoryDashboard({ record, onRestart, onExit }) {
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900">Reporte Memory Mirror</h1>
           <p className="text-slate-500 font-medium mt-1 text-sm">
-            Paciente: <span className="text-purple-600 font-bold">{playerName || 'Anónimo'}</span>
+            Estudiante: <span className="text-purple-600 font-bold">{playerName || 'Anónimo'}</span>
             <span className="mx-2 text-slate-300">|</span>
             {formattedDate}
           </p>
@@ -184,14 +184,14 @@ export default function MemoryDashboard({ record, onRestart, onExit }) {
         <div className="flex gap-2 flex-wrap md:flex-nowrap flex-shrink-0 no-print">
           {onRestart && (
             <button onClick={onRestart} className="px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-600 hover:bg-slate-50 shadow-sm transition-all text-sm">
-              🔄 Rehacer
+              Rehacer
             </button>
           )}
           <button onClick={handleExportExcel} className="px-4 py-2 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-700 shadow-sm transition-all text-sm flex items-center gap-2">
-            📊 Excel Clínico
+            Excel Clínico
           </button>
           <button onClick={handleExportRawTelemetry} className="px-4 py-2 rounded-xl bg-sky-600 font-bold text-white hover:bg-sky-700 shadow-sm transition-all text-sm flex items-center gap-2" title="Descargar log crudo e inalterable de sensores BLE para auditoría">
-            🛡️ Telemetría Cruda
+            Telemetría Cruda
           </button>
           <button onClick={onExit} className="px-4 py-2 rounded-xl bg-purple-600 font-bold text-white hover:bg-purple-700 shadow shadow-purple-200 transition-all text-sm">
             ← Finalizar
@@ -254,7 +254,7 @@ export default function MemoryDashboard({ record, onRestart, onExit }) {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <div className="mb-6">
             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              📈 Curva de Aprendizaje y Latencia
+              Curva de Aprendizaje y Latencia
             </h2>
             <p className="text-sm text-slate-500 mt-1">Evolución de la latencia (ms) a medida que aumenta la dificultad cognitiva (Nivel).</p>
           </div>
@@ -294,9 +294,9 @@ export default function MemoryDashboard({ record, onRestart, onExit }) {
         {/* BITÁCORA CLÍNICA */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 no-print">
           <h2 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-            📝 Bitácora Clínica (Observación Cualitativa)
+            Bitácora Clínica (Observación Cualitativa)
           </h2>
-          <p className="text-sm text-slate-500 mb-4 font-medium">Registra anotaciones clínicas sobre la conducta, distractores, nivel de tolerancia a la frustración o fatiga atencional del paciente.</p>
+          <p className="text-sm text-slate-500 mb-4 font-medium">Registra anotaciones clínicas sobre la conducta, distractores, nivel de tolerancia a la frustración o fatiga atencional del estudiante.</p>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -321,18 +321,18 @@ export default function MemoryDashboard({ record, onRestart, onExit }) {
         {/* ── SECCIÓN 2: RADIOGRAFÍA POR MOVIMIENTOS ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8 mt-6 page-break-before">
           <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            📋 Radiografía por Movimientos
+            Radiografía por Movimientos
           </h2>
           <div className="space-y-3">
             {(telemetry || []).map((t, idx) => {
               let statusText = '', borderLine = '', dot = '';
 
               if (t.isCorrect) {
-                statusText = `✅ Acierto. Tiempo de reacción: ${t.latencyMs} ms.`;
+                statusText = `Acierto. Tiempo de reacción: ${t.latencyMs} ms.`;
                 borderLine = 'border-emerald-100 bg-emerald-50/40';
                 dot = 'bg-emerald-500';
               } else {
-                statusText = `❌ Te equivocaste. Giraste ${t.userFace} pero se esperaba ${t.expectedFace}.`;
+                statusText = `Error de secuencia. Giraste ${t.userFace} pero se esperaba ${t.expectedFace}.`;
                 borderLine = 'border-rose-200 bg-rose-50/60';
                 dot = 'bg-rose-500';
               }

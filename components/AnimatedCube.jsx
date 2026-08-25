@@ -68,9 +68,11 @@ export default function AnimatedCube({ targetColor, status }) {
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: 1, scale: 1.4 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 flex items-center justify-center text-7xl drop-shadow-2xl translate-z-[140px]"
+              className="absolute inset-0 z-50 flex items-center justify-center drop-shadow-2xl translate-z-[140px]"
             >
-              ❌
+              <div className="w-16 h-16 rounded-full bg-red-600/90 text-white flex items-center justify-center font-black text-3xl shadow-2xl border border-red-400">
+                X
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

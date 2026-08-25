@@ -19,7 +19,7 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
             className="relative bg-[#111218] border border-red-500/30 p-8 rounded-3xl shadow-[0_0_50px_rgba(220,38,38,0.2)] max-w-sm w-full text-center flex flex-col gap-6"
           >
             <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto text-red-500 text-3xl">
-              ⚠️
+              !
             </div>
             
             <div>

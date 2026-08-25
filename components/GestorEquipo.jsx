@@ -2,16 +2,24 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { Trash2, UserPlus, Mail, User, Shield, AlertTriangle, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Trash2, UserPlus, Mail, User, Shield, AlertTriangle, Loader2, CheckCircle2, XCircle, Power, UserCheck } from 'lucide-react';
 
-export default function GestorEquipo({ colegioId }) {
+export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }) {
+  const { profile } = useAuth();
   const [especialistas, setEspecialistas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  
+  // Formulario de Invitación / Creación
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
+  const [rol, setRol] = useState('psicologo');
+  const [cargo, setCargo] = useState('Psicólogo(a) PIE');
+  const [tempPassword, setTempPassword] = useState('');
   const [inviting, setInviting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const fetchEspecialistas = useCallback(async () => {
     if (!colegioId) return;
@@ -21,13 +29,14 @@ export default function GestorEquipo({ colegioId }) {
         .from('perfiles')
         .select('*')
         .eq('colegio_id', colegioId)
-        .eq('rol', 'especialista')
-        .order('nombre_completo', { ascending: true });
+        .order('creado_en', { ascending: false });
 
       if (error) throw error;
       setEspecialistas(data || []);
     } catch (err) {
-      console.error('[GestorEquipo] Error cargando especialistas:', err.message);
+      console.warn('[GestorEquipo] Consulta en fallback:', err.message);
+      // Fallback si la tabla local está vacía
+      setEspecialistas([]);
     } finally {
       setLoading(false);
     }
@@ -37,11 +46,22 @@ export default function GestorEquipo({ colegioId }) {
     fetchEspecialistas();
   }, [fetchEspecialistas]);
 
+  // Actualizar cargo por defecto al cambiar de rol
+  const handleRolChange = (newRol) => {
+    setRol(newRol);
+    if (newRol === 'psicologo') setCargo('Psicólogo(a) PIE');
+    else if (newRol === 'terapeuta') setCargo('Terapeuta Ocupacional');
+    else if (newRol === 'coordinador_pie') setCargo('Coordinador(a) PIE');
+    else if (newRol === 'director') setCargo('Director(a) Académico(a)');
+    else setCargo('Especialista Clínico');
+  };
+
   const handleInvite = async (e) => {
     e.preventDefault();
     if (!nombre.trim() || !email.trim()) return;
     setInviting(true);
     setErrorMsg('');
+    setSuccessMsg('');
 
     try {
       const res = await fetch('/api/equipo/invitar', {
@@ -50,20 +70,28 @@ export default function GestorEquipo({ colegioId }) {
         body: JSON.stringify({
           nombre: nombre.trim(),
           email: email.trim().toLowerCase(),
-          colegio_id: colegioId
+          rol,
+          cargo: cargo.trim(),
+          tempPassword: tempPassword.trim() || null,
+          colegio_id: colegioId,
+          adminName: profile?.nombre_completo || 'Director / Coordinador'
         })
       });
 
       const resData = await res.json();
       if (!res.ok) {
-        throw new Error(resData.error || 'No se pudo enviar la invitación');
+        throw new Error(resData.error || 'No se pudo registrar al profesional.');
       }
 
-      alert('¡Especialista invitado con éxito! Se le ha enviado un correo de bienvenida.');
+      setSuccessMsg('¡Profesional agregado al equipo con éxito!');
       setNombre('');
       setEmail('');
-      setShowAddModal(false);
-      fetchEspecialistas();
+      setTempPassword('');
+      setTimeout(() => {
+        setShowAddModal(false);
+        setSuccessMsg('');
+        fetchEspecialistas();
+      }, 1200);
     } catch (err) {
       console.error('[GestorEquipo] Error al invitar:', err.message);
       setErrorMsg(err.message);
@@ -72,97 +100,167 @@ export default function GestorEquipo({ colegioId }) {
     }
   };
 
+  const handleToggleActivo = async (id, estadoActual, nombreCompleto) => {
+    const nuevoEstado = !estadoActual;
+    const actionText = nuevoEstado ? 'reactivar' : 'desactivar temporalmente';
+    if (!confirm(`¿Deseas ${actionText} la cuenta de "${nombreCompleto}"?`)) return;
+
+    try {
+      const res = await fetch('/api/equipo/toggle-activo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: id,
+          activo: nuevoEstado,
+          colegioId,
+          adminName: profile?.nombre_completo || 'Director / Coordinador'
+        })
+      });
+
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Error al cambiar estado.');
+      }
+
+      // Actualizar estado local inmediatamente
+      setEspecialistas(prev => prev.map(u => u.id === id ? { ...u, activo: nuevoEstado } : u));
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
   const handleDelete = async (id, nombreCompleto) => {
     const confirmed = confirm(
-      `¿Estás seguro de desvincular al especialista "${nombreCompleto}"?\n\nSus evaluaciones previas se mantendrán en el historial del colegio para resguardo de estadísticas.`
+      `¿Estás seguro de desvincular definitivamente a "${nombreCompleto}" de ${colegioNombre}?\n\nLas evaluaciones y telemetrías previas se mantendrán en el historial del colegio para resguardo de auditoría.`
     );
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/equipo/eliminar?id=${id}`, {
+      const res = await fetch(`/api/equipo/eliminar?id=${id}&colegio_id=${colegioId}&admin=${encodeURIComponent(profile?.nombre_completo || 'Director')}`, {
         method: 'DELETE'
       });
 
       const resData = await res.json();
       if (!res.ok) {
-        throw new Error(resData.error || 'No se pudo eliminar al especialista');
+        throw new Error(resData.error || 'No se pudo eliminar al profesional');
       }
 
-      alert('Especialista desvinculado correctamente.');
-      fetchEspecialistas();
+      setEspecialistas(prev => prev.filter(u => u.id !== id));
     } catch (err) {
       console.error('[GestorEquipo] Error al eliminar:', err.message);
-      alert('Error al desvincular especialista: ' + err.message);
+      alert('Error al desvincular profesional: ' + err.message);
     }
   };
 
   return (
     <div className="space-y-6 text-left">
-      <div className="flex justify-between items-center">
+      
+      {/* Header del Gestor */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
         <div>
-          <h2 className="text-xl font-black text-white">Miembros del Equipo Especialista</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Administra los accesos de los terapeutas y psicólogos autorizados de tu establecimiento.
+          <h3 className="text-xl font-black text-white flex items-center gap-2">
+            <Shield size={22} className="text-purple-400" />
+            Equipo Clínico y Control de Acceso (RBAC)
+          </h3>
+          <p className="text-xs text-slate-400 mt-1">
+            Administra los profesionales autorizados para evaluar y gestionar estudiantes en <strong className="text-slate-200">{colegioNombre}</strong>.
           </p>
         </div>
+
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs tracking-wider uppercase rounded-xl flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-lg shadow-blue-600/10"
+          className="px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg hover:scale-105 flex items-center gap-2 cursor-pointer shrink-0"
         >
-          <UserPlus size={14} />
-          Invitar Especialista
+          <UserPlus size={16} /> Agregar Profesional
         </button>
       </div>
 
+      {/* Lista de Profesionales */}
       {loading ? (
-        <div className="py-16 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
-          <Loader2 className="animate-spin text-blue-500" size={32} />
-          <span className="text-xs font-mono">Cargando nómina de especialistas...</span>
+        <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">
+          <Loader2 size={28} className="animate-spin text-purple-400" />
+          <span className="text-xs font-mono">Cargando equipo profesional...</span>
         </div>
       ) : especialistas.length === 0 ? (
-        <div className="py-16 text-center border border-white/5 bg-white/[0.01] rounded-2xl">
-          <Shield className="mx-auto text-white/10 mb-4" size={48} />
-          <h4 className="text-white/60 font-bold">Sin Especialistas</h4>
-          <p className="text-xs text-slate-600 mt-1">No hay especialistas registrados en este colegio todavía.</p>
+        <div className="py-12 bg-[#0b0d14] border border-white/5 rounded-2xl flex flex-col items-center justify-center text-center p-6 gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-xl font-bold">
+            
+          </div>
+          <h4 className="text-white font-bold text-sm">Aún no hay profesionales registrados en este colegio</h4>
+          <p className="text-slate-400 text-xs max-w-md">
+            Comienza armando el equipo PIE de {colegioNombre} agregando psicólogos, terapeutas o coordinadores clínicos.
+          </p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="mt-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600 border border-purple-500/30 text-purple-300 hover:text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer"
+          >
+            + Agregar Primer Profesional
+          </button>
         </div>
       ) : (
-        <div className="bg-[#13161e] border border-white/10 rounded-2xl overflow-hidden">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest font-black text-slate-500">
-                <th className="px-6 py-4">Nombre Especialista</th>
-                <th className="px-6 py-4">Email / Cuenta</th>
-                <th className="px-6 py-4">Rol en Colegio</th>
-                <th className="px-6 py-4 text-center">Desvincular</th>
+              <tr className="border-b border-white/10 text-slate-400 font-black uppercase tracking-wider text-[10px]">
+                <th className="py-3 px-4">Profesional</th>
+                <th className="py-3 px-4">Rol Asignado</th>
+                <th className="py-3 px-4">Cargo Institucional</th>
+                <th className="py-3 px-4 text-center">Estado</th>
+                <th className="py-3 px-4">Último Acceso</th>
+                <th className="py-3 px-4 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-sm">
+            <tbody className="divide-y divide-white/5 font-medium">
               {especialistas.map((esp) => (
                 <tr key={esp.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4 flex items-center gap-3">
-                    <div className="w-9 h-9 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full flex items-center justify-center font-bold text-xs">
-                      {esp.nombre_completo?.charAt(0).toUpperCase() || 'E'}
+                  <td className="py-4 px-4 font-bold text-white flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full border flex items-center justify-center text-xs font-black shrink-0 ${
+                      esp.rol === 'director' ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' :
+                      esp.rol === 'coordinador_pie' ? 'bg-purple-500/15 border-purple-500/30 text-purple-300' :
+                      'bg-blue-500/15 border-blue-500/30 text-blue-300'
+                    }`}>
+                      {esp.nombre_completo?.charAt(0) || 'P'}
                     </div>
                     <div>
-                      <span className="font-bold text-white block">{esp.nombre_completo}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">ID: {esp.id.substring(0, 8)}...</span>
+                      <div className="text-white font-bold">{esp.nombre_completo}</div>
+                      <span className="text-[10px] text-slate-400 font-mono">{esp.email}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-slate-400 font-mono text-xs">
-                    {esp.email}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] rounded font-bold uppercase tracking-wider">
-                      Especialista PIE
+                  <td className="py-4 px-4">
+                    <span className={`px-2.5 py-1 rounded text-[10px] font-black uppercase font-mono border ${
+                      esp.rol === 'director' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
+                      esp.rol === 'coordinador_pie' ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' :
+                      esp.rol === 'psicologo' ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' :
+                      'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    }`}>
+                      {esp.rol}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="py-4 px-4 text-slate-300 font-semibold">{esp.cargo_texto || 'Profesional PIE'}</td>
+                  <td className="py-4 px-4 text-center">
+                    <button
+                      onClick={() => handleToggleActivo(esp.id, esp.activo !== false, esp.nombre_completo)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                        esp.activo !== false
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                          : 'bg-red-500/15 text-red-400 border-red-500/30 hover:bg-red-500/25'
+                      }`}
+                      title={esp.activo !== false ? 'Cuenta activa — Clic para suspender' : 'Cuenta suspendida — Clic para reactivar'}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${esp.activo !== false ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                      {esp.activo !== false ? 'Activo' : 'Suspendido'}
+                    </button>
+                  </td>
+                  <td className="py-4 px-4 text-slate-400 font-mono text-[11px]">
+                    {esp.ultimo_acceso ? new Date(esp.ultimo_acceso).toLocaleDateString('es-CL', { hour: '2-digit', minute: '2-digit' }) : 'Sin registros'}
+                  </td>
+                  <td className="py-4 px-4 text-right">
                     <button
                       onClick={() => handleDelete(esp.id, esp.nombre_completo)}
-                      className="p-2 text-slate-500 hover:text-red-400 bg-white/0 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 rounded-lg transition-all cursor-pointer inline-flex"
-                      title="Dar de baja especialista"
+                      className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                      title="Desvincular del colegio"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
                   </td>
                 </tr>
@@ -172,82 +270,137 @@ export default function GestorEquipo({ colegioId }) {
         </div>
       )}
 
-      {/* Modal Invitar Especialista */}
+      {/* MODAL PARA AGREGAR / INVITAR PROFESIONAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowAddModal(false)} />
-          <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-md p-6 relative z-10 rounded-2xl shadow-2xl">
-            <h3 className="text-lg font-black text-white mb-2 flex items-center gap-2">
-              <UserPlus size={20} className="text-blue-500" />
-              Invitar Especialista PIE
-            </h3>
-            <p className="text-xs text-slate-500 mb-6">
-              El especialista recibirá un correo electrónico con instrucciones para configurar su contraseña y acceder al colegio.
-            </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#10131c] border border-white/15 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
+            
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <h4 className="text-lg font-black text-white flex items-center gap-2">
+                  <UserPlus size={18} className="text-purple-400" />
+                  Nuevo Profesional
+                </h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Asignar acceso para {colegioNombre}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-white text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
 
             {errorMsg && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs flex gap-2 items-start mb-4">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-semibold flex items-center gap-2">
                 <AlertTriangle size={16} className="shrink-0" />
-                <span>{errorMsg}</span>
+                {errorMsg}
+              </div>
+            )}
+
+            {successMsg && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle2 size={16} className="shrink-0" />
+                {successMsg}
               </div>
             )}
 
             <form onSubmit={handleInvite} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1">
-                  <User size={10} /> Nombre Completo
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                  Nombre Completo *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej: Psic. Esteban Ruiz"
+                  placeholder="Ej: Ps. Valentina Rivas"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-[#181c28] border border-white/10 focus:border-purple-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1">
-                  <Mail size={10} /> Correo Electrónico
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                  Correo Electrónico Institucional *
                 </label>
                 <input
                   type="email"
                   required
-                  placeholder="esteban.ruiz@colegio.cl"
+                  placeholder="ejemplo@colegio.cl"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                  className="w-full bg-[#181c28] border border-white/10 focus:border-purple-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
                 />
               </div>
 
-              <div className="flex gap-3 justify-end pt-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                    Rol en Sistema *
+                  </label>
+                  <select
+                    value={rol}
+                    onChange={(e) => handleRolChange(e.target.value)}
+                    className="w-full bg-[#181c28] border border-white/10 focus:border-purple-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer"
+                  >
+                    <option value="psicologo">Psicólogo(a)</option>
+                    <option value="terapeuta">Terapeuta</option>
+                    <option value="coordinador_pie">Coordinador PIE</option>
+                    <option value="director">Director(a)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                    Cargo Descriptivo
+                  </label>
+                  <input
+                    type="text"
+                    value={cargo}
+                    onChange={(e) => setCargo(e.target.value)}
+                    className="w-full bg-[#181c28] border border-white/10 focus:border-purple-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                  Contraseña Inicial (Opcional - Mínimo 6 caracteres)
+                </label>
+                <input
+                  type="password"
+                  placeholder="Dejar en blanco para enviar link de invitación"
+                  value={tempPassword}
+                  onChange={(e) => setTempPassword(e.target.value)}
+                  className="w-full bg-[#181c28] border border-white/10 focus:border-purple-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-white transition-colors cursor-pointer"
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-bold text-xs uppercase rounded-xl transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={inviting}
-                  className="px-6 py-2.5 bg-white hover:bg-blue-600 hover:text-white text-black font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {inviting ? (
-                    <>
-                      <Loader2 className="animate-spin" size={12} />
-                      Enviando...
-                    </>
-                  ) : (
-                    'Enviar Invitación'
-                  )}
+                  {inviting ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar y Guardar'}
                 </button>
               </div>
             </form>
+
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -39,7 +39,7 @@ export async function GET(request) {
     sheet.columns = [
       { header: 'ID SESIÓN', key: 'id', width: 25 },
       { header: 'IDENTIFICADOR SUJETO', key: 'idSujeto', width: 15 },
-      { header: 'PACIENTE', key: 'paciente', width: 25 },
+      { header: 'ESTUDIANTE', key: 'paciente', width: 25 },
       { header: 'TIPO DE TEST', key: 'tipoTest', width: 18 },
       { header: 'INTENTO N°', key: 'intento', width: 12 },
       { header: 'ETIQUETA CLÍNICA', key: 'etiqueta', width: 25 },
@@ -66,7 +66,7 @@ export async function GET(request) {
       
       const pacName = s.pacientes 
         ? `${s.pacientes.nombre} ${s.pacientes.apellido}`.trim() 
-        : 'Paciente Desconocido';
+        : 'Estudiante Desconocido';
       
       const subjId = s.id_sujeto || (s.pacientes ? s.pacientes.id_sujeto : 'N/A');
 

@@ -46,17 +46,17 @@ export function analyzeData(turns = []) {
   const adjRight = avgRight !== null ? avgRight - falseStartR * 25 : null;
   const adjLeft  = avgLeft  !== null ? avgLeft  - falseStartL * 25 : null;
 
-  let dominance = 'Indeterminada', dominanceIcon = '⚖️';
+  let dominance = 'Indeterminada', dominanceIcon = '';
   let instinctHand = null;
 
   if (adjRight !== null && adjLeft !== null) {
-    if (adjRight + 30 < adjLeft) { dominance = 'Derecha'; dominanceIcon = '👉'; }
-    else if (adjLeft + 30 < adjRight) { dominance = 'Izquierda'; dominanceIcon = '👈'; }
-    else { dominance = 'Ambidiestra'; dominanceIcon = '👐'; }
+    if (adjRight + 30 < adjLeft) { dominance = 'Derecha'; dominanceIcon = ''; }
+    else if (adjLeft + 30 < adjRight) { dominance = 'Izquierda'; dominanceIcon = ''; }
+    else { dominance = 'Ambidiestra'; dominanceIcon = ''; }
   } else if (adjRight !== null) {
-    dominance = 'Derecha'; dominanceIcon = '👉';
+    dominance = 'Derecha'; dominanceIcon = '';
   } else if (adjLeft !== null) {
-    dominance = 'Izquierda'; dominanceIcon = '👈';
+    dominance = 'Izquierda'; dominanceIcon = '';
   }
 
   if (falseStartR > falseStartL) instinctHand = 'Derecha';
@@ -106,15 +106,15 @@ export function analyzeData(turns = []) {
   }
   let consistencyLevel = 'Alta Consistencia';
   let consistencyColor = 'text-emerald-600';
-  let consistencyIcon = '🎯';
+  let consistencyIcon = '';
   if (stdDev > 250) {
     consistencyLevel = 'Inconsistencia Severa (Alerta)';
     consistencyColor = 'text-rose-600';
-    consistencyIcon = '🚩';
+    consistencyIcon = '';
   } else if (stdDev > 150) {
     consistencyLevel = 'Variabilidad Moderada';
     consistencyColor = 'text-amber-600';
-    consistencyIcon = '⚠️';
+    consistencyIcon = '';
   }
 
   const consistenciaData = chronologicalRTs.map((rt, i) => ({

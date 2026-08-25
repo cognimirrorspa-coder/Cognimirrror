@@ -293,7 +293,7 @@ export default function ExecutiveReport({ record, onRestart, onExit }) {
             onClick={downloadPDF} 
             className="px-4 py-2.5 bg-gradient-to-r from-[#00FFFF] to-[#3b82f6] hover:brightness-110 rounded-xl font-black uppercase text-[10px] tracking-[0.15em] shadow-[0_0_20px_rgba(0,255,255,0.3)] transition text-black"
           >
-            📥 PDF Clínico
+            PDF Clínico
           </button>
         </div>
 
@@ -430,7 +430,7 @@ export default function ExecutiveReport({ record, onRestart, onExit }) {
         <section className="grid grid-cols-1 gap-4">
           <div className="p-4 bg-gradient-to-r from-[#00FFFF]/10 to-transparent border-l-2 border-[#00FFFF] rounded-r-2xl">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xl">🌊</span>
+              
               <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#00FFFF]">Diagnóstico: Estado de Flujo</h4>
             </div>
             <p className="text-[10px] text-white/50 leading-relaxed font-medium">
@@ -442,7 +442,7 @@ export default function ExecutiveReport({ record, onRestart, onExit }) {
           {m.inhibitionScore === 100 && (
             <div className="p-4 bg-gradient-to-r from-[#39FF14]/10 to-transparent border-l-2 border-[#39FF14] rounded-r-2xl">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-xl">🛡️</span>
+                
                 <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#39FF14]">Diagnóstico: Supresión Prefrontal</h4>
               </div>
               <p className="text-[10px] text-white/50 leading-relaxed font-medium">

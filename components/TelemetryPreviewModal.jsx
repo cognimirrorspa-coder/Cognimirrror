@@ -77,7 +77,7 @@ export default function TelemetryPreviewModal({ isOpen, onClose, sessionData, pl
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `CogniMirror_${isRawOnly ? 'Telemetria_Cruda' : 'Informe'}_${playerName || 'Paciente'}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `CogniMirror_${isRawOnly ? 'Telemetria_Cruda' : 'Informe'}_${playerName || 'Estudiante'}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -100,7 +100,7 @@ export default function TelemetryPreviewModal({ isOpen, onClose, sessionData, pl
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Paciente: <span className="text-white font-bold">{playerName || sessionData.playerName || 'Especialista / Anónimo'}</span> | ID: {sessionData.id || sessionData.sessionId || 'N/A'}
+                Estudiante: <span className="text-white font-bold">{playerName || sessionData.playerName || 'Especialista / Anónimo'}</span> | ID: {sessionData.id || sessionData.sessionId || 'N/A'}
               </p>
             </div>
           </div>

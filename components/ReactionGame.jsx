@@ -486,7 +486,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         
         <div className="relative z-10 flex flex-col items-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-3xl mb-6 shadow-lg shadow-red-500/5 animate-pulse">
-            ⚠️
+            !
           </div>
           <h2 className="text-2xl font-black mb-3 text-white tracking-tight uppercase">Conexión Perdida</h2>
           <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-8">
@@ -520,7 +520,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         
         <div className="relative z-10 flex flex-col items-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-3xl mb-6 shadow-lg shadow-orange-500/5 animate-bounce">
-            🔥
+            
           </div>
           <h2 className="text-2xl font-black mb-3 text-white tracking-tight uppercase">Calentamiento Finalizado</h2>
           <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-8">
@@ -607,7 +607,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
                              x{Math.floor(currentStreak/3) + 1}
                            </motion.span>
                          )}
-                         {currentStreak > 5 && <span className="text-2xl mt-1">🔥</span>}
+                         {currentStreak > 5 && <span className="text-2xl mt-1"></span>}
                       </div>
                     </div>
                   </motion.div>

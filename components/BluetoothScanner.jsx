@@ -138,7 +138,7 @@ export default function BluetoothScanner({ isOpen, onClose, onConnected }) {
           
           <div className="ble-header">
             <div className="ble-icon-container">
-              {status === 'success' ? '✅' : '🧊'}
+              {status === 'success' ? 'OK' : 'BLE'}
             </div>
             <h2 className="ble-title">
               {status === 'success' ? '¡Conectado!' : 'Conectar Cubo Mágico'}

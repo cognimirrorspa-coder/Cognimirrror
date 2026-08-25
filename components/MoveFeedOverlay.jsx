@@ -57,7 +57,7 @@ export default function MoveFeedOverlay() {
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '14px' }}>📡</span>
+          
           <span style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 700, fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
             Feed de Movimientos BLE
           </span>
@@ -175,7 +175,7 @@ export default function MoveFeedOverlay() {
                 {/* Indicador visual de ráfaga */}
                 {isDouble && (
                   <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>
-                    ⚡ doble rápido
+                    doble rápido
                   </span>
                 )}
 

@@ -3,8 +3,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 
-const ENABLE_OFFLINE_BYPASS = false;
-
 const BYPASS_EMAIL = 'evaluador@cognimirror.com';
 const BYPASS_PASSWORD = 'clinica2026';
 const BYPASS_USER = {
@@ -26,6 +24,7 @@ const AuthContext = createContext({
   loading: true,
   signIn: async () => {},
   signUp: async () => {},
+  registerInstitution: async () => {},
   signOut: async () => {}
 });
 
@@ -34,7 +33,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Helper para cargar perfil desde base de datos Supabase
+  // Helper para cargar perfil y colegio desde base de datos Supabase
   const loadUserProfile = async (userObj) => {
     if (!userObj) {
       setProfile(null);
@@ -42,51 +41,62 @@ export function AuthProvider({ children }) {
     }
 
     // Mock para usuarios bypass locales
-    if (userObj.id === '00000000-0000-0000-0000-000000000000' || userObj.email === 'coordinador@colegio.com') {
+    if (userObj.id === '00000000-0000-0000-0000-000000000000' || userObj.email === 'coordinador@colegio.com' || userObj.email === 'director@davinci.cl') {
+      const isDirector = userObj.email === 'director@davinci.cl';
       const isCoordinator = userObj.email === 'coordinador@colegio.com';
       const mockProfile = {
         id: userObj.id,
         email: userObj.email,
-        nombre_completo: isCoordinator ? 'Coordinador PIE Demostración' : 'Ps. Evaluador de Prueba',
-        colegio_id: 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08',
-        rol: isCoordinator ? 'coordinador_pie' : 'especialista'
+        nombre_completo: isDirector ? 'Andrés Soto (Director)' : (isCoordinator ? 'Coordinador PIE General' : 'Ps. Evaluador de Prueba'),
+        colegio_id: 'c1000000-0000-0000-0000-000000000001',
+        rol: isDirector ? 'director' : (isCoordinator ? 'coordinador_pie' : 'psicologo'),
+        cargo_texto: isDirector ? 'Director Académico' : (isCoordinator ? 'Coordinadora PIE' : 'Psicólogo Clínico PIE'),
+        colegio: {
+          id: 'c1000000-0000-0000-0000-000000000001',
+          nombre: isDirector ? 'Colegio Leonardo Da Vinci' : 'Colegio Piloto Demostración',
+          rbd: isDirector ? '12345-6' : '99999-9',
+          comuna: 'Santiago'
+        }
       };
       setProfile(mockProfile);
       return mockProfile;
     }
 
     try {
+      // 1. Consultar perfil con join a tabla colegios
       const { data, error } = await supabase
         .from('perfiles')
-        .select('*')
+        .select('*, colegios(*)')
         .eq('id', userObj.id)
         .maybeSingle();
 
       if (!error && data) {
-        setProfile(data);
-        return data;
-      } else {
-        // Fallback: buscar en especialistas_bypass
-        const { data: bypassUser } = await supabase
-          .from('especialistas_bypass')
-          .select('*')
-          .eq('id', userObj.id)
-          .maybeSingle();
+        const fullProfile = {
+          ...data,
+          colegio: data.colegios || null
+        };
+        setProfile(fullProfile);
 
-        if (bypassUser) {
-          const fallbackProfile = {
-            id: bypassUser.id,
-            email: bypassUser.email,
-            nombre_completo: bypassUser.nombre_completo,
-            colegio_id: 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08',
-            rol: 'especialista'
-          };
-          setProfile(fallbackProfile);
-          return fallbackProfile;
-        }
+        // Actualizar último acceso en segundo plano
+        supabase
+          .from('perfiles')
+          .update({ ultimo_acceso: new Date().toISOString() })
+          .eq('id', userObj.id)
+          .then(() => {});
+
+        return fullProfile;
+      } else {
+        // Fallback: perfil básico si no se encontró en tabla
+        const fallbackProfile = {
+          id: userObj.id,
+          email: userObj.email,
+          nombre_completo: userObj.user_metadata?.full_name || userObj.email.split('@')[0],
+          rol: userObj.user_metadata?.rol || 'especialista',
+          colegio_id: userObj.user_metadata?.colegio_id || null
+        };
+        setProfile(fallbackProfile);
+        return fallbackProfile;
       }
-      setProfile(null);
-      return null;
     } catch (err) {
       console.error('[AuthContext] Error al cargar perfil:', err.message);
       setProfile(null);
@@ -158,20 +168,22 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       // 1. Cuentas bypass de demostración
-      if (email === BYPASS_EMAIL || email === 'psicologo@clinica.com' || email === 'coordinador@colegio.com') {
+      if (email === BYPASS_EMAIL || email === 'psicologo@clinica.com' || email === 'coordinador@colegio.com' || email === 'director@davinci.cl') {
         const passwordCorrect = (email === BYPASS_EMAIL && password === BYPASS_PASSWORD) || 
                                 (email === 'psicologo@clinica.com' && password === 'clinica2026') ||
-                                (email === 'coordinador@colegio.com' && password === 'clinica2026');
+                                (email === 'coordinador@colegio.com' && password === 'clinica2026') ||
+                                (email === 'director@davinci.cl' && password === 'clinica2026');
         
         if (!passwordCorrect) {
           return { data: null, error: { message: 'Contraseña incorrecta para la cuenta de demostración.' } };
         }
         
         const demoUserObj = {
-          id: email === 'coordinador@colegio.com' ? 'c001c001-c001-c001-c001-c001c001c001' : '00000000-0000-0000-0000-000000000000',
+          id: email === 'director@davinci.cl' ? 'd1000000-0000-0000-0000-000000000001' : 
+              email === 'coordinador@colegio.com' ? 'c001c001-c001-c001-c001-c001c001c001' : '00000000-0000-0000-0000-000000000000',
           email: email,
           user_metadata: {
-            full_name: email === BYPASS_EMAIL ? 'Ps. Evaluador de Prueba' : (email === 'coordinador@colegio.com' ? 'Coordinador PIE Demostración' : 'Ps. Especialista Clínico')
+            full_name: email === 'director@davinci.cl' ? 'Andrés Soto (Director)' : (email === 'coordinador@colegio.com' ? 'Coordinador PIE' : 'Ps. Evaluador de Prueba')
           }
         };
         const demoSessionObj = {
@@ -195,45 +207,53 @@ export function AuthProvider({ children }) {
       if (data && data.user && data.session) {
         localStorage.setItem('cognimirror_bypass_session', JSON.stringify(data.session));
         setUser(data.user);
-        await loadUserProfile(data.user);
+        const userProf = await loadUserProfile(data.user);
+
+        // Registrar evento de Login en Auditoría
+        if (userProf && userProf.colegio_id) {
+          supabase.from('logs_auditoria').insert([{
+            colegio_id: userProf.colegio_id,
+            usuario_id: data.user.id,
+            usuario_nombre: userProf.nombre_completo || data.user.email,
+            evento: 'LOGIN',
+            detalles: {
+              modulo: 'Inicio de Sesión Web',
+              email: data.user.email
+            }
+          }]).catch(() => {});
+        }
+
         return { data, error: null };
       }
 
-      // 3. Fallback: especialistas_bypass legacy
-      const { data: bypassUser } = await supabase
-        .from('especialistas_bypass')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (bypassUser) {
-        if (bypassUser.password !== password) {
-          return { data: null, error: { message: 'Contraseña incorrecta para el usuario registrado.' } };
-        }
-        
-        const matchedUser = {
-          id: bypassUser.id,
-          email: bypassUser.email,
-          user_metadata: {
-            full_name: bypassUser.nombre_completo
-          }
-        };
-        const sessionObj = {
-          user: matchedUser,
-          access_token: 'bypass-db-token-' + bypassUser.id,
-          refresh_token: 'bypass-db-token-' + bypassUser.id
-        };
-        
-        localStorage.setItem('cognimirror_bypass_session', JSON.stringify(sessionObj));
-        setUser(matchedUser);
-        await loadUserProfile(matchedUser);
-        return { data: { user: matchedUser, session: sessionObj }, error: null };
-      }
-
       if (authError) throw authError;
-      return { data: null, error: { message: 'Usuario no encontrado en el sistema.' } };
+      return { data: null, error: { message: 'Credenciales inválidas.' } };
     } catch (error) {
       console.error('[AuthContext] Error al iniciar sesión:', error.message);
+      return { data: null, error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registerInstitution = async ({ schoolName, rbd, comuna, region, adminName, email, password, role, cargo }) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/register-institution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolName, rbd, comuna, region, adminName, email, password, role, cargo })
+      });
+
+      const resData = await res.json();
+      if (!res.ok || resData.error) {
+        throw new Error(resData.error || 'Error al registrar la institución.');
+      }
+
+      console.log('[AuthContext] Institución registrada con éxito. Iniciando sesión...');
+      return await signIn(email, password);
+    } catch (error) {
+      console.error('[AuthContext] Error registrando institución:', error.message);
       return { data: null, error };
     } finally {
       setLoading(false);
@@ -245,9 +265,7 @@ export function AuthProvider({ children }) {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, fullName })
       });
 
@@ -256,7 +274,6 @@ export function AuthProvider({ children }) {
         throw new Error(resData.error || 'Error al registrar usuario.');
       }
 
-      console.log('[AuthContext] Cuenta creada en Supabase Auth, iniciando sesión...');
       return await signIn(email, password);
     } catch (error) {
       console.error('[AuthContext] Error en el flujo de registro:', error.message);
@@ -269,14 +286,22 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     setLoading(true);
     try {
+      if (profile?.colegio_id && user?.id) {
+        supabase.from('logs_auditoria').insert([{
+          colegio_id: profile.colegio_id,
+          usuario_id: user.id,
+          usuario_nombre: profile.nombre_completo || user.email,
+          evento: 'LOGOUT',
+          detalles: { accion: 'Cierre de sesión ordenado' }
+        }]).catch(() => {});
+      }
+
       localStorage.removeItem('cognimirror_bypass_session');
       setUser(null);
       setProfile(null);
       try {
         await supabase.auth.signOut();
-      } catch (e) {
-        // Ignorar
-      }
+      } catch (e) {}
     } catch (error) {
       console.error('[AuthContext] Error al cerrar sesión:', error.message);
     } finally {
@@ -285,7 +310,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, registerInstitution, signOut }}>
       {children}
     </AuthContext.Provider>
   );

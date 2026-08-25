@@ -6,14 +6,17 @@ export const revalidate = 0;
 
 export async function DELETE(request) {
   try {
-    // Intentar leer de la query string o del cuerpo del mensaje
     const { searchParams } = new URL(request.url);
     let specialistId = searchParams.get('id');
+    let colegioId = searchParams.get('colegio_id');
+    let adminName = searchParams.get('admin') || 'Director / Coordinador';
 
     if (!specialistId) {
       try {
         const body = await request.json();
         specialistId = body.id;
+        colegioId = body.colegio_id || colegioId;
+        adminName = body.admin || adminName;
       } catch (e) {
         // Ignorar
       }
@@ -21,77 +24,92 @@ export async function DELETE(request) {
 
     if (!specialistId) {
       return NextResponse.json(
-        { error: 'Falta el ID del especialista a eliminar' },
+        { error: 'Falta el ID del profesional a eliminar' },
         { status: 400 }
       );
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     // Modo Mock/Desarrollo si falta la clave secreta del servidor
     if (!serviceRoleKey || specialistId.startsWith('mock-')) {
-      console.warn(`[API Eliminar] Ejecutando en modo MOCK local para especialista ID: ${specialistId}`);
+      console.warn(`[API Eliminar] Ejecutando en modo MOCK local para profesional ID: ${specialistId}`);
       
-      const supabaseAnon = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-      
-      // Eliminar de perfiles directamente
-      const { error: profileError } = await supabaseAnon
+      const supabaseAnon = createClient(supabaseUrl, anonKey);
+      await supabaseAnon
         .from('perfiles')
         .delete()
         .eq('id', specialistId);
 
-      if (profileError) {
-        return NextResponse.json({ error: profileError.message }, { status: 400 });
+      if (colegioId) {
+        await supabaseAnon.from('logs_auditoria').insert([{
+          colegio_id: colegioId,
+          usuario_nombre: adminName,
+          evento: 'DESACTIVAR_USUARIO',
+          detalles: { accion: 'Desvinculación definitiva de cuenta', usuario_id: specialistId }
+        }]).catch(() => {});
       }
 
       return NextResponse.json({
         success: true,
         mockMode: true,
-        message: 'Especialista eliminado correctamente de la base de datos (Mock Mode).'
+        message: 'Profesional desvinculado correctamente.'
       });
     }
 
     // Modo Producción Real
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    console.log(`[API Eliminar] Eliminando especialista ID: ${specialistId}`);
+    // 1. Obtener datos antes de eliminar para el log
+    const { data: userToDelete } = await supabaseAdmin
+      .from('perfiles')
+      .select('nombre_completo, email, colegio_id')
+      .eq('id', specialistId)
+      .maybeSingle();
 
-    // 1. Eliminar de public.perfiles
+    const targetColegioId = colegioId || userToDelete?.colegio_id;
+
+    // 2. Eliminar de public.perfiles
     const { error: profileError } = await supabaseAdmin
       .from('perfiles')
       .delete()
       .eq('id', specialistId);
 
     if (profileError) {
-      console.error('[API Eliminar] Error eliminando perfil de especialista:', profileError.message);
+      console.error('[API Eliminar] Error eliminando perfil:', profileError.message);
       return NextResponse.json({ error: profileError.message }, { status: 400 });
     }
 
-    // 2. Eliminar de Supabase Auth
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(specialistId);
+    // 3. Eliminar de Supabase Auth
+    await supabaseAdmin.auth.admin.deleteUser(specialistId).catch(err => {
+      console.warn('[API Eliminar] Advertencia al eliminar en Auth:', err.message);
+    });
 
-    if (authError) {
-      console.warn('[API Eliminar] El perfil fue eliminado, pero falló la revocación de acceso en Auth:', authError.message);
-      // Retornar éxito parcial ya que el perfil fue eliminado y ya no pertenece al colegio
-      return NextResponse.json({
-        success: true,
-        warning: 'El perfil fue eliminado, pero falló la desactivación completa en Supabase Auth: ' + authError.message
-      });
+    // 4. Registrar en Auditoría
+    if (targetColegioId) {
+      await supabaseAdmin.from('logs_auditoria').insert([{
+        colegio_id: targetColegioId,
+        usuario_nombre: adminName,
+        evento: 'DESACTIVAR_USUARIO',
+        detalles: {
+          accion: 'Desvinculación y eliminación de profesional del colegio',
+          profesional_nombre: userToDelete?.nombre_completo || specialistId,
+          profesional_email: userToDelete?.email || ''
+        }
+      }]).catch(() => {});
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Especialista eliminado permanentemente del sistema.'
+      message: 'Profesional desvinculado permanentemente del sistema.'
     });
 
   } catch (err) {
-    console.error('[API Eliminar] Error crítico:', err.message);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('[API Eliminar] Error crítico:', err);
+    return NextResponse.json({ error: 'Internal Server Error: ' + err.message }, { status: 500 });
   }
 }

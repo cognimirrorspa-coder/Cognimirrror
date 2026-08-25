@@ -121,7 +121,7 @@ export function useReactionGame() {
   const finishGame = useCallback((finalData) => {
     setGameDataBoth(finalData);
     setPlayStateBoth('results');
-    console.log('✅ Juego terminado. Turnos:', finalData.length);
+    console.log('Juego terminado. Turnos:', finalData.length);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -174,7 +174,7 @@ export function useReactionGame() {
         // Swap actual por trampa
         [deckRef.current[nextIdx], deckRef.current[trapIdx]] = [deckRef.current[trapIdx], deckRef.current[nextIdx]];
         face = deckRef.current[nextIdx];
-        console.log('⚠️ TRAMPA DE IMPULSIVIDAD: NO-GO INYECTADO POR VELOCIDAD');
+        console.log('TRAMPA DE IMPULSIVIDAD: NO-GO INYECTADO POR VELOCIDAD');
       }
     }
 
@@ -212,7 +212,7 @@ export function useReactionGame() {
           const points = 150;
           setScore(s => s + points);
           setCombo(c => c + 1);
-          setFeedbackMsg({ text: `¡Autocontrol! 🧠 +${points}`, type: 'success' });
+          setFeedbackMsg({ text: `¡Autocontrol! +${points}`, type: 'success' });
           setTimeout(() => setFeedbackMsg(null), 1000);
 
           const successRecord = {
@@ -431,12 +431,12 @@ export function useReactionGame() {
 
           // Cálculo de puntuación y feedback dinámico
           let points = 100;
-          let text = '¡Bien! 👍';
+          let text = '¡Bien!';
           let type = 'success';
           
           if (reactionMs < 600) {
             points = 200;
-            text = '¡Rayo! ⚡';
+            text = '¡Excelente tiempo!';
             type = 'rayo';
           }
 

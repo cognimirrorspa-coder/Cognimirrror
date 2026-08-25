@@ -82,7 +82,7 @@ function RemoteEvalContent() {
       });
       setPatientData({
         id: 'demo-patient-id',
-        nombre: 'Paciente',
+        nombre: 'Estudiante',
         apellido: 'de Demostración',
         id_sujeto: 'S-DEMO'
       });
@@ -377,11 +377,11 @@ function RemoteEvalContent() {
               ) : (
                 <>
                   <div className="flex gap-4 items-start p-3 bg-black/30 rounded-xl border border-white/5">
-                    <span className="text-xl flex-shrink-0">👁️</span>
+                    
                     <p className="text-xs">Observa atentamente el gemelo digital en pantalla para memorizar la secuencia que se enciende.</p>
                   </div>
                   <div className="flex gap-4 items-start p-3 bg-black/30 rounded-xl border border-white/5">
-                    <span className="text-xl flex-shrink-0">🧩</span>
+                    
                     <p className="text-xs">Replica el patrón exacto en el mismo orden usando las caras correspondientes del cubo inteligente o tu teclado.</p>
                   </div>
                 </>

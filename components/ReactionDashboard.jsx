@@ -78,11 +78,11 @@ const CustomTooltip = ({ active, payload, label }) => {
           if (isGoOmission) { statusLabel = 'Omisión (Inatención)'; dotColor = 'bg-slate-400'; }
           if (isCommission) { statusLabel = 'Error Dirección (Visomotor)'; dotColor = 'bg-orange-500'; }
 
-          let handLabel = 'No-Go ✋';
+          let handLabel = 'No-Go';
           const isL = entry.dataKey.includes('rtL') || (entry.dataKey.includes('rtEvent') && data.expectedFace === 'L');
           const isR = entry.dataKey.includes('rtR') || (entry.dataKey.includes('rtEvent') && data.expectedFace === 'R');
-          if (isL) handLabel = 'Izquierda 🔴';
-          if (isR) handLabel = 'Derecha 🟠';
+          if (isL) handLabel = 'Izquierda (L)';
+          if (isR) handLabel = 'Derecha (R)';
 
           return (
             <div key={idx} className="flex flex-col gap-1">
@@ -240,7 +240,7 @@ export default function ReactionDashboard({
   const d = date ? new Date(date) : new Date();
   const formattedDate = `${d.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })} a las ${d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`;
 
-  const faceName = (f) => f === 'L' ? '🔴 Roja (L)' : f === 'R' ? '🟠 Naranja (R)' : f;
+  const faceName = (f) => f === 'L' ? 'Roja (L)' : f === 'R' ? 'Naranja (R)' : f;
   const ms = (v) => v !== null && v > 0 ? `${v} ms` : '—';
 
   const chartData = [];
@@ -410,7 +410,7 @@ export default function ReactionDashboard({
             )}
           </h1>
           <p className="text-slate-500 font-medium mt-1 text-sm">
-            Paciente: <span className="text-indigo-600 font-bold">{playerName || 'Anónimo'}</span>
+            Estudiante: <span className="text-indigo-600 font-bold">{playerName || 'Anónimo'}</span>
             <span className="mx-2 text-slate-300">|</span>
             {formattedDate}
           </p>
@@ -421,27 +421,27 @@ export default function ReactionDashboard({
             </p>
           ) : (
             <p className="text-xs text-amber-600 mt-1 font-bold flex items-center gap-1">
-              ⚠️ Sin calibrar. Los resultados incluyen latencia de hardware.
+              Sin calibrar. Los resultados incluyen latencia de hardware.
             </p>
           )}
           {isDemoData && (
             <p className="text-xs text-indigo-600 mt-1.5 font-bold flex items-center gap-1">
-              ℹ️ Usando telemetría de simulación clínica (sin registros atómicos en la base de datos).
+              Usando telemetría de simulación clínica (sin registros atómicos en la base de datos).
             </p>
           )}
         </div>
         <div className="flex gap-2 flex-wrap md:flex-nowrap flex-shrink-0 no-print">
           <button onClick={onRestart} className="px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-600 hover:bg-slate-50 shadow-sm transition-all text-sm">
-            🔄 Rehacer
+            Rehacer
           </button>
           <button onClick={handlePrint} className="px-4 py-2 rounded-xl bg-slate-800 font-bold text-white hover:bg-slate-900 shadow-sm transition-all text-sm flex items-center gap-2">
-            🖨️ PDF
+            PDF
           </button>
           <button onClick={handleExportExcel} className="px-4 py-2 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-700 shadow-sm transition-all text-sm flex items-center gap-2">
-            📊 Excel Clínico
+            Excel Clínico
           </button>
           <button onClick={handleExportRawTelemetry} className="px-4 py-2 rounded-xl bg-sky-600 font-bold text-white hover:bg-sky-700 shadow-sm transition-all text-sm flex items-center gap-2" title="Descargar log crudo e inalterable de sensores BLE para auditoría">
-            🛡️ Telemetría Cruda
+            Telemetría Cruda
           </button>
           <button onClick={onExit} className="px-4 py-2 rounded-xl bg-indigo-600 font-bold text-white hover:bg-indigo-700 shadow shadow-indigo-200 transition-all text-sm">
             ← Finalizar
@@ -598,8 +598,8 @@ export default function ReactionDashboard({
               <p className="text-2xl font-black text-slate-800">{m.dominance} {m.dominanceIcon}</p>
             </div>
             <div className="space-y-1 border-t border-slate-100 pt-3 mt-auto">
-              <StatRow label="Mano Izquierda 🔴" value={ms(m.avgLeft)} color="text-red-600" />
-              <StatRow label="Mano Derecha 🟠"   value={ms(m.avgRight)} color="text-orange-500" />
+              <StatRow label="Mano Izquierda (L)" value={ms(m.avgLeft)} color="text-red-600" />
+              <StatRow label="Mano Derecha (R)"   value={ms(m.avgRight)} color="text-orange-500" />
             </div>
           </div>
 
@@ -628,7 +628,7 @@ export default function ReactionDashboard({
               <div className="mb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    📈 Variabilidad Intraindividual (Por Mano)
+                    Variabilidad Intraindividual (Por Mano)
                   </h2>
                   <p className="text-sm text-slate-500 mt-1">
                     Visualiza la consistencia de cada mano por separado.
@@ -675,7 +675,7 @@ export default function ReactionDashboard({
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  📊 Tipología de Errores
+                  Tipología de Errores
                 </h2>
                 <p className="text-sm text-slate-500 mt-1">
                   Clasificación clínica de los fallos.
@@ -708,7 +708,7 @@ export default function ReactionDashboard({
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col w-full">
             <div className="mb-6">
               <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                ⏱️ Curva Cronológica de Reacción (Secuencia)
+                Curva Cronológica de Reacción (Secuencia)
               </h2>
               <p className="text-sm text-slate-500 mt-1">
                 Visualiza el progreso turno a turno de principio a fin, evidenciando procesos de aprendizaje o fatiga cognitiva.
@@ -737,7 +737,7 @@ export default function ReactionDashboard({
             <div className="flex flex-wrap items-center justify-center gap-4 mt-6 pt-6 border-t border-slate-100 text-[10px] font-bold uppercase text-slate-500">
               <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Acierto Normal</div>
               <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full border-2 border-yellow-500" /> Inhibición Exitosa</div>
-              <div className="flex items-center gap-1"><div className="text-red-500 text-sm leading-none">❌</div> Impulsividad</div>
+              <div className="flex items-center gap-1"><div className="text-red-500 text-xs font-bold font-mono">[X]</div> Impulsividad</div>
               <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 bg-orange-500" /> Falla Visomotora</div>
               <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Omisión</div>
             </div>
@@ -747,9 +747,9 @@ export default function ReactionDashboard({
         {/* BITÁCORA CLÍNICA */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 no-print">
           <h2 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-            📝 Bitácora Clínica (Observación Cualitativa)
+            Bitácora Clínica (Observación Cualitativa)
           </h2>
-          <p className="text-sm text-slate-500 mb-4 font-medium">Registra observaciones cualitativas sobre la conducta, distractores, nivel de ansiedad o fatiga del paciente durante el test de reacción.</p>
+          <p className="text-sm text-slate-500 mb-4 font-medium">Registra observaciones cualitativas sobre la conducta, distractores, nivel de ansiedad o fatiga del estudiante durante el test de reacción.</p>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -774,7 +774,7 @@ export default function ReactionDashboard({
         {/* ── SECCIÓN 3: RADIOGRAFÍA POR TURNOS ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8">
           <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            📋 Radiografía por Turnos
+            Radiografía por Turnos
           </h2>
           <div className="space-y-3">
             {(showAllTurns ? actualTurnsData : (actualTurnsData || []).slice(0, 15)).map((t, idx, arr) => {
@@ -788,23 +788,23 @@ export default function ReactionDashboard({
               const rt = t.time || t.reactionTimeMs;
 
               if (isNogoFail) {
-                statusText = `⚡ Te anticipaste al estímulo. Fallo de inhibición (Impulsividad).`;
+                statusText = `Te anticipaste al estímulo. Fallo de inhibición (Impulsividad).`;
                 borderLine = 'border-rose-200 bg-rose-50/60';
                 dot = 'bg-rose-500';
               } else if (isGoOmission) {
-                statusText = '😶 No respondiste a tiempo (Omisión/Inatención).';
+                statusText = 'No respondiste a tiempo (Omisión/Inatención).';
                 borderLine = 'border-amber-200 bg-amber-50/60';
                 dot = 'bg-amber-500';
               } else if (isCommission) {
-                statusText = `✋ Te equivocaste de mano, pero corregiste. Reacción final: ${rt} ms.`;
+                statusText = `Te equivocaste de mano, pero corregiste. Reacción final: ${rt} ms.`;
                 borderLine = 'border-blue-200 bg-blue-50/60';
                 dot = 'bg-blue-500';
               } else if (!isCorr && t.type !== 'NOGO') {
-                statusText = '❌ Te equivocaste de cara y se acabó el tiempo.';
+                statusText = 'Te equivocaste de cara y se acabó el tiempo.';
                 borderLine = 'border-red-200 bg-red-50/60';
                 dot = 'bg-red-500';
               } else {
-                statusText = t.type === 'NOGO' ? '✅ Inhibición correcta. (No moviste)' : `✅ Acierto. Tiempo de reacción: ${rt} ms.`;
+                statusText = t.type === 'NOGO' ? 'Inhibición correcta. (Sin movimiento)' : `Acierto. Tiempo de reacción: ${rt} ms.`;
                 borderLine = 'border-emerald-100 bg-emerald-50/40';
                 dot = 'bg-emerald-500';
               }
@@ -863,7 +863,7 @@ export default function ReactionDashboard({
                 onClick={() => setShowAllTurns(!showAllTurns)}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer shadow-sm active:scale-95"
               >
-                {showAllTurns ? 'Mostrar menos ↩' : `Ver más (${actualTurnsData.length - 15} turnos restantes) ➕`}
+                {showAllTurns ? 'Mostrar menos' : `Ver más (${actualTurnsData.length - 15} turnos restantes)`}
               </button>
             </div>
           )}
@@ -872,7 +872,7 @@ export default function ReactionDashboard({
         {/* ── SECCIÓN 4: GLOSARIO Y METODOLOGÍA CLÍNICA ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8 mt-6 page-break-before">
           <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            📖 Glosario y Metodología Clínica
+            Glosario y Metodología Clínica
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm text-slate-600">
             <div>
@@ -882,7 +882,7 @@ export default function ReactionDashboard({
             </div>
             <div>
               <h3 className="font-bold text-slate-800 mb-1 text-base">Curva de Fatiga (Fatiga Cognitiva)</h3>
-              <p className="mb-2"><strong>Qué significa:</strong> Evalúa la capacidad de mantener el nivel de alerta. Un decaimiento severo indica que el paciente pierde el foco sostenido con el paso de los minutos.</p>
+              <p className="mb-2"><strong>Qué significa:</strong> Evalúa la capacidad de mantener el nivel de alerta. Un decaimiento severo indica que el estudiante pierde el foco sostenido con el paso de los minutos.</p>
               <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100"><strong>Cálculo:</strong> Diferencia porcentual entre el tiempo promedio de la primera mitad de los turnos (cronológicamente) vs. la segunda mitad.</p>
             </div>
             <div>
@@ -892,12 +892,12 @@ export default function ReactionDashboard({
             </div>
             <div>
               <h3 className="font-bold text-slate-800 mb-1 text-base">Control Inhibitorio (Impulsividad)</h3>
-              <p className="mb-2"><strong>Qué significa:</strong> La capacidad del paciente de frenar un instinto automático motor. Altos niveles de "Falsos" evidencian una impulsividad significativa.</p>
+              <p className="mb-2"><strong>Qué significa:</strong> La capacidad del estudiante de frenar un instinto automático motor. Altos niveles de "Falsos" evidencian una impulsividad significativa.</p>
               <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100"><strong>Cálculo:</strong> Sumatoria directa de errores por anticipación en turnos No-Go (Falsos) o falta de reacción (Omisiones).</p>
             </div>
             <div>
               <h3 className="font-bold text-slate-800 mb-1 text-base">Atención Sostenida (Tolerancia a la Espera)</h3>
-              <p className="mb-2"><strong>Qué significa:</strong> Evalúa si el paciente se dispersa durante los intervalos de espera largos. Tiempos mucho más lentos en esperas largas sugieren dificultad para sostener el foco sin estímulos rápidos.</p>
+              <p className="mb-2"><strong>Qué significa:</strong> Evalúa si el estudiante se dispersa durante los intervalos de espera largos. Tiempos mucho más lentos en esperas largas sugieren dificultad para sostener el foco sin estímulos rápidos.</p>
               <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100"><strong>Cálculo:</strong> Comparación del tiempo promedio en turnos con esperas antes de la señal &lt;1.8s frente a esperas &gt;1.8s.</p>
             </div>
             <div>

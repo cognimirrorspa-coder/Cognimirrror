@@ -134,7 +134,7 @@ export default function EvaluadorPanel() {
           if (newP) {
             patientUuid = newP.id;
           } else {
-            throw new Error('No se pudo crear el perfil del paciente.');
+            throw new Error('No se pudo crear el perfil del estudiante.');
           }
         } else {
           patientUuid = paciente.id;
@@ -148,7 +148,7 @@ export default function EvaluadorPanel() {
           if (newP) {
             patientUuid = newP.id;
           } else {
-            throw new Error('No se pudo crear el perfil local del paciente.');
+            throw new Error('No se pudo crear el perfil local del estudiante.');
           }
         } else {
           patientUuid = localP.id;
@@ -286,11 +286,11 @@ export default function EvaluadorPanel() {
               onClick={signOut} 
               className="inline-flex items-center gap-2 text-red-400/60 hover:text-red-400 text-xs tracking-widest uppercase font-bold transition-colors bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/20 px-3 py-1.5 rounded"
             >
-              🔒 Cerrar Sesión
+              Cerrar Sesión
             </button>
           </div>
           <div className="flex justify-center items-center gap-3 text-3xl font-black text-white tracking-tight">
-            <span>🧊</span>
+            
             <span>Cogni<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">Mirror</span></span>
           </div>
           <h1 className="text-sm font-black tracking-[0.3em] text-white/40 uppercase mt-2">
@@ -334,7 +334,7 @@ export default function EvaluadorPanel() {
                     : 'bg-black/30 border-white/5 hover:bg-white/[0.02] opacity-60 hover:opacity-100'
                 }`}
               >
-                <span className="text-3xl">⚡</span>
+                
                 <div className="text-center">
                   <p className="text-xs font-bold text-white">Reaction Mirror</p>
                   <p className="text-[9px] text-slate-400 mt-0.5 font-medium">Reacción e Inhibición</p>
@@ -350,7 +350,7 @@ export default function EvaluadorPanel() {
                     : 'bg-black/30 border-white/5 hover:bg-white/[0.02] opacity-60 hover:opacity-100'
                 }`}
               >
-                <span className="text-3xl">🧬</span>
+                
                 <div className="text-center">
                   <p className="text-xs font-bold text-white">Memory Mirror</p>
                   <p className="text-[9px] text-slate-400 mt-0.5 font-medium">Memoria Visoespacial</p>
@@ -374,7 +374,7 @@ export default function EvaluadorPanel() {
                     : 'bg-black/30 border-white/5 hover:bg-white/[0.02] opacity-65 hover:opacity-100'
                 }`}
               >
-                <span className="text-2xl">🚀</span>
+                
                 <div className="text-left">
                   <p className="text-xs font-bold text-white">Evaluación Oficial</p>
                   <p className="text-[8px] text-purple-400 font-black uppercase tracking-wider mt-0.5">Sincroniza en Supabase</p>
@@ -390,7 +390,7 @@ export default function EvaluadorPanel() {
                     : 'bg-black/30 border-white/5 hover:bg-white/[0.02] opacity-65 hover:opacity-100'
                 }`}
               >
-                <span className="text-2xl">🔥</span>
+                
                 <div className="text-left">
                   <p className="text-xs font-bold text-white">Ensayo / Práctica</p>
                   <p className="text-[8px] text-orange-400 font-black uppercase tracking-wider mt-0.5">Sin persistencia (Local)</p>
@@ -402,13 +402,13 @@ export default function EvaluadorPanel() {
           {/* Feedback de Estado */}
           {errorMsg && (
             <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs font-semibold leading-relaxed">
-              ⚠️ {errorMsg}
+              {errorMsg}
             </div>
           )}
 
           {successMsg && (
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-semibold leading-relaxed">
-              ✅ {successMsg}
+              {successMsg}
             </div>
           )}
 
@@ -462,7 +462,7 @@ export default function EvaluadorPanel() {
               {panicLoading ? (
                 <RefreshCw size={16} className="animate-spin" />
               ) : (
-                '⚠️ Anular Último Intento'
+                'Anular Último Intento'
               )}
             </button>
             <p className="text-[9px] text-slate-500 text-center leading-relaxed px-4">

@@ -74,10 +74,10 @@ export async function exportReactionMirrorExcel({ playerName, date, metrics, pos
   Object.assign(titleCell, cellStyle(true, BLUE_CORP, WHITE, 16));
   sheet1.getRow(1).height = 32;
 
-  // Subtítulo paciente
+  // Subtítulo estudiante
   sheet1.mergeCells('A2:D2');
   const subCell = sheet1.getCell('A2');
-  subCell.value = `Paciente: ${playerName || 'Anónimo'}   |   Fecha: ${date ? new Date(date).toLocaleString('es-CL') : new Date().toLocaleString('es-CL')}`;
+  subCell.value = `Estudiante: ${playerName || 'Anónimo'}   |   Fecha: ${date ? new Date(date).toLocaleString('es-CL') : new Date().toLocaleString('es-CL')}`;
   Object.assign(subCell, cellStyle(false, BLUE_LIGHT, BLUE_CORP, 11));
   sheet1.getRow(2).height = 20;
 
@@ -211,7 +211,7 @@ export async function exportAllReactionHistoryExcel(historyList) {
   });
 
   const summaryHeaders = [
-    'Paciente',
+    'Estudiante',
     'Fecha Evaluación',
     'Dominancia Motriz',
     'Aciertos Izquierda (Roja)',
@@ -270,7 +270,7 @@ export async function exportAllReactionHistoryExcel(historyList) {
   });
 
   const detailHeaders = [
-    'Paciente',
+    'Estudiante',
     'Fecha de Sesión',
     'Turno ID',
     'Tipo Estímulo',
@@ -364,7 +364,7 @@ export async function exportAllMemoryHistoryExcel(historyList) {
   });
 
   const memoryHeaders = [
-    'Paciente',
+    'Estudiante',
     'Fecha Evaluación',
     'Nivel Máximo Alcanzado',
     'Corsi Memory Span',
@@ -418,7 +418,7 @@ export async function exportAllMemoryHistoryExcel(historyList) {
   });
 
   const detailHeaders = [
-    'Paciente',
+    'Estudiante',
     'Fecha de Sesión',
     'Nivel (Span)',
     'Intento',
@@ -528,7 +528,7 @@ export async function exportRawTelemetryExcel({ sessionData, playerName }) {
 
   sheet.mergeCells('A2:I2');
   const subCell = sheet.getCell('A2');
-  subCell.value = `ID Sesión: ${sessionData.id || sessionData.sessionId || 'N/A'}   |   Paciente: ${playerName || sessionData.playerName || 'Anónimo'}   |   Fecha ISO: ${sessionData.date || new Date().toISOString()}`;
+  subCell.value = `ID Sesión: ${sessionData.id || sessionData.sessionId || 'N/A'}   |   Estudiante: ${playerName || sessionData.playerName || 'Anónimo'}   |   Fecha ISO: ${sessionData.date || new Date().toISOString()}`;
   Object.assign(subCell, cellStyle(false, BLUE_LIGHT, BLUE_CORP, 10));
   sheet.getRow(2).height = 20;
 

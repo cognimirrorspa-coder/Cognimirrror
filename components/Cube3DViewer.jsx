@@ -110,6 +110,7 @@ export default function Cube3DViewer({
 
           const cubie = new THREE.Mesh(geo, mats);
           cubie.position.set(x, y, z);
+          cubie.userData.initialPos = new THREE.Vector3(x, y, z);
           cubeGroup.add(cubie);
           allCubies.push(cubie);
         }
@@ -249,7 +250,32 @@ export default function Cube3DViewer({
       }
     };
 
-    threeRef.current = { cubeGroup, rotateFace, allCubies };
+    const resetSolvedState = () => {
+      queueRef.current = [];
+      movesAppliedRef.current = 0;
+      isProcessingRef.current = false;
+
+      allCubies.forEach(cubie => {
+        if (cubie.userData.initialPos) {
+          cubie.position.copy(cubie.userData.initialPos);
+        }
+        cubie.quaternion.set(0, 0, 0, 1);
+        cubie.rotation.set(0, 0, 0);
+        cubie.updateMatrix();
+        cubie.updateMatrixWorld(true);
+      });
+
+      cubeGroup.position.set(0, 0, 0);
+      cubeGroup.rotation.set(0, 0, 0);
+      cubeGroup.updateMatrixWorld(true);
+
+      camera.position.set(0, 2.0, 9.1);
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    };
+
+    threeRef.current = { cubeGroup, rotateFace, allCubies, resetSolvedState };
 
     // ═══ ANIMATION LOOP ═══
     let afId;
@@ -281,25 +307,23 @@ export default function Cube3DViewer({
         const activeFaceKey = highlightFaceRef.current;
 
         if (orbitCameraRef.current && activeFaceKey) {
-          // === CÁMARA ORBITAL SEGÚN CARA ACTIVA (modo demostración) ===
-          // La cámara orbita alrededor del cubo para que la cara activa
-          // quede mirando directamente hacia el usuario. El cubo NO rota.
-          let targetCamX = 0, targetCamY = 2.5, targetCamZ = 8;
+          // === MICRO-INCLINACIÓN SUAVE HACIA CARA ACTIVA (Cubo estable, cara azul frontal siempre visible) ===
+          let targetCamX = 0, targetCamY = 2.0, targetCamZ = 9.1;
 
-          if      (activeFaceKey === 'B') { targetCamX =  0; targetCamY =  2; targetCamZ = -8; }
-          else if (activeFaceKey === 'R') { targetCamX =  8; targetCamY =  2; targetCamZ =  1; }
-          else if (activeFaceKey === 'L') { targetCamX = -8; targetCamY =  2; targetCamZ =  1; }
-          else if (activeFaceKey === 'U') { targetCamX =  0; targetCamY =  9; targetCamZ =  2; }
-          else if (activeFaceKey === 'D') { targetCamX =  0; targetCamY = -9; targetCamZ =  2; }
+          if      (activeFaceKey === 'R') { targetCamX =  1.6; targetCamY = 2.0; targetCamZ = 8.8; } // Leve vista derecha
+          else if (activeFaceKey === 'L') { targetCamX = -1.6; targetCamY = 2.0; targetCamZ = 8.8; } // Leve vista izquierda
+          else if (activeFaceKey === 'U') { targetCamX =  0.0; targetCamY = 3.4; targetCamZ = 8.6; } // Leve vista arriba
+          else if (activeFaceKey === 'D') { targetCamX =  0.0; targetCamY = 0.6; targetCamZ = 8.8; } // Leve vista abajo
+          else if (activeFaceKey === 'F') { targetCamX =  0.0; targetCamY = 2.0; targetCamZ = 9.1; } // Vista frontal azul
 
-          camera.position.x += (targetCamX - camera.position.x) * 0.06;
-          camera.position.y += (targetCamY - camera.position.y) * 0.06;
-          camera.position.z += (targetCamZ - camera.position.z) * 0.06;
+          camera.position.x += (targetCamX - camera.position.x) * 0.04;
+          camera.position.y += (targetCamY - camera.position.y) * 0.04;
+          camera.position.z += (targetCamZ - camera.position.z) * 0.04;
           camera.lookAt(0, 0, 0);
 
-          // Cubo estático mientras la cámara orbita
-          cubeGroup.rotation.y += (0 - cubeGroup.rotation.y) * 0.06;
-          cubeGroup.rotation.x += (0 - cubeGroup.rotation.x) * 0.06;
+          // Cubo estático y firme
+          cubeGroup.rotation.y += (0 - cubeGroup.rotation.y) * 0.04;
+          cubeGroup.rotation.x += (0 - cubeGroup.rotation.x) * 0.04;
         } else {
           // === MODO NORMAL: cámara vuelve a cara azul (Front) ===
           camera.position.x += (0   - camera.position.x) * 0.04;
@@ -328,11 +352,18 @@ export default function Cube3DViewer({
     };
   }, [isLocked, size, status]);
 
-  // ═══ QUEUE WORKER ═══
+  // ═══ QUEUE WORKER & RESET WATCHER ═══
   useEffect(() => {
     if (isLocked || ignoreSensor) return;
     const three = threeRef.current;
     if (!three) return;
+
+    if (moveHistory.length === 0) {
+      if (movesAppliedRef.current > 0 || queueRef.current.length > 0) {
+        three.resetSolvedState();
+      }
+      return;
+    }
 
     const processQueue = async () => {
       if (isProcessingRef.current || queueRef.current.length === 0) return;
@@ -422,22 +453,22 @@ export default function Cube3DViewer({
       if (isDemoRunningRef.current) return;
       isDemoRunningRef.current = true;
       
-      // Esperar a que la cámara orbital llegue a la cara (lerp 0.06 llega en ~350ms)
-      await new Promise(r => setTimeout(r, 350));
+      // Esperar brevemente para que la cara brille antes de girar
+      await new Promise(r => setTimeout(r, 200));
 
       for (const m of demoMoves) {
-        // Giro de demostración: 90° lento y visible (16 pasos)
-        await three.rotateFace(m, 16);
+        // Giro de demostración: 90° pausado, suave y visible (24 pasos)
+        await three.rotateFace(m, 24);
         
-        // Mantener girado para que el usuario vea claramente qué cara mover
-        await new Promise(r => setTimeout(r, 400));
+        // Mantener girado para que el estudiante vea claramente qué cara mover (650ms)
+        await new Promise(r => setTimeout(r, 650));
 
         // Devolver a posición original limpiamente (cubo resuelto = gemelo digital correcto)
         const reverseMove = m.endsWith("'") ? m.slice(0, -1) : m + "'";
-        await three.rotateFace(reverseMove, 12);
+        await three.rotateFace(reverseMove, 20);
 
-        // Pausa breve antes del siguiente movimiento (si hubiera más de uno)
-        await new Promise(r => setTimeout(r, 200));
+        // Pausa suave
+        await new Promise(r => setTimeout(r, 250));
       }
 
       isDemoRunningRef.current = false;

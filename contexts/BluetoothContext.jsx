@@ -145,7 +145,7 @@ export function BluetoothProvider({ children }) {
   };
 
   const calibrateGyro = useCallback(() => {
-    console.log("⚓ Calibrando punto cero con:", currentRawGyro.current);
+    console.log("Calibrando punto cero con:", currentRawGyro.current);
     setGyroOffset({ ...currentRawGyro.current });
   }, []);
 
@@ -164,7 +164,7 @@ export function BluetoothProvider({ children }) {
       window.lastFaceCache = finalMove;
       lastPacketTimeRef.current = now;
 
-      console.log(`[⚡ SPEEDCUBE MOVE]: ${finalMove} (ID: ${moveId})`);
+      console.log(`[SPEEDCUBE MOVE]: ${finalMove} (ID: ${moveId})`);
       broadcastMove(finalMove);
       // Mantenemos el feed opcional agregado para los Joysticks
       if (typeof broadcastMoveFeed === 'function') broadcastMoveFeed(finalMove, 'native');
@@ -311,7 +311,7 @@ export function BluetoothProvider({ children }) {
     const result = { ble: bleLatency, render: renderLatency, total };
     setCalibrationResult(result);
     setIsCalibrating(false);
-    console.log('✅ Calibración completada:', result);
+    console.log('Calibración completada:', result);
     return result;
   }, []);
 
@@ -324,8 +324,8 @@ export function BluetoothProvider({ children }) {
     device,
     batteryLevel,
     subscribeToMoves,
-    subscribeToMoveComplete, // ⏱ Nueva API: TEM (Tiempo de Ejecución Motora)
-    subscribeToMoveFeed,     // 📡 Feed de diagnóstico en tiempo real
+    subscribeToMoveComplete, // Nueva API: TEM (Tiempo de Ejecución Motora)
+    subscribeToMoveFeed,     // Feed de diagnóstico en tiempo real
     subscribeToGyro,
     broadcastMove,
     // Calibración de latencia

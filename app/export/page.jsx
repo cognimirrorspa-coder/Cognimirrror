@@ -574,7 +574,7 @@ export default function ExportCenter() {
     summarySheet.columns = [
       { header: 'ID Sesión', key: 'id', width: 25 },
       { header: 'ID Sujeto', key: 'idSujeto', width: 12 },
-      { header: 'Paciente', key: 'paciente', width: 25 },
+      { header: 'Estudiante', key: 'paciente', width: 25 },
       { header: 'Tipo de Test', key: 'tipoTest', width: 18 },
       { header: 'N° Intento', key: 'intento', width: 12 },
       { header: 'Etiqueta Clínica', key: 'etiqueta', width: 25 },
@@ -622,7 +622,7 @@ export default function ExportCenter() {
       
       telemetrySheet.columns = [
         { header: 'ID Sesión', key: 'idSesion', width: 25 },
-        { header: 'Paciente', key: 'paciente', width: 20 },
+        { header: 'Estudiante', key: 'paciente', width: 20 },
         { header: 'Tipo Test', key: 'tipoTest', width: 15 },
         { header: 'Giro N°', key: 'giroNum', width: 10 },
         { header: 'Estímulo Esperado', key: 'esperado', width: 18 },
@@ -686,7 +686,7 @@ export default function ExportCenter() {
   const handleGenerateMagicLink = async (e) => {
     e.preventDefault();
     if (!selectedRemotePatient) {
-      setActionMessage({ text: 'Por favor, selecciona un paciente.', type: 'error' });
+      setActionMessage({ text: 'Por favor, selecciona un estudiante.', type: 'error' });
       return;
     }
 
@@ -737,7 +737,7 @@ export default function ExportCenter() {
                 onClick={signOut} 
                 className="inline-flex items-center gap-2 text-red-400/60 hover:text-red-400 text-xs tracking-widest uppercase font-bold transition-colors bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/20 px-3 py-1.5 rounded"
               >
-                🔒 Cerrar Sesión
+                Cerrar Sesión
               </button>
             </div>
             <h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white/90 to-white/30">
@@ -754,13 +754,13 @@ export default function ExportCenter() {
               onClick={() => setActiveTab('exports')}
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all rounded-md ${activeTab === 'exports' ? 'bg-[#22c55e] text-black shadow' : 'text-slate-400 hover:text-white'}`}
             >
-              📥 Reportes y Descargas
+              Reportes y Descargas
             </button>
             <button 
               onClick={() => setActiveTab('remote')}
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all rounded-md ${activeTab === 'remote' ? 'bg-[#22c55e] text-black shadow' : 'text-slate-400 hover:text-white'}`}
             >
-              🔗 Evaluaciones Remotas (PIE)
+              Evaluaciones Remotas (PIE)
             </button>
           </div>
         </header>
@@ -786,15 +786,15 @@ export default function ExportCenter() {
               <h2 className="text-lg font-black tracking-tight text-white mb-6 border-b border-white/5 pb-3">1. Filtrado Clínico</h2>
               
               <div className="flex flex-col gap-5">
-                {/* Paciente */}
+                {/* Estudiante */}
                 <div>
-                  <label className="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Grupo / Paciente</label>
+                  <label className="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Grupo / Estudiante</label>
                   <select 
                     value={selectedPatientId}
                     onChange={(e) => setSelectedPatientId(e.target.value)}
                     className="w-full bg-black/40 border border-white/10 rounded-md p-3 text-white text-sm focus:outline-none focus:border-green-500/50"
                   >
-                    <option value="all">Todos los Pacientes (Cohorte)</option>
+                    <option value="all">Todos los Estudiantes (Cohorte)</option>
                     {patients.map(p => (
                       <option key={p.id} value={p.id}>{p.name} {p.idSujeto ? `(${p.idSujeto})` : ''}</option>
                     ))}
@@ -971,14 +971,14 @@ export default function ExportCenter() {
                 {filteredSessions.length === 0 ? (
                   <div className="text-center py-20 border border-white/5 bg-black/20 rounded-xl">
                     <Clock className="mx-auto text-slate-700 mb-4" size={48} />
-                    <p className="text-sm text-slate-500">No hay sesiones clínicas en el período o paciente seleccionado.</p>
+                    <p className="text-sm text-slate-500">No hay sesiones clínicas en el período o estudiante seleccionado.</p>
                   </div>
                 ) : (
                   <div className="overflow-hidden rounded-xl border border-white/5 max-h-[400px] overflow-y-auto">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-white/[0.03] text-slate-400 uppercase font-bold border-b border-white/5">
                         <tr>
-                          <th className="p-3">Paciente</th>
+                          <th className="p-3">Estudiante</th>
                           <th className="p-3">Intento</th>
                           <th className="p-3">Tipo Test</th>
                           <th className="p-3">Fecha</th>
@@ -1005,7 +1005,7 @@ export default function ExportCenter() {
                             <td className="p-3 text-slate-400">{s.clinicalLabel}</td>
                             <td className="p-3 text-right">
                               {s.anotacion_clinica ? (
-                                <span className="text-green-400 text-xs" title={s.anotacion_clinica}>📝 Con Nota</span>
+                                <span className="text-green-400 text-xs" title={s.anotacion_clinica}>Con Nota</span>
                               ) : (
                                 <span className="text-slate-600 text-xs">Sin Nota</span>
                               )}
@@ -1031,16 +1031,16 @@ export default function ExportCenter() {
               <h2 className="text-lg font-black tracking-tight text-white mb-6 border-b border-white/5 pb-3">Nuevo Magic Link</h2>
               
               <form onSubmit={handleGenerateMagicLink} className="flex flex-col gap-5">
-                {/* Select Paciente */}
+                {/* Select Estudiante */}
                 <div>
-                  <label className="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Paciente Asignado</label>
+                  <label className="block text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-2">Estudiante Asignado</label>
                   <select 
                     value={selectedRemotePatient}
                     onChange={(e) => setSelectedRemotePatient(e.target.value)}
                     required
                     className="w-full bg-black/40 border border-white/10 rounded-md p-3 text-white text-sm focus:outline-none focus:border-green-500/50"
                   >
-                    <option value="">Seleccione Paciente...</option>
+                    <option value="">Seleccione Estudiante...</option>
                     {patients.map(p => (
                       <option key={p.id} value={p.id}>{p.name} {p.idSujeto ? `(${p.idSujeto})` : ''}</option>
                     ))}
@@ -1061,7 +1061,7 @@ export default function ExportCenter() {
                 </div>
 
                 <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl text-xs text-slate-500 leading-relaxed">
-                  ⚠️ El enlace de evaluación remota expira automáticamente en <strong>24 horas</strong>. El paciente podrá conectar su cubo BLE directamente desde su navegador e inyectar el resultado clínico.
+                  El enlace de evaluación remota expira automáticamente en <strong>24 horas</strong>. El estudiante podrá conectar su cubo BLE directamente desde su navegador e inyectar el resultado clínico.
                 </div>
 
                 <button 
@@ -1091,7 +1091,7 @@ export default function ExportCenter() {
                     }}
                     className="mt-2 text-[10px] text-green-400 font-bold hover:underline"
                   >
-                    Copiar Enlace 📋
+                    Copiar Enlace
                   </button>
                 </div>
               )}
@@ -1116,7 +1116,7 @@ export default function ExportCenter() {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-white/[0.03] text-slate-400 uppercase font-bold border-b border-white/5">
                       <tr>
-                        <th className="p-3">Paciente</th>
+                        <th className="p-3">Estudiante</th>
                         <th className="p-3">Test</th>
                         <th className="p-3">Expiración</th>
                         <th className="p-3">Estado</th>
@@ -1132,7 +1132,7 @@ export default function ExportCenter() {
                           <tr key={ev.id} className="hover:bg-white/[0.01]">
                             <td className="p-3">
                               <div className="font-semibold text-white">
-                                {ev.pacientes ? `${ev.pacientes.nombre} ${ev.pacientes.apellido}` : 'Paciente'}
+                                {ev.pacientes ? `${ev.pacientes.nombre} ${ev.pacientes.apellido}` : 'Estudiante'}
                               </div>
                               <div className="text-[10px] text-slate-500 font-mono">{ev.token}</div>
                             </td>
@@ -1164,7 +1164,7 @@ export default function ExportCenter() {
                                 className="px-2 py-1 bg-green-500 hover:bg-green-600 disabled:bg-slate-800 disabled:text-slate-600 text-black font-black text-[10px] uppercase rounded tracking-wider flex items-center gap-1 transition-all"
                                 title="Sala de Control en Vivo"
                               >
-                                📺 Controlar
+                                Controlar
                               </button>
                               <button
                                 onClick={() => {
@@ -1176,7 +1176,7 @@ export default function ExportCenter() {
                                 className="p-1.5 bg-white/5 hover:bg-white/10 rounded text-slate-300 disabled:opacity-40 disabled:pointer-events-none"
                                 title="Copiar enlace"
                               >
-                                📋
+                                Ver Ficha
                               </button>
                               <button
                                 onClick={() => handleRevokeLink(ev.id)}
@@ -1216,7 +1216,7 @@ export default function ExportCenter() {
                   Sala de Control Remoto
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5 font-medium">
-                  Paciente: <strong className="text-white">{activeControlEval.pacientes ? `${activeControlEval.pacientes.nombre} ${activeControlEval.pacientes.apellido}` : 'Alumno'}</strong>
+                  Estudiante: <strong className="text-white">{activeControlEval.pacientes ? `${activeControlEval.pacientes.nombre} ${activeControlEval.pacientes.apellido}` : 'Estudiante'}</strong>
                 </p>
               </div>
               <div className="flex items-center gap-2 bg-black/40 px-3.5 py-1.5 rounded-full border border-white/5">
@@ -1238,7 +1238,7 @@ export default function ExportCenter() {
                   disabled={!patientOnline}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:pointer-events-none text-white font-black text-[10px] uppercase tracking-wider rounded transition-all active:scale-[0.98]"
                 >
-                  ▶️ Iniciar Test
+                  Iniciar Test
                 </button>
                 
                 <button
@@ -1246,7 +1246,7 @@ export default function ExportCenter() {
                   disabled={!patientOnline}
                   className="w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:pointer-events-none text-white font-black text-[10px] uppercase tracking-wider rounded transition-all active:scale-[0.98]"
                 >
-                  🔄 Reiniciar Partida
+                  Reiniciar Partida
                 </button>
 
                 <button
@@ -1254,7 +1254,7 @@ export default function ExportCenter() {
                   disabled={!patientOnline}
                   className="w-full py-3 bg-red-650 hover:bg-red-600 disabled:opacity-40 disabled:pointer-events-none text-white font-black text-[10px] uppercase tracking-wider rounded transition-all active:scale-[0.98]"
                 >
-                  ⏹️ Cancelar Partida
+                  Cancelar Partida
                 </button>
 
                 <div className="border-t border-white/5 pt-4 flex flex-col gap-2">
@@ -1387,7 +1387,7 @@ export default function ExportCenter() {
                     onClick={() => setActiveControlEval(null)}
                     className="w-full text-center py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:brightness-110 text-black font-black text-xs uppercase tracking-wider rounded transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-1.5 shadow-lg shadow-green-500/10"
                   >
-                    📊 Ver Ficha e Informe Clínico
+                    Ver Ficha e Informe Clínico
                   </Link>
                 )}
                 

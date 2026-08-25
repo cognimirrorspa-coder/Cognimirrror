@@ -16,12 +16,12 @@ const FACE_FREQUENCIES = {
 };
 
 const FACE_METADATA = {
-  U: { name: 'BLANCO', position: 'Arriba (U)', color: 'bg-white text-black border-white', text: 'text-white', badge: '⚪ BLANCO (Cara Arriba)' },
-  D: { name: 'AMARILLO', position: 'Abajo (D)', color: 'bg-yellow-400 text-black border-yellow-500', text: 'text-yellow-400', badge: '🟡 AMARILLO (Cara Abajo)' },
-  R: { name: 'NARANJA', position: 'Derecha (R)', color: 'bg-orange-500 text-white border-orange-600', text: 'text-orange-500', badge: '🟠 NARANJA (Mano Derecha)' },
-  L: { name: 'ROJO', position: 'Izquierda (L)', color: 'bg-red-500 text-white border-red-600', text: 'text-red-500', badge: '🔴 ROJO (Mano Izquierda)' },
-  F: { name: 'AZUL', position: 'Frente (F)', color: 'bg-blue-600 text-white border-blue-700', text: 'text-blue-500', badge: '🔵 AZUL (Cara Frente)' },
-  B: { name: 'VERDE', position: 'Atrás (B - Giro 180°)', color: 'bg-emerald-600 text-white border-emerald-700', text: 'text-emerald-400', badge: '🟢 VERDE (Cara de Atrás)' }
+  U: { name: 'BLANCO', position: 'Arriba (U)', color: 'bg-white text-black border-white', text: 'text-white', badge: 'BLANCO (Cara Arriba)' },
+  D: { name: 'AMARILLO', position: 'Abajo (D)', color: 'bg-yellow-400 text-black border-yellow-500', text: 'text-yellow-400', badge: 'AMARILLO (Cara Abajo)' },
+  R: { name: 'NARANJA', position: 'Derecha (R)', color: 'bg-orange-500 text-white border-orange-600', text: 'text-orange-500', badge: 'NARANJA (Mano Derecha)' },
+  L: { name: 'ROJO', position: 'Izquierda (L)', color: 'bg-red-500 text-white border-red-600', text: 'text-red-500', badge: 'ROJO (Mano Izquierda)' },
+  F: { name: 'AZUL', position: 'Frente (F)', color: 'bg-blue-600 text-white border-blue-700', text: 'text-blue-500', badge: 'AZUL (Cara Frente)' },
+  B: { name: 'VERDE', position: 'Atrás (B - Giro 180°)', color: 'bg-emerald-600 text-white border-emerald-700', text: 'text-emerald-400', badge: 'VERDE (Cara de Atrás)' }
 };
 
 // Singleton para el motor de audio Web Audio API
@@ -324,7 +324,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
 
         <div className="relative z-10 flex flex-col items-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-3xl mb-6 shadow-lg shadow-red-500/5 animate-pulse">
-            ⚠️
+            !
           </div>
           <h2 className="text-2xl font-black mb-3 text-white tracking-tight uppercase">Conexión Perdida</h2>
           <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-8">
@@ -470,7 +470,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                   <Eye size={44} />
                 </div>
                 <h2 className="text-[#00FFFF] font-black tracking-[0.3em] uppercase text-2xl sm:text-4xl drop-shadow-[0_0_20px_rgba(0,255,255,0.8)] text-center">
-                  👁️ OBSERVA LA SECUENCIA
+                  OBSERVA LA SECUENCIA
                 </h2>
                 <p className="text-cyan-200/90 text-xs sm:text-sm font-bold tracking-widest bg-cyan-950/80 px-4 py-1.5 rounded-full border border-cyan-500/30 shadow-lg text-center">
                   Prepárate... El cubo se mostrará completamente armado
@@ -482,10 +482,10 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
             {gameState === 'waiting_for_user' && isUserAlertPhase && (
               <div className="flex flex-col items-center justify-center gap-4 py-16 z-20 animate-in fade-in zoom-in-95 duration-500">
                 <div className="w-20 h-20 rounded-3xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-[0_0_40px_rgba(57,255,20,0.5)] animate-pulse">
-                  <span className="text-3xl font-black">🎯</span>
+                  
                 </div>
                 <h2 className="text-[#39FF14] font-black tracking-[0.3em] uppercase text-2xl sm:text-4xl drop-shadow-[0_0_20px_rgba(57,255,20,0.8)] text-center">
-                  🎯 TU TURNO
+                  TU TURNO
                 </h2>
                 <p className="text-emerald-200/90 text-xs sm:text-sm font-bold tracking-widest bg-emerald-950/80 px-4 py-1.5 rounded-full border border-emerald-500/30 shadow-lg text-center">
                   Replica la secuencia observada en tu cubo inteligente
@@ -543,11 +543,11 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                         : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:scale-105 shadow-[0_0_30px_rgba(6,182,212,0.4)] text-white animate-pulse'
                       }`}
                   >
-                    {isConnected ? '🚀 INICIAR PRUEBA' : '⚡ CONECTAR CUBO SMART BLE'}
+                    {isConnected ? 'INICIAR PRUEBA' : 'CONECTAR CUBO SMART BLE'}
                   </button>
                   {isConnected ? (
                     <span className="text-[11px] text-purple-300/70 font-mono font-bold tracking-wider animate-pulse bg-purple-950/40 px-3 py-1 rounded-full border border-purple-500/20">
-                      🔴 O gira 2 veces la cara ROJA (L) del cubo para iniciar
+                      Gira 2 veces la cara ROJA (L) del cubo para iniciar
                     </span>
                   ) : (
                     <span className="text-[11px] text-cyan-300/70 font-mono font-bold tracking-wider bg-cyan-950/40 px-3 py-1 rounded-full border border-cyan-500/20">

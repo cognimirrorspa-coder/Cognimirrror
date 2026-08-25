@@ -6,7 +6,15 @@ export const revalidate = 0;
 
 export async function POST(request) {
   try {
-    const { email, nombre, colegio_id } = await request.json();
+    const { 
+      email, 
+      nombre, 
+      colegio_id, 
+      rol = 'psicologo', 
+      cargo = 'Profesional PIE',
+      tempPassword = null,
+      adminName = 'Director / Coordinador' 
+    } = await request.json();
 
     if (!email || !nombre || !colegio_id) {
       return NextResponse.json(
@@ -17,29 +25,38 @@ export async function POST(request) {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     // Modo Mock/Desarrollo si falta la clave secreta del servidor
     if (!serviceRoleKey) {
       console.warn('[API Invitar] SUPABASE_SERVICE_ROLE_KEY no encontrada. Corriendo en modo MOCK local.');
+      const mockUserId = `mock-user-${Math.random().toString(36).substring(2, 9)}`;
       
-      const mockUserId = `mock-user-${Math.random().toString(36).substring(2, 9)}-${Date.now().toString().slice(-4)}`;
-      
-      // Simular inserción en perfiles directamente
-      const supabaseAnon = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-      const { error: profileError } = await supabaseAnon
+      const supabaseAnon = createClient(supabaseUrl, anonKey);
+      await supabaseAnon
         .from('perfiles')
         .insert([{
           id: mockUserId,
-          email: email,
-          nombre_completo: nombre,
+          email: email.trim().toLowerCase(),
+          nombre_completo: nombre.trim(),
           colegio_id: colegio_id,
-          rol: 'especialista',
+          rol: rol.toLowerCase(),
+          cargo_texto: cargo.trim(),
           activo: true
-        }]);
+        }]).catch(() => {});
 
-      if (profileError) {
-        return NextResponse.json({ error: profileError.message }, { status: 400 });
-      }
+      // Registrar auditoría mock
+      await supabaseAnon.from('logs_auditoria').insert([{
+        colegio_id: colegio_id,
+        usuario_nombre: adminName,
+        evento: 'CREAR_USUARIO',
+        detalles: {
+          profesional_nombre: nombre,
+          profesional_email: email,
+          rol: rol,
+          cargo: cargo
+        }
+      }]).catch(() => {});
 
       return NextResponse.json({
         success: true,
@@ -47,67 +64,97 @@ export async function POST(request) {
         user: {
           id: mockUserId,
           email,
-          nombre
+          nombre,
+          rol,
+          cargo
         }
       });
     }
 
     // Modo Producción Real
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    console.log(`[API Invitar] Invitando al especialista: ${email}`);
+    console.log(`[API Invitar] Creando/invitando profesional: ${email} (${rol}) para colegio ${colegio_id}`);
 
-    // 1. Invitar al usuario via Supabase Auth admin
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: {
-        full_name: nombre
+    // Si se proporciona una contraseña temporal, lo creamos directamente; de lo contrario, enviamos invitación
+    let authUser = null;
+    if (tempPassword && tempPassword.length >= 6) {
+      const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: email.trim().toLowerCase(),
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: nombre.trim(),
+          colegio_id: colegio_id,
+          rol: rol.toLowerCase()
+        }
+      });
+
+      if (createError) {
+        return NextResponse.json({ error: createError.message }, { status: 400 });
       }
-    });
+      authUser = createData.user;
+    } else {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email.trim().toLowerCase(), {
+        data: {
+          full_name: nombre.trim(),
+          colegio_id: colegio_id,
+          rol: rol.toLowerCase()
+        }
+      });
 
-    if (authError) {
-      console.error('[API Invitar] Error invitando usuario en auth:', authError.message);
-      return NextResponse.json({ error: authError.message }, { status: 400 });
+      if (authError) {
+        console.error('[API Invitar] Error invitando usuario en auth:', authError.message);
+        return NextResponse.json({ error: authError.message }, { status: 400 });
+      }
+      authUser = authData.user;
     }
 
-    const newUser = authData.user;
-
-    // 2. Crear su registro en public.perfiles
+    // 2. Crear o actualizar su registro en public.perfiles
     const { error: profileError } = await supabaseAdmin
       .from('perfiles')
-      .insert([{
-        id: newUser.id,
-        email: newUser.email,
-        nombre_completo: nombre,
+      .upsert([{
+        id: authUser.id,
+        email: email.trim().toLowerCase(),
+        nombre_completo: nombre.trim(),
         colegio_id: colegio_id,
-        rol: 'especialista',
+        rol: rol.toLowerCase(),
+        cargo_texto: cargo.trim(),
         activo: true
       }]);
 
     if (profileError) {
       console.warn('[API Invitar] Error creando registro en tabla perfiles:', profileError.message);
-      return NextResponse.json({ 
-        success: true, 
-        warning: 'El usuario fue invitado pero falló la creación del perfil.',
-        user: { id: newUser.id, email: newUser.email }
-      });
     }
+
+    // 3. Registrar Evento de Auditoría
+    await supabaseAdmin.from('logs_auditoria').insert([{
+      colegio_id: colegio_id,
+      usuario_nombre: adminName,
+      evento: 'CREAR_USUARIO',
+      detalles: {
+        profesional_nombre: nombre.trim(),
+        profesional_email: email.trim().toLowerCase(),
+        rol: rol,
+        cargo: cargo
+      }
+    }]).catch(e => console.warn('[API Invitar] Error en auditoría:', e.message));
 
     return NextResponse.json({
       success: true,
       user: {
-        id: newUser.id,
-        email: newUser.email,
-        nombre
+        id: authUser.id,
+        email: authUser.email,
+        nombre: nombre.trim(),
+        rol: rol,
+        cargo: cargo
       }
     });
 
   } catch (err) {
-    console.error('[API Invitar] Error crítico:', err.message);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('[API Invitar] Error crítico:', err);
+    return NextResponse.json({ error: 'Internal Server Error: ' + err.message }, { status: 500 });
   }
 }

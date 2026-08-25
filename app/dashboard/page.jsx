@@ -359,6 +359,9 @@ function ClassicDashboard() {
           <div className="sidebar-section">
             <div className="sidebar-section-title">Gestión Escolar</div>
             <nav className="sidebar-menu">
+              <Link href="/director" className="sidebar-link" style={{ color: '#c084fc', fontWeight: 'bold' }}>
+                Panel Institucional
+              </Link>
               <Link href="/students" className="sidebar-link">Directorio Estudiantes</Link>
               <Link href="/export" className="sidebar-link">Exportar e Informes</Link>
             </nav>
@@ -380,9 +383,6 @@ function ClassicDashboard() {
             <nav className="sidebar-menu">
               <Link href="/evaluador" className="sidebar-link evaluador-destacado">
                 Modo Evaluador
-              </Link>
-              <Link href="/defensa" className="sidebar-link">
-                Diapositivas Defensa
               </Link>
             </nav>
           </div>
@@ -430,31 +430,11 @@ function ClassicDashboard() {
               </div>
             </div>
 
-             <div className="cube-overlay">
-              <button className="cube-btn" onClick={startGuidedScramble} style={{ background: 'var(--accent)', color: 'white' }}>Scramble</button>
-              <button className="cube-btn" onClick={() => { resetCubeState(); resetStats(); }} style={{ color: 'var(--green)' }}>Resolver</button>
-              <button className="cube-btn" onClick={calibrateGyro}>Calibrar</button>
-              
-              <button 
-                className="cube-btn" 
-                onClick={() => {
-                  if (!isConnected) {
-                    alert('Por favor, conecta primero tu cubo inteligente usando el botón de abajo a la izquierda.');
-                    return;
-                  }
-                  setIsPresentationRemoteActive(!isPresentationRemoteActive);
-                }}
-                style={{ 
-                  borderColor: isPresentationRemoteActive ? '#22c55e' : 'var(--border)',
-                  background: isPresentationRemoteActive ? 'rgba(34,197,94,0.15)' : 'rgba(10,12,16,.8)',
-                  color: isPresentationRemoteActive ? '#4ade80' : 'var(--text)',
-                  fontWeight: 'bold',
-                  boxShadow: isPresentationRemoteActive ? '0 0 10px rgba(34,197,94,0.2)' : 'none'
-                }}
-                title={isPresentationRemoteActive ? 'Mando activo - Gira el cubo para pasar diapositivas globales' : 'Usar cubo para pasar diapositivas globales'}
-              >
-                {isPresentationRemoteActive ? 'Mando PPT ON' : 'Mando PPT'}
-              </button>
+              <div className="cube-overlay">
+                <button className="cube-btn" onClick={startGuidedScramble} style={{ background: 'var(--accent)', color: 'white' }}>Scramble</button>
+                <button className="cube-btn" onClick={() => { resetCubeState(); resetStats(); }} style={{ color: 'var(--green)' }}>Resolver</button>
+                <button className="cube-btn" onClick={calibrateGyro}>Calibrar</button>
+              </div>
 
               {/* ── Botón Joicube ── */}
               <div style={{ display: 'none', position: 'relative', gap: '8px', alignItems: 'center' }}>
@@ -473,8 +453,8 @@ function ClassicDashboard() {
                   {joicube.status === 'active' && (
                     <span style={{ width:8, height:8, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 8px #a855f7', display:'inline-block', flexShrink:0 }} />
                   )}
-                  {joicube.status === 'no_server' && '⚠️'}
-                  {(joicube.status === 'idle') && '🕹️'}
+                  {joicube.status === 'no_server' && '!'}
+                  
                   {joicube.status === 'active'     ? 'Joicube ON'    :
                    joicube.status === 'connecting' ? 'Conectando…'   :
                    joicube.status === 'no_server'  ? 'Sin servidor'  : 'Joicube'}
@@ -509,7 +489,7 @@ function ClassicDashboard() {
                     backdropFilter: 'blur(10px)',
                   }}>
                     <div style={{ color:'#f87171', fontWeight:700, marginBottom:4 }}>
-                      🕹️ Servidor de teclas no encontrado
+                      Servidor de teclas no encontrado
                     </div>
                     <div>Abre una terminal y ejecuta:</div>
                     <code style={{
@@ -527,30 +507,29 @@ function ClassicDashboard() {
                 )}
               </div>
             </div>
-          </div>
 
           <div className="stats-panel">
             <div className="stats-tabs">
               {['session', 'moves', 'ble'].map(tab => (
                 <div key={tab} className={`tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-                  {tab === 'session' ? 'Sesión' : tab === 'moves' ? 'Movimientos' : '📡 BLE'}
+                  {tab === 'session' ? 'Sesión' : tab === 'moves' ? 'Movimientos' : 'BLE'}
                 </div>
               ))}
             </div>
 
             <div className={`tab-content ${activeTab === 'session' ? 'active' : ''}`}>
               <div className="stat-card">
-                <h3>⏱ Temporizador</h3>
+                <h3>Temporizador</h3>
                 <div className="big-timer" id="big-timer">00:00.000</div>
                 <div className="timer-label" id="timer-label">Práctica libre (Sin grabar)</div>
                 <div className="stat-row"><span className="label">Rotaciones</span><span className="value" id="st-moves" style={{ color: 'var(--accent)' }}>0</span></div>
               </div>
               <div className="stat-card">
-                <h3>📋 Registro</h3>
+                <h3>Registro</h3>
                 <div id="move-log"><span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Esperando inicio...</span></div>
               </div>
               <div className="stat-card">
-                 <h3>📊 Resumen</h3>
+                 <h3>Resumen</h3>
                  <div className="stat-row"><span className="label">Total Movimientos</span><span className="value" id="st-total">0</span></div>
                  <div className="stat-row"><span className="label">TPS Máximo</span><span className="value" id="st-max-tps">0.00</span></div>
                  <div className="stat-row"><span className="label">Pausa Prolongada</span><span className="value" id="st-idle">00:00.000</span></div>

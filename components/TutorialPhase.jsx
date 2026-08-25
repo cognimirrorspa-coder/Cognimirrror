@@ -26,7 +26,7 @@ const PHASES = {
     demoMoves: ['L', "L'"],   // Demo: gira L y lo devuelve
     label: 'IZQUIERDA (Rojo)',
   },
-  4: { text: 'Si ves VERDE o AZUL, 🛑 NO MUEVAS NADA', type: 'info', duration: 2500 },
+  4: { text: 'Si ves VERDE o AZUL: NO MUEVAS NADA', type: 'info', duration: 2500 },
   5: { text: '¡Calibración Completa!', type: 'final' },
 };
 
@@ -163,7 +163,7 @@ export default function TutorialPhase({ onCompleteTutorial }) {
 
       if (p?.type === 'mirror' && (currentSub === 'action' || currentSub === 'demo')) {
         const isCorrect = p.expectedBLE.includes(letter);
-        console.log(`[BLE CHECK] got="${letter}" want="${p.expectedBLE}" → ${isCorrect ? '✅ MATCH' : '❌ NO MATCH'}`);
+        console.log(`[BLE CHECK] got="${letter}" want="${p.expectedBLE}" → ${isCorrect ? 'MATCH' : 'NO MATCH'}`);
 
         if (isCorrect) {
           ignoreInputRef.current = true;
@@ -349,8 +349,8 @@ export default function TutorialPhase({ onCompleteTutorial }) {
         <div className="flex flex-col items-center w-full">
           <div className="flex items-center justify-center gap-2 mb-1">
             <span className="text-[9px] font-black text-blue-500 uppercase tracking-[0.2em]">Instrucción</span>
-            {subFase === 'demo' && <span className="text-[9px] animate-pulse text-yellow-400 font-bold uppercase">👁️ Observa</span>}
-            {subFase === 'action' && <span className="text-[9px] text-cyan-400 font-bold uppercase animate-pulse">🤚 Tu turno</span>}
+            {subFase === 'demo' && <span className="text-[9px] animate-pulse text-yellow-400 font-bold uppercase">Observa</span>}
+            {subFase === 'action' && <span className="text-[9px] text-cyan-400 font-bold uppercase animate-pulse">Tu turno</span>}
             {autoProgressing && <span className="text-[9px] animate-pulse text-green-400 font-bold">Procesando...</span>}
           </div>
           <AnimatePresence mode="wait">

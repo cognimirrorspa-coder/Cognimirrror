@@ -102,7 +102,7 @@ function StepMenu({ onNext, onHistory, activePatient, setActivePatientId, patien
             `}
           >
             Iniciar Test
-            <span className="ml-3 inline-block group-hover:translate-x-1 transition-transform">🚀</span>
+            
           </button>
 
           <button
@@ -115,14 +115,14 @@ function StepMenu({ onNext, onHistory, activePatient, setActivePatientId, patien
                 : 'bg-white/5 border-white/10 text-white/20 cursor-not-allowed shadow-none'}
             `}
           >
-            🏋️ Modo Entrenamiento / Práctica
+            Modo Entrenamiento / Práctica
           </button>
 
           <button
             onClick={onHistory}
             className="w-full py-4 rounded-2xl font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm uppercase tracking-widest border border-white/5 cursor-pointer"
           >
-            📜 Ver Historial Clínico
+            Ver Historial Clínico
           </button>
         </div>
 
@@ -166,7 +166,7 @@ function StepHistory({ onBack, onOpenReport, patients, deletePatient, deleteSess
       type: 'patient',
       payload: { patientId },
       title: `Eliminar a ${name}`,
-      message: '¿Estás seguro de eliminar este paciente y todas sus sesiones asociadas? Esta acción es irreversible.'
+      message: '¿Estás seguro de eliminar este estudiante y todas sus sesiones asociadas? Esta acción es irreversible.'
     });
   };
 
@@ -187,7 +187,7 @@ function StepHistory({ onBack, onOpenReport, patients, deletePatient, deleteSess
 
       <div className="w-full space-y-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
         {patients.length === 0 ? (
-          <p className="text-white/30 text-center py-20">No hay pacientes registrados aún.</p>
+          <p className="text-white/30 text-center py-20">No hay estudiantes registrados aún.</p>
         ) : (
           patients.map(patient => (
             <div key={patient.id} className="bg-white/5 border border-white/10 p-5 rounded-2xl flex flex-col gap-4">
@@ -198,9 +198,9 @@ function StepHistory({ onBack, onOpenReport, patients, deletePatient, deleteSess
                 <button 
                   onClick={() => confirmDeletePatient(patient.id, patient.name)}
                   className="text-red-500/40 hover:text-red-400 transition-colors p-1"
-                  title="Eliminar Paciente"
+                  title="Eliminar Estudiante"
                 >
-                  <span className="text-xl">🗑️</span>
+                  Eliminar
                 </button>
               </div>
 
@@ -409,7 +409,7 @@ export default function MemoryGameView({ onExit, subjectId, etiquetaEstudio, isW
       
       {step === 'questions' && (
         <OnboardingForm 
-          playerName={activePatient?.name || 'Paciente'} 
+          playerName={activePatient?.name || 'Estudiante'} 
           onComplete={(data) => { 
             setSessionMeta(data); 
             setStep('playing'); 
@@ -419,7 +419,7 @@ export default function MemoryGameView({ onExit, subjectId, etiquetaEstudio, isW
 
       {step === 'playing' && (
         <SimonGame
-          playerName={activePatient?.name || 'Paciente'}
+          playerName={activePatient?.name || 'Estudiante'}
           sessionMeta={sessionMeta}
           sessionStartTime={sessionStartTime}
           isDemoMode={isDemoMode}

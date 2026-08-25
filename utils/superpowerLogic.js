@@ -6,37 +6,37 @@ export const SUPERPODERES_DICT = {
     titulo: 'Precisión Analítica Absoluta',
     descripcion: 'Tu cerebro opera bajo el principio de "Cero Margen de Error". Mientras otros cerebros sacrifican exactitud por velocidad impulsiva, tu corteza prefrontal procesa la información de forma deliberada y estratégica, garantizando un 100% de precisión. Este es el perfil neurológico clásico de científicos y mentes analíticas de alto nivel.',
     color: 'from-blue-500 to-indigo-600',
-    icon: '🔬'
+    icon: 'research'
   },
   Freno: {
     titulo: 'Supresión Prefrontal Absoluta',
     descripcion: 'Tienes un Freno Cognitivo de acero. Mientras la mayoría de los cerebros ceden al instinto de movimiento ante la presión de la velocidad, tu Corteza Prefrontal es capaz de anular impulsos eléctricos en milisegundos. Esta es una métrica clásica de alta función ejecutiva y toma de decisiones bajo estrés.',
     color: 'from-purple-400 to-indigo-500',
-    icon: '🧠'
+    icon: 'brain'
   },
   Velocidad: {
     titulo: 'Velocidad de Conducción Nivel E-Sports',
     descripcion: 'Tus vías motoras están optimizadas a niveles atléticos. El tiempo que tarda tu cerebro en decodificar un estímulo visual y transformarlo en una orden mecánica para tus dedos está en el percentil superior. Tu sistema nervioso transmite datos a una velocidad que roza el límite biológico humano.',
     color: 'from-orange-400 to-red-500',
-    icon: '⚡'
+    icon: 'speed'
   },
   Ambidextrismo: {
     titulo: 'Ambidextrismo Neuronal',
     descripcion: 'Tu cerebro presenta una Simetría de Procesamiento excepcional. A diferencia del 90% de la población que tiene un hemisferio dominante marcado, tus vías neuronales puentean la información a la misma velocidad exacta hacia ambas manos. Tienes un cerebro literalmente balanceado.',
     color: 'from-emerald-400 to-teal-500',
-    icon: '⚖️'
+    icon: 'balance'
   },
   Flujo: {
     titulo: 'Estado de Flujo Sostenido',
     descripcion: 'Tu cerebro tiene la capacidad de entrar en Flow (Estado de Flujo) de manera instantánea. Tu gráfica no muestra los micro-lapsos de distracción normales de la fatiga mental. Tienes una atención sostenida de alta fidelidad, capaz de bloquear el ruido exterior por completo.',
     color: 'from-blue-400 to-emerald-400',
-    icon: '🌊'
+    icon: 'flow'
   },
   Metronomo: {
     titulo: 'Metrónomo Neuronal',
     descripcion: 'Tu cerebro funciona con la precisión de un reloj suizo. La variabilidad de tus tiempos de reacción entre un movimiento y otro es casi nula en ambas manos. Esta consistencia extrema demuestra un control motor absoluto, sin los picos de fatiga o micro-distracciones que afectan a la mayoría de las personas.',
     color: 'from-slate-400 to-slate-700',
-    icon: '⌚'
+    icon: 'timer'
   }
 };
 
@@ -119,7 +119,7 @@ export function calcularBonoContexto(historial, metadata, superpowerId) {
   if (horasSueno > 0 && horasSueno < 6 && isGoodPerformance) {
     return {
       id: 'reserva',
-      texto: "✨ Bonus: Lograste este rendimiento operando con déficit de sueño. Tu cerebro utilizó su 'Reserva Cognitiva' para compensar la fatiga, manteniendo tu función ejecutiva intacta.",
+      texto: "Observación: Lograste este rendimiento operando con déficit de sueño. Tu cerebro utilizó su 'Reserva Cognitiva' para compensar la fatiga, manteniendo tu función ejecutiva intacta.",
       tipo: 'warning' // Estilo ambar/dorado
     };
   }
@@ -128,7 +128,7 @@ export function calcularBonoContexto(historial, metadata, superpowerId) {
   if (nivelRuido >= 7 && accuracy >= 0.9) {
     return {
       id: 'aislamiento',
-      texto: "✨ Bonus: Cancelación de Ruido Natural. Lograste filtrar un entorno altamente distractor, demostrando un foco blindado frente a estímulos externos.",
+      texto: "Observación: Cancelación de Ruido Natural. Lograste filtrar un entorno altamente distractor, demostrando un foco blindado frente a estímulos externos.",
       tipo: 'info' // Estilo cyan/azul
     };
   }
@@ -138,7 +138,7 @@ export function calcularBonoContexto(historial, metadata, superpowerId) {
   if (animosNegativos.includes(estadoAnimo?.toLowerCase()) && noGoErrors === 0 && noGoTurns.length > 0) {
     return {
       id: 'regulacion',
-      texto: "✨ Bonus: Regulación Emocional. Demostraste que tu precisión motora y control inhibitorio se mantienen estables incluso bajo carga emocional o estrés.",
+      texto: "Observación: Regulación Emocional. Demostraste que tu precisión motora y control inhibitorio se mantienen estables incluso bajo carga emocional o estrés.",
       tipo: 'success' // Estilo esmeralda
     };
   }

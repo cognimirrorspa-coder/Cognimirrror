@@ -195,7 +195,7 @@ function StepMenu({ onStartWarmup, onStartOfficial, onHistory, activePatient, se
         {/* Configuración de Tiempo de Omisión (Evaluador) */}
         <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl flex flex-col items-start gap-1.5 text-left">
           <label className="text-[10px] font-black text-purple-300 uppercase tracking-widest flex items-center gap-1.5">
-            <span>⏱️</span> Límite de Omisión (Evaluador)
+            Límite de Omisión (Evaluador)
           </label>
           <div className="grid grid-cols-4 gap-1.5 w-full mt-1">
             {[800, 1000, 1200, 1500].map((timeVal) => (
@@ -209,12 +209,12 @@ function StepMenu({ onStartWarmup, onStartOfficial, onHistory, activePatient, se
                     : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
                 }`}
               >
-                {timeVal / 1000}s {timeVal === 1200 ? '★' : ''}
+                {timeVal / 1000}s {timeVal === 1200 ? '(Estándar)' : ''}
               </button>
             ))}
           </div>
           <span className="text-[9px] text-slate-400 font-mono mt-0.5">
-            Defecto: 1.2s (★). Configura la ventana de respuesta antes de considerar omisión.
+            Defecto: 1.2s (Estándar). Configura la ventana de respuesta antes de considerar omisión.
           </span>
         </div>
 
@@ -240,7 +240,7 @@ function StepMenu({ onStartWarmup, onStartOfficial, onHistory, activePatient, se
             `}
           >
             Modo Calentamiento (15 seg)
-            <span className="ml-3 inline-block group-hover:translate-x-1 transition-transform">🔥</span>
+            
           </button>
 
           <button
@@ -255,14 +255,14 @@ function StepMenu({ onStartWarmup, onStartOfficial, onHistory, activePatient, se
             `}
           >
             Iniciar Evaluación Oficial
-            <span className="ml-3 inline-block group-hover:translate-x-1 transition-transform">🚀</span>
+            
           </button>
 
           <button
             onClick={onHistory}
             className="w-full py-4 rounded-2xl font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm uppercase tracking-widest border border-white/5 cursor-pointer mt-1"
           >
-            📜 Ver Historial Clínico
+            Ver Historial Clínico
           </button>
         </div>
 
@@ -308,7 +308,7 @@ function StepHistory({ onBack, onOpenReport, onOpenEvolution, patients, deletePa
       type: 'patient',
       payload: { patientId },
       title: `Eliminar a ${name}`,
-      message: '¿Estás seguro de eliminar este paciente y todas sus sesiones asociadas? Esta acción es irreversible.'
+      message: '¿Estás seguro de eliminar este estudiante y todas sus sesiones asociadas? Esta acción es irreversible.'
     });
   };
 
@@ -329,7 +329,7 @@ function StepHistory({ onBack, onOpenReport, onOpenEvolution, patients, deletePa
 
       <div className="w-full space-y-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
         {patients.length === 0 ? (
-          <p className="text-white/30 text-center py-20">No hay pacientes registrados aún.</p>
+          <p className="text-white/30 text-center py-20">No hay estudiantes registrados aún.</p>
         ) : (
           patients.map(patient => (
             <div key={patient.id} className="bg-white/5 border border-white/10 p-5 rounded-2xl flex flex-col gap-4">
@@ -341,16 +341,16 @@ function StepHistory({ onBack, onOpenReport, onOpenEvolution, patients, deletePa
                       onClick={() => onOpenEvolution(patient)}
                       className="px-3 py-1 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/40 hover:text-white rounded-full text-xs font-bold transition-colors flex items-center gap-1 border border-indigo-500/30"
                     >
-                      📈 Ver Evolución Clínica
+                      Ver Evolución Clínica
                     </button>
                   )}
                 </div>
                 <button 
                   onClick={() => confirmDeletePatient(patient.id, patient.name)}
                   className="text-red-400 hover:text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-colors"
-                  title="Eliminar Paciente"
+                  title="Eliminar Estudiante"
                 >
-                  🗑️
+                  Eliminar
                 </button>
               </div>
               
@@ -375,7 +375,7 @@ function StepHistory({ onBack, onOpenReport, onOpenEvolution, patients, deletePa
                         className="text-red-400/50 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Eliminar Sesión"
                       >
-                        🗑️
+                        Eliminar
                       </button>
                     </div>
                   ))}
@@ -578,7 +578,7 @@ export default function ReactionGameView({ onExit, onGameReady, subjectId, etiqu
       )}
       {step === 'questions' && (
         <OnboardingForm 
-          playerName={activePatient?.name || 'Paciente'} 
+          playerName={activePatient?.name || 'Estudiante'} 
           onComplete={(data) => { 
             setSessionMeta(data); 
             setStep('countdown'); 
