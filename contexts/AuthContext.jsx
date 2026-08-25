@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
         email: userObj.email,
         nombre_completo: isLabAdmin 
           ? 'Equipo CogniMirror (Administración & I+D)' 
-          : (isBrayan ? 'Ps. Brayan Castro (Investigador PIE)' : (isLabEvaluator ? 'Ps. Evaluador de Investigación (200 Tests)' : 'Coordinador PIE General')),
+          : (isBrayan ? 'Brayan Castro (Investigador PIE)' : (isLabEvaluator ? 'Evaluador de Investigación (200 Tests)' : 'Coordinador PIE General')),
         colegio_id: 'c0000000-0000-0000-0000-000000000001',
         rol: isLabAdmin ? 'director' : (isCoordinator ? 'coordinador_pie' : 'psicologo'),
         cargo_texto: isLabAdmin ? 'Director de Investigación y Desarrollo' : 'Psicólogo Clínico / Investigador PIE',
@@ -193,7 +193,7 @@ export function AuthProvider({ children }) {
           user_metadata: {
             full_name: isLabAdmin 
               ? 'Equipo CogniMirror (Administración & I+D)' 
-              : (isBrayan ? 'Ps. Brayan Castro (Investigador PIE)' : 'Ps. Evaluador de Investigación (200 Tests)')
+              : (isBrayan ? 'Brayan Castro (Investigador PIE)' : 'Evaluador de Investigación (200 Tests)')
           }
         };
         const demoSessionObj = {
@@ -312,7 +312,9 @@ export function AuthProvider({ children }) {
         }]).catch(() => {});
       }
 
-      localStorage.removeItem('cognimirror_bypass_session');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('cognimirror_bypass_session');
+      }
       setUser(null);
       setProfile(null);
       try {
@@ -322,6 +324,9 @@ export function AuthProvider({ children }) {
       console.error('[AuthContext] Error al cerrar sesión:', error.message);
     } finally {
       setLoading(false);
+      if (typeof window !== 'undefined') {
+        window.location.replace('/login');
+      }
     }
   };
 

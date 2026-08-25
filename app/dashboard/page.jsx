@@ -331,7 +331,11 @@ function ClassicDashboard() {
           
           {user && (
             <div className="sidebar-user">
-              <div className="sidebar-user-name">Ps. {user.user_metadata?.full_name || 'Especialista'}</div>
+              <div className="sidebar-user-name">
+                {(user.user_metadata?.full_name || profile?.nombre_completo || 'Ps. Especialista').startsWith('Ps.') 
+                  ? (user.user_metadata?.full_name || profile?.nombre_completo) 
+                  : `Ps. ${user.user_metadata?.full_name || profile?.nombre_completo || 'Especialista'}`}
+              </div>
               <div className="sidebar-user-role">Sesión Clínica Activa</div>
               {isOfflineNetwork && (
                 <div style={{
