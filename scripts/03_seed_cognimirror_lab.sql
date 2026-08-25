@@ -1,45 +1,27 @@
 -- ==============================================================================
 -- SEED INSTITUCIONAL: COGNIMIRROR RESEARCH LAB (ENTORNO DE PRUEBAS Y VALIDACIÓN)
 -- ==============================================================================
--- Este script crea el colegio "CogniMirror Research & Validation Lab" (RBD: 99999-9)
--- y los usuarios oficiales del equipo para aplicar las 200 pruebas clínicas/BLE.
--- ==============================================================================
 
--- 0. Asegurar que existan las columnas necesarias en tablas previas
+-- 0. Asegurar extensiones y estructuras
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE IF NOT EXISTS public.colegios (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nombre VARCHAR(255) NOT NULL,
-    rbd VARCHAR(50) UNIQUE NOT NULL,
-    comuna VARCHAR(100) DEFAULT 'Santiago',
-    region VARCHAR(100) DEFAULT 'Metropolitana',
-    codigo_invitacion VARCHAR(20),
-    creado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
+-- Actualizar columnas en colegios
 ALTER TABLE public.colegios 
 ADD COLUMN IF NOT EXISTS comuna VARCHAR(100) DEFAULT 'Santiago',
 ADD COLUMN IF NOT EXISTS region VARCHAR(100) DEFAULT 'Metropolitana',
 ADD COLUMN IF NOT EXISTS codigo_invitacion VARCHAR(20);
 
-CREATE TABLE IF NOT EXISTS public.perfiles (
-    id UUID PRIMARY KEY,
-    colegio_id UUID REFERENCES public.colegios(id) ON DELETE CASCADE,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    nombre_completo VARCHAR(150) NOT NULL,
-    rol VARCHAR(50) NOT NULL DEFAULT 'especialista',
-    cargo_texto VARCHAR(100),
-    activo BOOLEAN DEFAULT TRUE,
-    ultimo_acceso TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    creado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
+-- Actualizar columnas y constraint de roles en perfiles
 ALTER TABLE public.perfiles 
 ADD COLUMN IF NOT EXISTS colegio_id UUID REFERENCES public.colegios(id) ON DELETE CASCADE,
 ADD COLUMN IF NOT EXISTS cargo_texto VARCHAR(100),
 ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE,
 ADD COLUMN IF NOT EXISTS ultimo_acceso TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now());
+
+-- Eliminar restricción antigua de roles y aplicar la nueva con soporte de director y coordinador
+ALTER TABLE public.perfiles DROP CONSTRAINT IF EXISTS perfiles_rol_check;
+ALTER TABLE public.perfiles ADD CONSTRAINT perfiles_rol_check 
+CHECK (rol IN ('director', 'coordinador_pie', 'psicologo', 'terapeuta', 'especialista', 'evaluador'));
 
 CREATE TABLE IF NOT EXISTS public.logs_auditoria (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
