@@ -5,6 +5,53 @@
 -- y los usuarios oficiales del equipo para aplicar las 200 pruebas clínicas/BLE.
 -- ==============================================================================
 
+-- 0. Asegurar que existan las columnas necesarias en tablas previas
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS public.colegios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre VARCHAR(255) NOT NULL,
+    rbd VARCHAR(50) UNIQUE NOT NULL,
+    comuna VARCHAR(100) DEFAULT 'Santiago',
+    region VARCHAR(100) DEFAULT 'Metropolitana',
+    codigo_invitacion VARCHAR(20),
+    creado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.colegios 
+ADD COLUMN IF NOT EXISTS comuna VARCHAR(100) DEFAULT 'Santiago',
+ADD COLUMN IF NOT EXISTS region VARCHAR(100) DEFAULT 'Metropolitana',
+ADD COLUMN IF NOT EXISTS codigo_invitacion VARCHAR(20);
+
+CREATE TABLE IF NOT EXISTS public.perfiles (
+    id UUID PRIMARY KEY,
+    colegio_id UUID REFERENCES public.colegios(id) ON DELETE CASCADE,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    nombre_completo VARCHAR(150) NOT NULL,
+    rol VARCHAR(50) NOT NULL DEFAULT 'especialista',
+    cargo_texto VARCHAR(100),
+    activo BOOLEAN DEFAULT TRUE,
+    ultimo_acceso TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    creado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.perfiles 
+ADD COLUMN IF NOT EXISTS colegio_id UUID REFERENCES public.colegios(id) ON DELETE CASCADE,
+ADD COLUMN IF NOT EXISTS cargo_texto VARCHAR(100),
+ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS ultimo_acceso TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now());
+
+CREATE TABLE IF NOT EXISTS public.logs_auditoria (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    colegio_id UUID REFERENCES public.colegios(id) ON DELETE CASCADE,
+    usuario_id UUID,
+    usuario_nombre VARCHAR(150),
+    evento VARCHAR(50) NOT NULL,
+    detalles JSONB DEFAULT '{}'::jsonb,
+    ip_origen VARCHAR(45),
+    creado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- 1. Insertar el Colegio de Pruebas Oficial (Tenant de I+D)
 INSERT INTO public.colegios (id, nombre, rbd, comuna, region)
 VALUES (

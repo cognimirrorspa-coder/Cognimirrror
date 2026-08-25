@@ -18,6 +18,12 @@ CREATE TABLE IF NOT EXISTS colegios (
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Si la tabla colegios ya existía previamente, asegurar columnas:
+ALTER TABLE colegios 
+ADD COLUMN IF NOT EXISTS comuna VARCHAR(100) DEFAULT 'Santiago',
+ADD COLUMN IF NOT EXISTS region VARCHAR(100) DEFAULT 'Metropolitana',
+ADD COLUMN IF NOT EXISTS codigo_invitacion VARCHAR(20);
+
 -- Habilitar RLS en Colegios
 ALTER TABLE colegios ENABLE ROW LEVEL SECURITY;
 
