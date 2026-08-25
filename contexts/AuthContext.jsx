@@ -25,7 +25,7 @@ const AuthContext = createContext({
   signIn: async () => {},
   signUp: async () => {},
   registerInstitution: async () => {},
-  signOut: async () => {}
+  signOut: () => {}
 });
 
 export function AuthProvider({ children }) {
@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
         email: userObj.email,
         nombre_completo: isLabAdmin 
           ? 'Equipo CogniMirror (Administración & I+D)' 
-          : (isBrayan ? 'Brayan Castro (Investigador PIE)' : (isLabEvaluator ? 'Evaluador de Investigación (200 Tests)' : 'Coordinador PIE General')),
+          : (isBrayan ? 'Brayan Castro (Investigador PIE)' : 'Evaluador de Investigación (200 Tests)'),
         colegio_id: 'c0000000-0000-0000-0000-000000000001',
         rol: isLabAdmin ? 'director' : (isCoordinator ? 'coordinador_pie' : 'psicologo'),
         cargo_texto: isLabAdmin ? 'Director de Investigación y Desarrollo' : 'Psicólogo Clínico / Investigador PIE',
@@ -303,40 +303,29 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signOut = async () => {
-    setLoading(true);
+  const signOut = () => {
     try {
-      if (profile?.colegio_id && user?.id) {
-        supabase.from('logs_auditoria').insert([{
-          colegio_id: profile.colegio_id,
-          usuario_id: user.id,
-          usuario_nombre: profile.nombre_completo || user.email,
-          evento: 'LOGOUT',
-          detalles: { accion: 'Cierre de sesión ordenado' }
-        }]).catch(() => {});
-      }
-
       if (typeof window !== 'undefined') {
         localStorage.removeItem('cognimirror_bypass_session');
-        // Limpiar todas las posibles claves de supabase auth en localStorage
-        Object.keys(localStorage).forEach(key => {
-          if (key.includes('supabase') || key.includes('cognimirror') || key.includes('auth')) {
-            localStorage.removeItem(key);
-          }
-        });
+        localStorage.removeItem('cognimirror_offline_patients');
         sessionStorage.clear();
+        
+        // Limpiar todas las cookies de autenticación
+        document.cookie.split(";").forEach((c) => {
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
       }
+      
       setUser(null);
       setProfile(null);
-      try {
-        await supabase.auth.signOut();
-      } catch (e) {}
+      
+      // Async background cleanup
+      supabase.auth.signOut().catch(() => {});
     } catch (error) {
-      console.error('[AuthContext] Error al cerrar sesión:', error.message);
+      console.error('[AuthContext] Error cerrando sesión:', error);
     } finally {
-      setLoading(false);
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        window.location.replace('/login');
       }
     }
   };
