@@ -3,13 +3,13 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 
-const BYPASS_EMAIL = 'evaluador@cognimirror.com';
+const BYPASS_EMAIL = 'evaluador@cognimirror.cl';
 const BYPASS_PASSWORD = 'clinica2026';
 const BYPASS_USER = {
-  id: '00000000-0000-0000-0000-000000000000',
+  id: 'e0000000-0000-0000-0000-000000000001',
   email: BYPASS_EMAIL,
   user_metadata: {
-    full_name: 'Ps. Evaluador de Prueba'
+    full_name: 'Ps. Evaluador de Investigación (CogniMirror Lab)'
   }
 };
 const BYPASS_SESSION = {
@@ -40,21 +40,25 @@ export function AuthProvider({ children }) {
       return null;
     }
 
-    // Mock para usuarios bypass locales
-    if (userObj.id === '00000000-0000-0000-0000-000000000000' || userObj.email === 'coordinador@colegio.com' || userObj.email === 'director@davinci.cl') {
-      const isDirector = userObj.email === 'director@davinci.cl';
-      const isCoordinator = userObj.email === 'coordinador@colegio.com';
+    // Mock para usuarios bypass y colegio de pruebas CogniMirror Research Lab
+    const isLabAdmin = userObj.email === 'cognimirrorspa@gmail.com' || userObj.email === 'director@davinci.cl';
+    const isLabEvaluator = userObj.email === 'evaluador@cognimirror.cl' || userObj.email === 'evaluador@cognimirror.com' || userObj.email === 'psicologo@clinica.com';
+    const isCoordinator = userObj.email === 'coordinador@colegio.com';
+
+    if (isLabAdmin || isLabEvaluator || isCoordinator || userObj.id === '00000000-0000-0000-0000-000000000000') {
       const mockProfile = {
-        id: userObj.id,
+        id: userObj.id || (isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001'),
         email: userObj.email,
-        nombre_completo: isDirector ? 'Andrés Soto (Director)' : (isCoordinator ? 'Coordinador PIE General' : 'Ps. Evaluador de Prueba'),
-        colegio_id: 'c1000000-0000-0000-0000-000000000001',
-        rol: isDirector ? 'director' : (isCoordinator ? 'coordinador_pie' : 'psicologo'),
-        cargo_texto: isDirector ? 'Director Académico' : (isCoordinator ? 'Coordinadora PIE' : 'Psicólogo Clínico PIE'),
+        nombre_completo: isLabAdmin 
+          ? 'Equipo CogniMirror (Administración & I+D)' 
+          : (isLabEvaluator ? 'Ps. Evaluador de Investigación (200 Tests)' : 'Coordinador PIE General'),
+        colegio_id: 'c0000000-0000-0000-0000-000000000001',
+        rol: isLabAdmin ? 'director' : (isCoordinator ? 'coordinador_pie' : 'psicologo'),
+        cargo_texto: isLabAdmin ? 'Director de Investigación y Desarrollo' : 'Psicólogo Investigador / Evaluador BLE',
         colegio: {
-          id: 'c1000000-0000-0000-0000-000000000001',
-          nombre: isDirector ? 'Colegio Leonardo Da Vinci' : 'Colegio Piloto Demostración',
-          rbd: isDirector ? '12345-6' : '99999-9',
+          id: 'c0000000-0000-0000-0000-000000000001',
+          nombre: 'CogniMirror Research Lab (Entorno de Pruebas)',
+          rbd: '99999-9',
           comuna: 'Santiago'
         }
       };
@@ -167,23 +171,27 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     setLoading(true);
     try {
-      // 1. Cuentas bypass de demostración
-      if (email === BYPASS_EMAIL || email === 'psicologo@clinica.com' || email === 'coordinador@colegio.com' || email === 'director@davinci.cl') {
-        const passwordCorrect = (email === BYPASS_EMAIL && password === BYPASS_PASSWORD) || 
-                                (email === 'psicologo@clinica.com' && password === 'clinica2026') ||
-                                (email === 'coordinador@colegio.com' && password === 'clinica2026') ||
-                                (email === 'director@davinci.cl' && password === 'clinica2026');
+      // 1. Cuentas del equipo y sandbox de pruebas CogniMirror
+      const isDemoAccount = email === 'cognimirrorspa@gmail.com' || 
+                            email === 'evaluador@cognimirror.cl' || 
+                            email === 'evaluador@cognimirror.com' ||
+                            email === 'psicologo@clinica.com' || 
+                            email === 'coordinador@colegio.com' || 
+                            email === 'director@davinci.cl';
+
+      if (isDemoAccount) {
+        const passwordCorrect = password === 'clinica2026';
         
         if (!passwordCorrect) {
-          return { data: null, error: { message: 'Contraseña incorrecta para la cuenta de demostración.' } };
+          return { data: null, error: { message: 'Contraseña incorrecta para la cuenta de investigación / demostración.' } };
         }
         
+        const isLabAdmin = email === 'cognimirrorspa@gmail.com' || email === 'director@davinci.cl';
         const demoUserObj = {
-          id: email === 'director@davinci.cl' ? 'd1000000-0000-0000-0000-000000000001' : 
-              email === 'coordinador@colegio.com' ? 'c001c001-c001-c001-c001-c001c001c001' : '00000000-0000-0000-0000-000000000000',
+          id: isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001',
           email: email,
           user_metadata: {
-            full_name: email === 'director@davinci.cl' ? 'Andrés Soto (Director)' : (email === 'coordinador@colegio.com' ? 'Coordinador PIE' : 'Ps. Evaluador de Prueba')
+            full_name: isLabAdmin ? 'Equipo CogniMirror (Administración & I+D)' : 'Ps. Evaluador de Investigación (200 Tests)'
           }
         };
         const demoSessionObj = {
