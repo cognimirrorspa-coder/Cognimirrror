@@ -163,79 +163,77 @@ export default function Cube3DViewer({
     let isRotatingLocal = false;
     const rotateSingleFace = async (baseFace, angle90, steps) => {
       while (isRotatingLocal) {
-        await new Promise(r => setTimeout(r, 16));
+        await new Promise(r => setTimeout(r, 8));
       }
       isRotatingLocal = true;
       try {
-      const cfg = MOVES_CONFIG[baseFace];
-      if (!cfg) return;
+        const cfg = MOVES_CONFIG[baseFace];
+        if (!cfg) return;
 
-      const active = allCubies.filter(c => Math.abs(c.position[cfg.axis] - cfg.val) < 0.4);
-      const pivot = new THREE.Object3D();
-      cubeGroup.add(pivot);
-      // Reparentar cubies al pivot
-      active.forEach(c => pivot.attach(c));
+        const active = allCubies.filter(c => Math.abs(c.position[cfg.axis] - cfg.val) < 0.4);
+        const pivot = new THREE.Object3D();
+        cubeGroup.add(pivot);
+        // Reparentar cubies al pivot
+        active.forEach(c => pivot.attach(c));
 
-      if (steps <= 0) {
-        // Modo instantáneo (catch-up)
-        pivot.rotation[cfg.axis] = angle90;
-        pivot.updateMatrixWorld(true);
-      } else {
-        const dA = angle90 / steps;
-        for (let i = 0; i < steps; i++) {
-          pivot.rotation[cfg.axis] += dA;
-          renderer.render(scene, camera);
-          await new Promise(requestAnimationFrame);
+        if (steps <= 0) {
+          // Modo instantáneo (catch-up)
+          pivot.rotation[cfg.axis] = angle90;
+          pivot.updateMatrixWorld(true);
+        } else {
+          const dA = angle90 / steps;
+          for (let i = 0; i < steps; i++) {
+            pivot.rotation[cfg.axis] += dA;
+            await new Promise(requestAnimationFrame);
+          }
+          pivot.rotation[cfg.axis] = angle90;
+          pivot.updateMatrixWorld(true);
         }
-        pivot.rotation[cfg.axis] = angle90;
-        pivot.updateMatrixWorld(true);
-        renderer.render(scene, camera);
+
+        // SNAP ORTOGONAL BASADO EN MATRIZ — Previene gimbal lock, deformación y piezas negras
+        active.forEach(c => {
+          cubeGroup.attach(c); // hereda transform mundial
+          
+          // 1. Snap posición a enteros exactos (-1, 0, 1)
+          c.position.set(
+            Math.round(c.position.x),
+            Math.round(c.position.y),
+            Math.round(c.position.z)
+          );
+
+          // 2. Snap ejes de rotación a la dirección ortogonal global más cercana
+          c.updateMatrixWorld(true);
+          const m = c.matrix;
+          const xAxis = new THREE.Vector3();
+          const yAxis = new THREE.Vector3();
+          const zAxis = new THREE.Vector3();
+          m.extractBasis(xAxis, yAxis, zAxis);
+
+          const snapVector = (v) => {
+            let maxComp = 'x';
+            if (Math.abs(v.y) > Math.abs(v[maxComp])) maxComp = 'y';
+            if (Math.abs(v.z) > Math.abs(v[maxComp])) maxComp = 'z';
+            const val = Math.sign(v[maxComp]) || 1;
+            v.set(0, 0, 0);
+            v[maxComp] = val;
+          };
+
+          snapVector(xAxis);
+          snapVector(yAxis);
+          snapVector(zAxis);
+
+          const snappedMatrix = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
+          c.quaternion.setFromRotationMatrix(snappedMatrix);
+          c.rotation.setFromQuaternion(c.quaternion);
+          c.updateMatrixWorld(true);
+        });
+        cubeGroup.remove(pivot);
+      } finally {
+        isRotatingLocal = false;
       }
+    };
 
-      // SNAP ORTOGONAL BASADO EN MATRIZ — Previene gimbal lock, deformación y piezas negras
-      active.forEach(c => {
-        cubeGroup.attach(c); // hereda transform mundial
-        
-        // 1. Snap posición a enteros exactos (-1, 0, 1)
-        c.position.set(
-          Math.round(c.position.x),
-          Math.round(c.position.y),
-          Math.round(c.position.z)
-        );
-
-        // 2. Snap ejes de rotación a la dirección ortogonal global más cercana
-        c.updateMatrixWorld(true);
-        const m = c.matrix;
-        const xAxis = new THREE.Vector3();
-        const yAxis = new THREE.Vector3();
-        const zAxis = new THREE.Vector3();
-        m.extractBasis(xAxis, yAxis, zAxis);
-
-        const snapVector = (v) => {
-          let maxComp = 'x';
-          if (Math.abs(v.y) > Math.abs(v[maxComp])) maxComp = 'y';
-          if (Math.abs(v.z) > Math.abs(v[maxComp])) maxComp = 'z';
-          const val = Math.sign(v[maxComp]) || 1;
-          v.set(0, 0, 0);
-          v[maxComp] = val;
-        };
-
-        snapVector(xAxis);
-        snapVector(yAxis);
-        snapVector(zAxis);
-
-        const snappedMatrix = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
-        c.quaternion.setFromRotationMatrix(snappedMatrix);
-        c.rotation.setFromQuaternion(c.quaternion);
-        c.updateMatrixWorld(true);
-      });
-      cubeGroup.remove(pivot);
-    } finally {
-      isRotatingLocal = false;
-    }
-  };
-
-    const rotateFace = async (notation, steps = 18) => {
+    const rotateFace = async (notation, steps = 8) => {
       // Resolver movimientos compuestos (M, E, S)
       if (COMPOUND_MOVES[notation]) {
         for (const sub of COMPOUND_MOVES[notation]) {
@@ -459,22 +457,21 @@ export default function Cube3DViewer({
       if (isDemoRunningRef.current) return;
       isDemoRunningRef.current = true;
       
-      // Esperar brevemente para que la cara brille antes de girar
-      await new Promise(r => setTimeout(r, 200));
+      // Breve pausa para brillo inicial
+      await new Promise(r => setTimeout(r, 60));
 
       for (const m of demoMoves) {
-        // Giro de demostración: 90° pausado, suave y visible (24 pasos)
-        await three.rotateFace(m, 24);
+        // Giro de demostración rápido y fluido (8 pasos)
+        await three.rotateFace(m, 8);
         
-        // Mantener girado para que el estudiante vea claramente qué cara mover (650ms)
-        await new Promise(r => setTimeout(r, 650));
+        // Mantener cara visible brevemente
+        await new Promise(r => setTimeout(r, 200));
 
-        // Devolver a posición original limpiamente (cubo resuelto = gemelo digital correcto)
+        // Devolver a posición original limpiamente
         const reverseMove = m.endsWith("'") ? m.slice(0, -1) : m + "'";
-        await three.rotateFace(reverseMove, 20);
+        await three.rotateFace(reverseMove, 8);
 
-        // Pausa suave
-        await new Promise(r => setTimeout(r, 250));
+        await new Promise(r => setTimeout(r, 60));
       }
 
       isDemoRunningRef.current = false;

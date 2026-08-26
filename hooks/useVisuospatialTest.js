@@ -88,7 +88,7 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
 
   /**
    * Reproducción de Secuencia (Gemelo Digital)
-   * Recorre la secuencia actual encendiendo/apagando caras tras un retraso inicial de 1.8s.
+   * Recorre la secuencia actual encendiendo/apagando caras con ritmo ágil y fluido.
    */
   useEffect(() => {
     if (requireBluetooth && !isConnected) return;
@@ -100,7 +100,7 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
       setShowingIndex(-1);
       userInputsRef.current = [];
 
-      // Alerta de 1.8s antes de iniciar los movimientos
+      // Breve pausa inicial de 400ms antes de iniciar los estímulos
       const initialDelayTimeout = setTimeout(() => {
         if (!isMounted) return;
 
@@ -118,8 +118,8 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
               playbackTimeoutRef.current = setTimeout(() => {
                 index++;
                 playNext();
-              }, 600); // Se mantiene apagada por 600ms para separar estímulos
-            }, 1300); // Se mantiene encendida por 1300ms para lectura accesible
+              }, 200); // 200ms apagada entre estímulos
+            }, 650); // 650ms encendida (ágil y nítida)
           } else {
             // Terminó la reproducción de la secuencia
             setActiveFace(null);
@@ -139,7 +139,7 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
         };
 
         playNext();
-      }, 1800);
+      }, 400);
 
       return () => {
         isMounted = false;
@@ -161,7 +161,6 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
     if (!actual) return 'omission'; // No hubo input (timeout o vacío)
 
     // 2. Inversión de Orden: ¿el usuario produjo las caras correctas pero en orden invertido?
-    // Verificar si la cara que giró pertenece a la secuencia pero en posición diferente
     const expectedFutureIdx = expectedSequence.indexOf(actual, failedAtIndex + 1);
     const wasExpectedBefore = failedAtIndex > 0 && expectedSequence.slice(0, failedAtIndex).includes(actual);
     
@@ -171,18 +170,17 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
 
     // 3. Giro Erróneo: cara completamente incorrecta
     if (!expectedSequence.includes(actual)) {
-      return 'wrong_face'; // Cara que no existe en absoluto en la secuencia
+      return 'wrong_face';
     }
 
-    return 'wrong_position'; // Cara correcta de la secuencia pero en posición equivocada
+    return 'wrong_position';
   }, []);
 
   /**
    * Manejador de Input del Usuario
-   * Se dispara externamente vía giros de caras del cubo inteligente.
+   * Se dispara instantáneamente vía giros del cubo o teclado.
    */
   const handleCubeInput = useCallback((face) => {
-    // Si la señal BLE incluye modificadores como prima (ej. "R'"), los limpiamos.
     const normalizedFace = face.replace("'", "");
 
     // Solo registrar si estamos esperando input y es una cara válida.
@@ -192,9 +190,8 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
 
     const now = performance.now();
 
-    // ── FILTRO DE RE-ALINEACIÓN DE MISMA CARA (1200ms COOLDOWN) ──
-    if (normalizedFace === lastInputFaceRef.current && (now - lastInputTimeRef.current) < 1200) {
-      console.warn(`[Corsi Filter] Descartando re-alineación de la cara ${normalizedFace} (dentro de 1.2s)`);
+    // ── FILTRO ANTI-REBOTE LIGERO (180ms COOLDOWN) ──
+    if (normalizedFace === lastInputFaceRef.current && (now - lastInputTimeRef.current) < 180) {
       return;
     }
 
@@ -202,8 +199,6 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
     lastInputTimeRef.current = now;
 
     const latency = now - lastEventTimeRef.current;
-    
-    // Actualizamos la marca de tiempo para medir la latencia del SIGUIENTE movimiento
     lastEventTimeRef.current = now; 
 
     const expectedFace = sequence[userIndex];
@@ -218,7 +213,6 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
       ? Math.round(now - sequenceStartTimeRef.current)
       : null;
 
-    // Clasificar error si es incorrecto
     let errorType = null;
     if (!isCorrect) {
       errorType = classifyError(userInputsRef.current, sequence, userIndex);
@@ -234,10 +228,10 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
       userFace: normalizedFace,
       isCorrect,
       latencyMs: currentLatencyMs,
-      latencyFromSequenceEnd, // Tiempo desde que terminó de mostrar hasta el primer giro
+      latencyFromSequenceEnd,
       isFirstMove,
-      errorType, // 'omission' | 'inversion' | 'wrong_face' | 'wrong_position' | null
-      errorClassification: errorType, // Alias estandarizado
+      errorType,
+      errorClassification: errorType,
       moveLatencies: isCorrect ? [...currentLatencies, currentLatencyMs] : currentLatencies,
       timestamp: Date.now()
     }]);
@@ -248,7 +242,7 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
       // Si completó la secuencia actual con éxito
       if (userIndex + 1 === sequence.length) {
         // ¡NIVEL COMPLETADO!
-        const newSpan = level; // El span completado es el nivel actual
+        const newSpan = level;
         if (newSpan > corsiSpan) {
           setCorsiSpan(newSpan);
         }
@@ -264,7 +258,7 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
           userInputsRef.current = [];
           setSequence(generateSequence(nextLevel));
           setGameState('showing_sequence');
-        }, 2500);
+        }, 900); // 900ms para transición fluida
       } else {
         // Avanza al siguiente paso de la secuencia
         setUserIndex(userIndex + 1);
@@ -280,16 +274,13 @@ export function useVisuospatialTest(isConnected = true, requireBluetooth = true)
         setCurrentLatencies([]);
         userInputsRef.current = [];
         if (trial === 'A') {
-          // Falló en Intento A: Pasa a Intento B del mismo nivel
           setTrial('B');
           setSequence(generateSequence(level));
           setGameState('showing_sequence');
         } else {
-          // Falló en Intento B: Discontinue Rule - el test termina
-          // El Corsi Span es el último nivel completado exitosamente (ya guardado)
           setGameState('finished');
         }
-      }, 2500);
+      }, 900); // 900ms para transición fluida
     }
   }, [gameState, sequence, userIndex, level, trial, errorsInLevel, generateSequence, classifyError, corsiSpan, currentLatencies, maxLevelReached]);
 

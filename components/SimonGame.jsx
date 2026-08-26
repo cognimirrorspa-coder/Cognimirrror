@@ -105,20 +105,6 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
   const [showErrorFlash, setShowErrorFlash] = useState(false);
   const [cubeSize, setCubeSize] = useState(300);
   const [userTurnFeedback, setUserTurnFeedback] = useState(null); // Feedback visual instantáneo de giro del usuario
-  const [isUserAlertPhase, setIsUserAlertPhase] = useState(false);
-
-  // Alerta de 1.6s para el turno del usuario
-  useEffect(() => {
-    if (gameState === 'waiting_for_user') {
-      setIsUserAlertPhase(true);
-      const timer = setTimeout(() => {
-        setIsUserAlertPhase(false);
-      }, 1600);
-      return () => clearTimeout(timer);
-    } else {
-      setIsUserAlertPhase(false);
-    }
-  }, [gameState]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -153,7 +139,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
   useEffect(() => {
     if (errorsInLevel > prevErrorsRef.current) {
       setShowErrorFlash(true);
-      setTimeout(() => setShowErrorFlash(false), 600);
+      setTimeout(() => setShowErrorFlash(false), 400);
     }
     prevErrorsRef.current = errorsInLevel;
   }, [errorsInLevel]);
@@ -162,7 +148,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
   useEffect(() => {
     if (userIndex > prevUserIndexRef.current) {
       setSuccessFlash(true);
-      setTimeout(() => setSuccessFlash(false), 300);
+      setTimeout(() => setSuccessFlash(false), 200);
     }
     prevUserIndexRef.current = userIndex;
   }, [userIndex]);
@@ -171,30 +157,29 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
   useEffect(() => {
     if (level > prevLevelRef.current) {
       setLevelUpFlash(true);
-      setTimeout(() => setLevelUpFlash(false), 1500);
+      setTimeout(() => setLevelUpFlash(false), 800);
     }
     prevLevelRef.current = level;
   }, [level]);
 
-  // Incrementar demoKey cada vez que se enciende una cara nueva en la demo
+  // Incrementar demoKey cada vez que se enciende una cara nueva en la demo de secuencia
   useEffect(() => {
     if (activeFace && gameState === 'showing_sequence') {
       setDemoKey(k => k + 1);
     }
   }, [activeFace, gameState]);
 
-  // Handler unificado de input del usuario con feedback visual instantáneo
+  // Handler unificado de input del usuario con feedback visual y sonoro instantáneo
   const triggerUserInputFeedback = (face) => {
     handleCubeInput(face);
 
     if (FACE_METADATA[face]) {
       setUserTurnFeedback({ face, meta: FACE_METADATA[face], timestamp: Date.now() });
-      setDemoKey(k => k + 1);
-      setTimeout(() => setUserTurnFeedback(null), 700);
+      setTimeout(() => setUserTurnFeedback(null), 400);
     }
 
     if (FACE_FREQUENCIES[face]) {
-      playTone(FACE_FREQUENCIES[face], 'triangle', 0.35);
+      playTone(FACE_FREQUENCIES[face], 'triangle', 0.25);
     }
   };
 
@@ -425,8 +410,8 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                   </div>
                 </div>
               )}
-              {gameState === 'waiting_for_user' && !isUserAlertPhase && (
-                <div className="flex flex-col items-center gap-2 sm:gap-3 animate-in fade-in zoom-in-95 duration-300">
+              {gameState === 'waiting_for_user' && (
+                <div className="flex flex-col items-center gap-2 sm:gap-3 animate-in fade-in zoom-in-95 duration-200">
                   <p className="text-[#39FF14] font-black tracking-[0.3em] uppercase text-sm sm:text-xl drop-shadow-[0_0_10px_rgba(57,255,20,0.5)]">
                     TU TURNO (REPLICA)
                   </p>
@@ -435,7 +420,7 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
                   </span>
                   <div className="flex gap-1.5 mt-1">
                     {sequence.map((_, i) => (
-                      <div key={i} className={`w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${i < userIndex ? 'bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.8)]' : i === userIndex ? 'bg-[#39FF14]/50 animate-pulse border-2 border-[#39FF14]' : 'border-2 border-[#39FF14]/30 bg-transparent'}`} />
+                      <div key={i} className={`w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full transition-all duration-200 ${i < userIndex ? 'bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.8)]' : i === userIndex ? 'bg-[#39FF14]/50 animate-pulse border-2 border-[#39FF14]' : 'border-2 border-[#39FF14]/30 bg-transparent'}`} />
                     ))}
                   </div>
                 </div>
@@ -463,39 +448,9 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               )}
             </div>
 
-            {/* 1.6S DE TRANSICIÓN: ALERTA DE OBSERVACIÓN (CUBO OCULTO EN EL CENTRO) */}
-            {gameState === 'showing_sequence' && showingIndex < 0 && (
-              <div className="flex flex-col items-center justify-center gap-4 py-16 z-20 animate-in fade-in zoom-in-95 duration-500">
-                <div className="w-20 h-20 rounded-3xl bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shadow-[0_0_40px_rgba(0,255,255,0.5)] animate-bounce">
-                  <Eye size={44} />
-                </div>
-                <h2 className="text-[#00FFFF] font-black tracking-[0.3em] uppercase text-2xl sm:text-4xl drop-shadow-[0_0_20px_rgba(0,255,255,0.8)] text-center">
-                  OBSERVA LA SECUENCIA
-                </h2>
-                <p className="text-cyan-200/90 text-xs sm:text-sm font-bold tracking-widest bg-cyan-950/80 px-4 py-1.5 rounded-full border border-cyan-500/30 shadow-lg text-center">
-                  Prepárate... El cubo se mostrará completamente armado
-                </p>
-              </div>
-            )}
-
-            {/* 1.6S DE TRANSICIÓN: ALERTA DE TURNO DE USUARIO (CUBO OCULTO EN EL CENTRO) */}
-            {gameState === 'waiting_for_user' && isUserAlertPhase && (
-              <div className="flex flex-col items-center justify-center gap-4 py-16 z-20 animate-in fade-in zoom-in-95 duration-500">
-                <div className="w-20 h-20 rounded-3xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-[0_0_40px_rgba(57,255,20,0.5)] animate-pulse">
-                  
-                </div>
-                <h2 className="text-[#39FF14] font-black tracking-[0.3em] uppercase text-2xl sm:text-4xl drop-shadow-[0_0_20px_rgba(57,255,20,0.8)] text-center">
-                  TU TURNO
-                </h2>
-                <p className="text-emerald-200/90 text-xs sm:text-sm font-bold tracking-widest bg-emerald-950/80 px-4 py-1.5 rounded-full border border-emerald-500/30 shadow-lg text-center">
-                  Replica la secuencia observada en tu cubo inteligente
-                </p>
-              </div>
-            )}
-
             {/* HUD PANEL: POSICIONADO ABAJO A LA DERECHA PARA EVITAR SUPERPOSICIÓN */}
-            {(activeMeta || userTurnFeedback) && showingIndex >= 0 && !isUserAlertPhase && (
-              <div className="absolute bottom-6 right-6 bg-[#13161e]/90 backdrop-blur-md border border-white/15 rounded-2xl p-4 flex items-center gap-3 w-64 shadow-2xl z-20 transition-all duration-300 animate-in fade-in zoom-in-95">
+            {(activeMeta || userTurnFeedback) && showingIndex >= 0 && (
+              <div className="absolute bottom-6 right-6 bg-[#13161e]/90 backdrop-blur-md border border-white/15 rounded-2xl p-4 flex items-center gap-3 w-64 shadow-2xl z-20 transition-all duration-200 animate-in fade-in zoom-in-95">
                 <div className={`w-12 h-12 rounded-xl ${(userTurnFeedback?.meta || activeMeta)?.color} shadow-lg flex items-center justify-center font-black text-xl border shrink-0 animate-pulse`}>
                   {(userTurnFeedback?.face || activeFace)}
                 </div>
@@ -513,12 +468,8 @@ export default function SimonGame({ onExit, playerName, sessionMeta, sessionStar
               </div>
             )}
 
-            {/* ÁREA DEL CUBO 3D (OCULTO DURANTE ALERTAS DE TRANSICIÓN DE 1.6S) */}
-            <div className={`relative transition-all duration-300 flex items-center justify-center ${
-              (gameState === 'showing_sequence' && showingIndex < 0) || (gameState === 'waiting_for_user' && isUserAlertPhase)
-                ? 'opacity-0 pointer-events-none hidden'
-                : 'opacity-100'
-            }`}>
+            {/* ÁREA DEL CUBO 3D */}
+            <div className="relative transition-all duration-200 flex items-center justify-center opacity-100">
               <Cube3DViewer
                 status={gameState === 'finished' ? 'eval_celebration' : 'gyro_active'}
                 size={cubeSize}
