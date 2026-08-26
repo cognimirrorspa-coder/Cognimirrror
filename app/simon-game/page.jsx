@@ -17,7 +17,7 @@ function GameContent() {
     if (isDemo) {
       router.push('/defensa?slide=13'); // Diapositiva 14
     } else {
-      router.push('/dashboard');
+      router.push('/dashboard?tab=niveles');
     }
   };
 

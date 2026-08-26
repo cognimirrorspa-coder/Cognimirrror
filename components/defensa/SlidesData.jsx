@@ -155,7 +155,7 @@ export function getSlideComponent(index) {
           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Específico 3</span>
           <h4 className="font-bold text-white mt-1 mb-2">Gestión y Reportes</h4>
           <p className="text-slate-400 text-xs leading-relaxed">
-            Desarrollar un portal clínico multi-tenant para psicólogos con gráficos longitudinales y reportes PDF Decreto 170.
+            Desarrollar un portal clínico multi-tenant para psicólogos con gráficos longitudinales y reportes PDF de Informes PIE.
           </p>
         </div>
       </div>

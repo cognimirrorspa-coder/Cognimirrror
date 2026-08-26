@@ -282,10 +282,10 @@ export default function CoordinadorDashboard() {
                 </div>
               </div>
 
-              {/* Tarjeta 3: Cumplimiento Decreto 170 */}
+              {/* Tarjeta 3: Cumplimiento Programa PIE */}
               <div className="bg-[#10131c] border border-emerald-500/30 p-5 rounded-2xl relative overflow-hidden shadow-lg bg-gradient-to-br from-[#10131c] to-emerald-950/20">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Cumplimiento Dto. 170</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Cumplimiento PIE</span>
                   <div className="w-9 h-9 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-xl flex items-center justify-center">
                     <CheckCircle2 size={18} />
                   </div>

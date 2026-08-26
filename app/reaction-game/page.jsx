@@ -9,6 +9,7 @@ function GameContent() {
   const subjectId = searchParams.get('subjectId');
   const etiquetaEstudio = searchParams.get('etiquetaEstudio');
   const modo = searchParams.get('modo');
+  const level = searchParams.get('level');
   
   const isDemo = modo === 'defensa';
   const warmup = isDemo || searchParams.get('warmup') === 'true';
@@ -17,7 +18,7 @@ function GameContent() {
     if (isDemo) {
       router.push('/defensa?slide=13'); // Diapositiva 14
     } else {
-      router.push('/dashboard');
+      router.push('/dashboard?tab=niveles');
     }
   };
 
@@ -39,6 +40,7 @@ function GameContent() {
         etiquetaEstudio={etiquetaEstudio}
         isWarmupUrl={warmup}
         isDemoMode={isDemo}
+        initialLevel={level}
       />
     </div>
   );

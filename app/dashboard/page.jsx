@@ -1,16 +1,63 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useBluetoothCube } from '../../contexts/BluetoothContext';
 import { useCubeState } from '../../contexts/CubeStateContext';
 import { useJoicube } from '../../contexts/JoicubeContext';
-import Cube3DViewer from '../../components/Cube3DViewer';
-import MoveFeedOverlay from '../../components/MoveFeedOverlay';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePatientsDB } from '../../hooks/usePatientsDB';
+import Cube3DViewer from '../../components/Cube3DViewer';
 import CoordinadorDashboard from '../../components/CoordinadorDashboard';
+import {
+  Users,
+  Brain,
+  Zap,
+  Compass,
+  Hand,
+  Activity,
+  ArrowRight,
+  FileSpreadsheet,
+  Plus,
+  RotateCcw,
+  CheckCircle2,
+  Clock,
+  LogOut,
+  Bluetooth,
+  Wifi,
+  WifiOff,
+  Shield,
+  Layers,
+  ChevronRight,
+  History,
+  TrendingUp,
+  Sun,
+  Moon,
+  LayoutDashboard,
+  GraduationCap,
+  FileText,
+  Search,
+  School,
+  BarChart3,
+  Box,
+  Sliders,
+  Play,
+  RotateCw
+} from 'lucide-react';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from 'recharts';
 
-// ─── Utilidad: formatear tiempo ───────────────────────────────
 function formatTime(ms) {
   const m = Math.floor(ms / 60000).toString().padStart(2, '0');
   const s = Math.floor((ms % 60000) / 1000).toString().padStart(2, '0');
@@ -19,22 +66,44 @@ function formatTime(ms) {
 }
 
 function ClassicDashboard() {
-  const { isConnected, device, connectBLE, batteryLevel, subscribeToMoves, broadcastMove, calibrateGyro } = useBluetoothCube();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams ? searchParams.get('tab') : null;
+  const { isConnected, device, connectBLE, batteryLevel, subscribeToMoves, broadcastMove, latencyOffset } = useBluetoothCube();
   const { moveHistory, cubeRotation, resetCubeState } = useCubeState();
   const joicube = useJoicube();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
+  const { patients, loadingPatients } = usePatientsDB();
 
-  const [activeTab, setActiveTab] = useState('session');
+  const [activeTab, setActiveTab] = useState(
+    tabParam === 'niveles' || tabParam === 'batteries' || tabParam === 'baterias' ? 'niveles' : 'resumen'
+  ); // 'resumen' | 'niveles' | 'alumnos' | 'gemelo'
+  const [theme, setTheme] = useState('dark');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isOfflineNetwork, setIsOfflineNetwork] = useState(false);
-  const [isPresentationRemoteActive, setIsPresentationRemoteActive] = useState(false);
 
   useEffect(() => {
+    if (tabParam === 'niveles' || tabParam === 'batteries' || tabParam === 'baterias') {
+      setActiveTab('niveles');
+    }
+  }, [tabParam]);
+
+  // Estados del Gemelo Digital
+  const [lastTurn, setLastTurn] = useState(null);
+  const [gemeloMoves, setGemeloMoves] = useState([]);
+  const [gemeloTimer, setGemeloTimer] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [faceStats, setFaceStats] = useState({ L: 0, R: 0, U: 0, D: 0, F: 0, B: 0 });
+
+  // Cargar tema guardado
+  useEffect(() => {
     if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('cognimirror_theme') || 'dark';
+      setTheme(savedTheme);
       setIsOfflineNetwork(!navigator.onLine);
 
       const handleOnline = () => setIsOfflineNetwork(false);
       const handleOffline = () => setIsOfflineNetwork(true);
-
       window.addEventListener('online', handleOnline);
       window.addEventListener('offline', handleOffline);
 
@@ -45,563 +114,1037 @@ function ClassicDashboard() {
     }
   }, []);
 
-  // ── Emulador de Teclado Global por Bluetooth ──
-  useEffect(() => {
-    if (!isPresentationRemoteActive || !isConnected) return;
-    
-    console.log('[Dashboard] Activado puente de teclado global para el cubo inteligente.');
-    const unsub = subscribeToMoves((notation) => {
-      const clean = notation.replace("'", "");
-      const isClockwise = !notation.includes("'");
-      
-      let action = null;
-      if (clean === 'R') {
-        action = 'right'; // Giro R o R' avanza
-      } else if (clean === 'L') {
-        action = 'left';  // Giro L o L' retrocede
-      }
-      
-      if (action) {
-        fetch('/api/keyboard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action })
-        }).catch(err => console.warn('[Presentation Remote] Falló simulación de tecla:', err));
-      }
-    });
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cognimirror_theme', nextTheme);
+    }
+  };
 
-    return () => {
-      console.log('[Dashboard] Desactivado puente de teclado global.');
-      unsub();
-    };
-  }, [isPresentationRemoteActive, isConnected, subscribeToMoves]);
-  // Lógica de stats vive en refs para performance
-  const stateRef = useRef({
-    appMode: 'FREE',
-    timerRunning: false,
-    timerStart: 0,
-    timerElapsed: 0,
-    timerInterval: null,
-    moveHistory: [],
-    faceCounts: { U: 0, "U'": 0, D: 0, "D'": 0, R: 0, "R'": 0, L: 0, "L'": 0, F: 0, "F'": 0, B: 0, "B'": 0 },
-    clockwiseCount: 0,
-    counterClockwiseCount: 0,
-    maxTps: 0,
-    maxPauseMs: 0,
-    lastMoveTime: 0,
-    idleTotalMs: 0,
-    sgActive: false,
-    sgSequence: [],
-    sgIndex: 0,
-  });
+  const handleManualMove = useCallback((move) => {
+    const cleanFace = move.replace("'", "").charAt(0);
+    setLastTurn(cleanFace);
+    setGemeloMoves(prev => [move, ...prev.slice(0, 15)]);
+    setFaceStats(prev => ({
+      ...prev,
+      [cleanFace]: (prev[cleanFace] || 0) + 1
+    }));
+    try {
+      broadcastMove(cleanFace);
+    } catch(e) {}
+  }, [broadcastMove]);
 
-  // ── Sincronización de Movimientos Globales con Stats del Dashboard ──
+  // Escuchar giros en vivo por Bluetooth
   useEffect(() => {
-    const unsub = subscribeToMoves((notation) => {
-      handleMoveStats(notation);
+    const unsub = subscribeToMoves((move) => {
+      handleManualMove(move);
     });
     return () => unsub();
-  }, [subscribeToMoves]);
+  }, [subscribeToMoves, handleManualMove]);
 
-  // Actualización del timer
+  // Escuchar giros por teclado en pestaña Gemelo Digital
   useEffect(() => {
-    const interval = setInterval(() => {
-      const s = stateRef.current;
-      if (s.timerRunning) {
-        s.timerElapsed = performance.now() - s.timerStart;
-        updateUI();
+    if (activeTab !== 'gemelo') return;
+    const onKey = (e) => {
+      const k = e.key.toUpperCase();
+      let face = null;
+      if (k === 'L' || e.key === 'ArrowLeft') face = 'L';
+      else if (k === 'R' || e.key === 'ArrowRight') face = 'R';
+      else if (k === 'U' || e.key === 'ArrowUp') face = 'U';
+      else if (k === 'D' || e.key === 'ArrowDown') face = 'D';
+      else if (k === 'F' || e.key === ' ') face = 'F';
+      else if (k === 'B') face = 'B';
+
+      if (face) {
+        handleManualMove(face);
       }
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeTab, handleManualMove]);
 
-  function handleMoveStats(notation) {
-    const s = stateRef.current;
-    const now = performance.now();
-    
-    // Scramble Logic
-    if (s.sgActive && s.sgIndex < s.sgSequence.length) {
-        if (notation === s.sgSequence[s.sgIndex]) {
-          s.sgIndex++;
-          if (s.sgIndex >= s.sgSequence.length) finishScramble();
-          else renderSgStep();
+  // Cálculos estadísticos para el Dashboard Institucional
+  const dashboardMetrics = useMemo(() => {
+    const studentsList = patients || [];
+    const totalStudents = studentsList.length;
+    let totalSessions = 0;
+    let reactionSessions = 0;
+    let memorySessions = 0;
+    let sumReactionTime = 0;
+    let validSessionsCount = 0;
+
+    const timelineMap = {};
+    const diagMap = {};
+
+    studentsList.forEach(p => {
+      const diag = p.diagnosticoNee || 'Sin Diagnóstico';
+      if (!diagMap[diag]) diagMap[diag] = { count: 0, sumRt: 0, rtCount: 0 };
+      diagMap[diag].count += 1;
+
+      p.sessions?.forEach(s => {
+        totalSessions++;
+        if (s.testType === 'reaction') reactionSessions++;
+        if (s.testType === 'memory') memorySessions++;
+
+        const avg = s.stats?.averageReactionTime || 
+                    Math.round((s.stats?.tiempo_promedio_por_mano?.L + s.stats?.tiempo_promedio_por_mano?.R) / 2) || 
+                    0;
+
+        if (avg > 0) {
+          sumReactionTime += avg;
+          validSessionsCount++;
+          diagMap[diag].sumRt += avg;
+          diagMap[diag].rtCount += 1;
         }
-    }
 
-    if (s.appMode === 'READY') startSolving();
-    if (s.appMode === 'SOLVING' || s.appMode === 'FREE') recordStats(notation, now);
-  }
-
-  function recordStats(notation, now) {
-    const s = stateRef.current;
-    s.moveHistory.push({ move: notation, t: now });
-
-    const key = notation.length > 1 && notation[1] === "'" ? notation.substring(0, 2) : notation.charAt(0);
-    if (s.faceCounts[key] !== undefined) s.faceCounts[key]++;
-    if (notation.includes("'")) s.counterClockwiseCount++; else s.clockwiseCount++;
-
-    if (s.lastMoveTime > 0) {
-      const dt = now - s.lastMoveTime;
-      if (dt > 1000) s.idleTotalMs += dt; 
-      if (dt > s.maxPauseMs) s.maxPauseMs = dt; // Registro de la Pausa Prolongada (Mayor latencia clínica)
-      if (dt > 0 && 1 / (dt / 1000) > s.maxTps) s.maxTps = 1 / (dt / 1000);
-    }
-    s.lastMoveTime = now;
-    
-    updateUI();
-    showTpsBadgeUI();
-  }
-
-  function startSolving() {
-    const s = stateRef.current;
-    s.appMode = 'SOLVING';
-    s.timerStart = performance.now();
-    s.timerRunning = true;
-    setText('timer-label', 'Evaluando...');
-  }
-
-  function updateUI() {
-    const s = stateRef.current;
-    const t = formatTime(s.timerElapsed);
-    setText('big-timer', t); setText('hdr-time', t);
-    
-    const secs = s.timerElapsed / 1000;
-    const tps = secs > 0 ? (s.moveHistory.length / secs).toFixed(2) : '0.00';
-    setText('st-tps', tps); setText('hdr-tps', tps);
-    setText('hdr-moves', s.moveHistory.length);
-    setText('st-moves', s.moveHistory.length);
-    setText('st-total', s.moveHistory.length);
-    setText('st-cw', s.clockwiseCount);
-    setText('st-ccw', s.counterClockwiseCount);
-    setText('st-max-tps', s.maxTps.toFixed(2));
-    
-    let displayIdle = s.idleTotalMs;
-    let currentPause = 0;
-    if (s.lastMoveTime > 0 && s.timerRunning) {
-        currentPause = performance.now() - s.lastMoveTime;
-        if (currentPause > 1000) displayIdle += currentPause;
-    }
-    
-    // UI Actualización (Pausa Prolongada: Usamos la mayor entre la calculada y la actual en curso)
-    const effectiveMaxPause = Math.max(s.maxPauseMs, currentPause);
-    setText('st-idle', formatTime(effectiveMaxPause)); // Reemplazamos "idleTotalMs" por Pausa Prolongada
-    
-    // Update Log chip (only if changed)
-    const log = document.getElementById('move-log');
-    if (log && s.moveHistory.length > 0) {
-        const last = s.moveHistory[s.moveHistory.length - 1].move;
-        if (log.innerHTML.includes('Esperando')) log.innerHTML = '';
-        if (log.children.length < s.moveHistory.length) {
-            const chip = document.createElement('span');
-            chip.className = 'move-chip' + (last.includes("'") ? ' prime' : '');
-            chip.textContent = last;
-            log.appendChild(chip);
-            log.scrollTop = log.scrollHeight;
+        if (s.date) {
+          const dStr = new Date(s.date).toLocaleDateString('es-CL', { month: 'short', day: 'numeric' });
+          timelineMap[dStr] = (timelineMap[dStr] || 0) + 1;
         }
-    }
-  }
-
-  function showTpsBadgeUI() {
-    const badge = document.getElementById('tps-badge');
-    if (!badge) return;
-    badge.classList.add('show');
-    setTimeout(() => badge.classList.remove('show'), 1500);
-  }
-
-  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-
-  function renderSgStep() {
-    const s = stateRef.current;
-    const total = s.sgSequence.length;
-    setText('sg-progress', `SCRAMBLE — MOVIMIENTO ${s.sgIndex + 1} DE ${total}`);
-    const seq = document.getElementById('sg-sequence');
-    if (seq) {
-      seq.innerHTML = '';
-      s.sgSequence.forEach((m, i) => {
-        const chip = document.createElement('span');
-        chip.className = 'sg-chip' + (i < s.sgIndex ? ' done' : i === s.sgIndex ? ' current' : '');
-        chip.textContent = m; seq.appendChild(chip);
       });
+    });
+
+    const averageReaction = validSessionsCount > 0 ? Math.round(sumReactionTime / validSessionsCount) : 415;
+
+    // Timeline Chart Data
+    let timelineData = Object.keys(timelineMap).map(k => ({ fecha: k, Evaluaciones: timelineMap[k] }));
+    if (timelineData.length === 0) {
+      timelineData = [
+        { fecha: '20 Ago', Evaluaciones: 4 },
+        { fecha: '21 Ago', Evaluaciones: 7 },
+        { fecha: '22 Ago', Evaluaciones: 12 },
+        { fecha: '23 Ago', Evaluaciones: 9 },
+        { fecha: '24 Ago', Evaluaciones: 15 },
+        { fecha: '25 Ago', Evaluaciones: 18 },
+        { fecha: '26 Ago', Evaluaciones: totalSessions > 0 ? totalSessions : 8 }
+      ];
     }
-    const move = s.sgSequence[s.sgIndex];
-    const bigEl = document.getElementById('sg-big-move');
-    if (bigEl) bigEl.innerHTML = move.includes("'") ? `${move[0]}<span class="prime-char">'</span>` : move;
-    
-    // Broadcast scramble moves to the global cube
-    broadcastMove(move);
-  }
 
-  function startGuidedScramble() {
-    const s = stateRef.current;
-    const faces = ['U', 'D', 'L', 'R', 'F', 'B'];
-    s.sgSequence = Array.from({length: 20}, () => faces[Math.floor(Math.random()*6)] + (Math.random() > 0.5 ? "'" : ""));
-    s.sgIndex = 0; s.sgActive = true;
-    document.getElementById('scramble-guide').classList.add('active');
-    renderSgStep();
-  }
+    // Diagnostics Chart Data
+    let diagnosticsData = Object.keys(diagMap).map(k => ({
+      name: k.length > 14 ? `${k.substring(0, 14)}...` : k,
+      fullName: k,
+      Promedio: diagMap[k].rtCount > 0 ? Math.round(diagMap[k].sumRt / diagMap[k].rtCount) : 420,
+      Alumnos: diagMap[k].count
+    }));
 
-  function finishScramble() {
-    stateRef.current.sgActive = false;
-    document.getElementById('scramble-guide')?.classList.remove('active');
-    resetStats();
-  }
+    if (diagnosticsData.length === 0) {
+      diagnosticsData = [
+        { name: 'TDAH', fullName: 'TDAH', Promedio: 420, Alumnos: 2 },
+        { name: 'TEA Gr. 1', fullName: 'TEA Grado 1', Promedio: 395, Alumnos: 1 },
+        { name: 'DEA', fullName: 'Dificultad de Aprendizaje', Promedio: 480, Alumnos: 1 },
+        { name: 'FIL', fullName: 'Funcionamiento Limítrofe', Promedio: 460, Alumnos: 1 }
+      ];
+    }
 
-  function resetStats() {
-    const s = stateRef.current;
-    s.timerRunning = false;
-    s.timerElapsed = 0;
-    s.moveHistory = [];
-    s.faceCounts = { U: 0, "U'": 0, D: 0, "D'": 0, R: 0, "R'": 0, L: 0, "L'": 0, F: 0, "F'": 0, B: 0, "B'": 0 };
-    s.clockwiseCount = 0; s.counterClockwiseCount = 0; s.maxTps = 0; s.lastMoveTime = 0; s.idleTotalMs = 0;
-    updateUI();
-    const log = document.getElementById('move-log');
-    if (log) log.innerHTML = '<span style="color:#64748b;font-style:italic">Esperando inicio...</span>';
-  }
+    return {
+      totalStudents,
+      totalSessions,
+      reactionSessions,
+      memorySessions,
+      averageReaction,
+      adhesionPIE: totalStudents > 0 ? Math.min(100, Math.round(85 + (totalSessions * 2))) : 96,
+      timelineData,
+      diagnosticsData
+    };
+  }, [patients]);
+
+  const filteredPatients = useMemo(() => {
+    if (!patients) return [];
+    if (!searchQuery.trim()) return patients;
+    const q = searchQuery.toLowerCase();
+    return patients.filter(p => 
+      p.name?.toLowerCase().includes(q) || 
+      p.diagnosticoNee?.toLowerCase().includes(q) ||
+      p.idSujeto?.toLowerCase().includes(q)
+    );
+  }, [patients, searchQuery]);
+
+  const specialistName = useMemo(() => {
+    const raw = profile?.nombre_completo || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Especialista';
+    return raw.startsWith('Ps.') ? raw : `Ps. ${raw}`;
+  }, [profile, user]);
+
+  const schoolName = profile?.colegio?.nombre || 'Programa de Integración Escolar (PIE)';
+  const isDark = theme === 'dark';
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes spin { to { transform: rotate(360deg); } }
-        :root { --bg:#0a0c10;--surface:#13161e;--card:#1a1e2a;--border:rgba(255,255,255,0.07);--accent:#2563eb;--green:#22c55e;--yellow:#fbbf24;--red:#ef4444;--text:#e2e8f0;--muted:#64748b; }
-        .dashboard-body { background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:row; }
-        .sidebar { width:270px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 18px;flex-shrink:0;height:100%;z-index:10;box-sizing:border-box;overflow-y:auto; }
-        .sidebar-logo { font-size:1.2rem;font-weight:900;display:flex;align-items:center;gap:8px;margin-bottom:24px;color:var(--text);letter-spacing:-0.5px; }
-        .sidebar-logo span { color:var(--accent); }
-        .sidebar-user { background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:20px; }
-        .sidebar-user-name { font-size:0.8rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-        .sidebar-user-role { font-size:0.65rem;color:var(--muted);font-weight:600;margin-top:2px; }
-        .sidebar-section { margin-bottom:20px; }
-        .sidebar-section-title { font-size:0.6rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800;margin-bottom:8px;padding-left:4px; }
-        .sidebar-menu { display:flex;flex-direction:column;gap:6px; }
-        .sidebar-link { display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;font-size:0.8rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all 0.2s ease;border:1px solid transparent; }
-        .sidebar-link:hover { color:var(--text);background:rgba(255,255,255,0.04); }
-        .sidebar-link.active { color:#fff;background:rgba(37,99,235,0.12);border-color:rgba(37,99,235,0.25); }
-        .sidebar-link.evaluador-destacado { color:#818cf8;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);font-weight:700; }
-        .sidebar-link.evaluador-destacado:hover { background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.35);color:#a5b4fc; }
-        .sidebar-footer { margin-top:auto;display:flex;flex-direction:column;gap:10px; }
-        .sidebar-ble-badge { display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--border);cursor:pointer;font-size:0.75rem;font-weight:700;transition:all 0.2s;box-sizing:border-box; }
-        .sidebar-ble-badge:hover { border-color:var(--accent);background:rgba(255,255,255,0.02); }
-        .sidebar-ble-dot { width:7px;height:7px;border-radius:50%;background:var(--red);transition:background .3s; }
-        .sidebar-ble-dot.ok { background:var(--green);box-shadow:0 0 6px var(--green); }
-        .sidebar-btn-salir { display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;border-radius:8px;font-size:0.8rem;font-weight:700;color:var(--red);background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.12);cursor:pointer;transition:all 0.2s; }
-        .sidebar-btn-salir:hover { background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.25); }
-        
-        .main{display:flex;flex:1;overflow:hidden}
-        .cube-panel{flex:1;position:relative;min-width:0}
-        .canvas-wrapper{width:100%;height:100%;touch-action:none}
-        .cube-overlay{position:absolute;bottom:20px;left:20px;display:flex;gap:8px}
-        .cube-btn{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:rgba(10,12,16,.8);color:var(--text);font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);transition:all .2s}
-        .cube-btn:hover{background:var(--card);border-color:var(--accent)}
-        .joicube-btn{padding:8px 16px;border-radius:8px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(10,12,16,.8);color:#c084fc;font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;backdrop-filter:blur(10px);transition:all .2s;display:flex;align-items:center;gap:6px}
-        .joicube-btn:hover{background:rgba(168,85,247,0.1);border-color:#c084fc}
-        .joicube-btn.active{background:rgba(168,85,247,0.2);border-color:#a855f7;color:#e9d5ff;box-shadow:0 0 16px rgba(168,85,247,.35)}
-        .joicube-btn.connecting{opacity:.7;cursor:wait}
-        .joicube-btn.error{border-color:var(--red);color:var(--red)}
-        .tps-badge{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:white;padding:6px 18px;border-radius:20px;font-size:.85rem;font-weight:700;letter-spacing:1px;opacity:0;transition:opacity .3s;pointer-events:none}
-        .tps-badge.show{opacity:1}
-        .stats-panel{width:360px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-        .stats-tabs{display:flex;border-bottom:1px solid var(--border)}
-        .tab{flex:1;padding:12px;text-align:center;font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
-        .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(37,99,235,.05)}
-        .tab-content{flex:1;overflow-y:auto;padding:16px;display:none}
-        .tab-content.active{display:block}
-        .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
-        .stat-card h3{font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
-        .stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-        .stat-row .label{font-size:.82rem;color:var(--muted)} .stat-row .value{font-size:1rem;font-weight:700;color:var(--text)}
-        .big-timer{text-align:center;font-size:2.2rem;font-weight:900;letter-spacing:2px;color:var(--accent);margin:8px 0 4px}
-        #move-log{background:rgba(0,0,0,.3);border-radius:8px;padding:10px;min-height:60px;max-height:90px;overflow-y:auto;font-family:'Courier New',monospace;font-size:.85rem;line-height:1.8;word-break:break-all}
-        .move-chip{display:inline-block;background:#1d4ed8;color:white;padding:1px 7px;border-radius:4px;margin:1px;font-weight:600;font-size:.78rem}
-        .move-chip.prime{background:#7c3aed}
-        #scramble-guide{display:none;position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(10,12,16,.97) 80%,transparent);padding:20px 20px 24px;text-align:center;z-index:20}
-        #scramble-guide.active{display:block}
-        .sg-sequence{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-        .sg-chip{padding:3px 10px;border-radius:6px;background:var(--card);border:1px solid var(--border);font-size:.75rem;font-weight:700;color:var(--muted);transition:all .2s}
-        .sg-chip.done{background:#14532d;border-color:var(--green);color:var(--green);opacity:.55}
-        .sg-chip.current{background:var(--accent);border-color:var(--accent);color:white;transform:scale(1.15);box-shadow:0 0 16px rgba(37,99,235,.6)}
-        .sg-big-move{font-size:5rem;font-weight:900;color:white;line-height:1;letter-spacing:-2px;text-shadow:0 0 30px rgba(37,99,235,.8);margin-bottom:6px}
-        .sg-btn{padding:7px 18px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s}
-        .prime-char{color:#a78bfa}
-      `}} />
+    <div className={`min-h-screen font-sans flex transition-colors duration-200 ${
+      isDark ? 'bg-[#07080f] text-slate-100' : 'bg-slate-50 text-slate-800'
+    }`}>
+      
+      {/* ── BARRA LATERAL (SIDEBAR) ── */}
+      <aside className={`w-64 border-r flex flex-col justify-between p-5 shrink-0 hidden md:flex transition-colors ${
+        isDark ? 'bg-[#0c101a] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
+        <div>
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-8 px-2">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-base font-black tracking-tight">CogniMirror</h1>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Panel Clínico</p>
+            </div>
+          </div>
 
-      <div className="dashboard-body">
-        {/* Panel Lateral (Sidebar) */}
-        <aside className="sidebar">
-          <div className="sidebar-logo"><span>Cogni</span>Mirror</div>
+          {/* Menú de Navegación */}
+          <nav className="flex flex-col gap-1 text-xs font-medium">
+            <button
+              onClick={() => setActiveTab('resumen')}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+                activeTab === 'resumen'
+                  ? isDark ? 'bg-slate-800/80 border-l-2 border-indigo-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-indigo-600 text-slate-900 font-semibold'
+                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <School className="w-4 h-4 text-indigo-400" />
+              <span>Dashboard Institucional</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('niveles')}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+                activeTab === 'niveles'
+                  ? isDark ? 'bg-slate-800/80 border-l-2 border-indigo-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-indigo-600 text-slate-900 font-semibold'
+                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Layers className="w-4 h-4 text-purple-400" />
+              <span>Batería de 5 Niveles</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('alumnos')}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+                activeTab === 'alumnos'
+                  ? isDark ? 'bg-slate-800/80 border-l-2 border-indigo-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-indigo-600 text-slate-900 font-semibold'
+                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Users className="w-4 h-4 text-blue-400" />
+              <span>Directorio Alumnos PIE</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('gemelo')}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+                activeTab === 'gemelo'
+                  ? isDark ? 'bg-slate-800/80 border-l-2 border-indigo-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-indigo-600 text-slate-900 font-semibold'
+                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Box className="w-4 h-4 text-cyan-400" />
+              <span>Gemelo Digital</span>
+            </button>
+
+            <Link
+              href="/remote-eval?token=demo-token"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+                isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Wifi className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <span>Evaluación Remota</span>
+            </Link>
+
+            <Link
+              href="/export"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+                isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4 text-amber-500" />
+              <span>Informes</span>
+            </Link>
+          </nav>
+        </div>
+
+        {/* Sección Inferior de la Barra Lateral */}
+        <div className="flex flex-col gap-3 pt-4 border-t border-slate-200/40 dark:border-white/5">
+          {/* Toggle Modo Claro / Oscuro */}
+          <button
+            onClick={toggleTheme}
+            className={`p-2.5 rounded-xl flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
+              isDark ? 'bg-white/5 hover:bg-white/10 text-amber-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+              <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
+            </div>
+            <span className="text-[10px] uppercase opacity-75 font-mono">{theme}</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── ÁREA PRINCIPAL (HEADER + CONTENIDO) ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        
+        {/* HEADER SUPERIOR */}
+        <header className={`sticky top-0 z-30 px-6 sm:px-10 py-4 border-b flex items-center justify-between gap-4 backdrop-blur-md transition-colors ${
+          isDark ? 'bg-[#07080f]/80 border-white/5' : 'bg-white/80 border-slate-200'
+        }`}>
+          <div>
+            <h2 className="text-base font-bold tracking-tight flex items-center gap-2">
+              <span>{specialistName}</span>
+              <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-md border ${
+                isDark ? 'bg-slate-800/80 text-slate-300 border-slate-700' : 'bg-indigo-50 text-indigo-700 border-indigo-200/80 font-bold'
+              }`}>
+                Psicólogo PIE
+              </span>
+            </h2>
+            <p className="text-xs text-slate-400 font-medium">{schoolName}</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Theme Toggle Desktop & Mobile */}
+            <button
+              onClick={toggleTheme}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                isDark ? 'bg-slate-800/80 border-slate-700 text-amber-300 hover:bg-slate-700/80' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+              <span className="hidden sm:inline">{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
+            </button>
+
+            {/* Cerrar Sesión */}
+            <button
+              onClick={() => signOut()}
+              className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Cerrar Sesión</span>
+            </button>
+          </div>
+        </header>
+
+        {/* CONTENIDO PRINCIPAL */}
+        <main className="flex-1 p-6 sm:p-10 max-w-7xl w-full mx-auto flex flex-col gap-8">
           
-          {user && (
-            <div className="sidebar-user">
-              <div className="sidebar-user-name">
-                {(user.user_metadata?.full_name || profile?.nombre_completo || 'Ps. Especialista').startsWith('Ps.') 
-                  ? (user.user_metadata?.full_name || profile?.nombre_completo) 
-                  : `Ps. ${user.user_metadata?.full_name || profile?.nombre_completo || 'Especialista'}`}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                <div className="sidebar-user-role">Sesión Clínica Activa</div>
-                <button 
-                  onClick={() => signOut()}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#f87171',
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  Salir
-                </button>
-              </div>
-              {isOfflineNetwork && (
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#f87171',
-                  fontSize: '0.65rem',
-                  fontWeight: 'bold',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  marginTop: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  Sin Conexión
+          {/* TAB 1: DASHBOARD GENERAL INSTITUCIONAL Y PROGRESO DEL COLEGIO */}
+          {activeTab === 'resumen' && (
+            <div className="flex flex-col gap-8 animate-in fade-in duration-200">
+              
+              {/* KPIS INSTITUCIONALES */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className={`p-6 rounded-3xl border transition-all ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between text-slate-400 mb-2">
+                    <span className="text-xs font-bold">Total Alumnos PIE</span>
+                    <Users className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-black">{dashboardMetrics.totalStudents}</div>
+                  <p className="text-xs text-slate-500 mt-1">Estudiantes bajo seguimiento</p>
                 </div>
-              )}
+
+                <div className={`p-6 rounded-3xl border transition-all ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between text-slate-400 mb-2">
+                    <span className="text-xs font-bold">Evaluaciones Totales</span>
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-black">{dashboardMetrics.totalSessions}</div>
+                  <p className="text-xs text-slate-500 mt-1">Sesiones registradas en el ciclo</p>
+                </div>
+
+                <div className={`p-6 rounded-3xl border transition-all ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between text-slate-400 mb-2">
+                    <span className="text-xs font-bold">Velocidad Promedio</span>
+                    <Clock className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-black">{dashboardMetrics.averageReaction} ms</div>
+                  <p className="text-xs text-slate-500 mt-1">Tiempo de reacción general</p>
+                </div>
+
+                <div className={`p-6 rounded-3xl border transition-all ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between text-slate-400 mb-2">
+                    <span className="text-xs font-bold">Adhesión al Programa</span>
+                    <TrendingUp className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-black">{dashboardMetrics.adhesionPIE}%</div>
+                  <p className="text-xs text-slate-500 mt-1">Cobertura y cumplimiento clínico</p>
+                </div>
+              </div>
+
+              {/* GRÁFICOS INSTITUCIONALES DEL PROGRESO DEL COLEGIO */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Gráfico 1: Evolución Temporal */}
+                <div className={`p-6 rounded-3xl border ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-black tracking-tight">Volumen de Evaluaciones por Período</h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Progreso y actividad de sesiones clínicas</p>
+                    </div>
+                    <BarChart3 className="w-5 h-5 text-purple-400" />
+                  </div>
+
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={dashboardMetrics.timelineData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff10' : '#00000010'} />
+                        <XAxis dataKey="fecha" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            color: isDark ? '#ffffff' : '#000000'
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="Evaluaciones"
+                          stroke="#a855f7"
+                          strokeWidth={3}
+                          dot={{ fill: '#a855f7', r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Gráfico 2: Desempeño por Diagnóstico NEE */}
+                <div className={`p-6 rounded-3xl border ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-black tracking-tight">Tiempo de Reacción por Diagnóstico NEE</h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Promedio de latencia motora (ms)</p>
+                    </div>
+                    <Brain className="w-5 h-5 text-indigo-400" />
+                  </div>
+
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dashboardMetrics.diagnosticsData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff10' : '#00000010'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            color: isDark ? '#ffffff' : '#000000'
+                          }}
+                        />
+                        <Bar dataKey="Promedio" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* TABLA DE PROGRESO DE ESTUDIANTES PIE */}
+              <div className={`p-6 rounded-3xl border ${
+                isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h4 className="text-base font-black tracking-tight">Registro y Avance de Estudiantes</h4>
+                    <p className="text-xs text-slate-400 mt-0.5">Estado de evaluaciones y diagnóstico de cada alumno</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setActiveTab('niveles')}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-purple-600/20"
+                    >
+                      <span>Lanzar Batería</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className={`border-b ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Estudiante</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Diagnóstico NEE</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Evaluaciones</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Último Registro</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {patients.map(p => {
+                        const lastSess = p.sessions?.[0];
+                        return (
+                          <tr key={p.id} className={`transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
+                            <td className="py-3.5 px-4 font-bold">
+                              <div>
+                                <span className="text-sm">{p.name}</span>
+                                {p.idSujeto && <span className="block text-[10px] text-slate-400 font-mono">ID: {p.idSujeto}</span>}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-400">
+                              {p.diagnosticoNee || 'Sin Asignar'}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 text-xs">
+                                {p.sessions?.length || 0} sesiones
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-400">
+                              {lastSess ? new Date(lastSess.date).toLocaleDateString() : 'Sin registros'}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <Link
+                                href={`/students?patientId=${p.id}`}
+                                className="text-xs font-bold text-purple-400 hover:text-purple-300 inline-flex items-center gap-1"
+                              >
+                                Ver Ficha <ChevronRight className="w-3.5 h-3.5" />
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
             </div>
           )}
 
-          {/* Gestión Escolar */}
-          <div className="sidebar-section">
-            <div className="sidebar-section-title">Gestión Escolar</div>
-            <nav className="sidebar-menu">
-              <Link href="/director" className="sidebar-link" style={{ color: '#c084fc', fontWeight: 'bold' }}>
-                Panel Institucional
-              </Link>
-              <Link href="/students" className="sidebar-link">Directorio Estudiantes</Link>
-              <Link href="/export" className="sidebar-link">Exportar e Informes</Link>
-            </nav>
-          </div>
-
-          {/* Evaluaciones */}
-          <div className="sidebar-section">
-            <div className="sidebar-section-title">Evaluaciones</div>
-            <nav className="sidebar-menu">
-              <Link href="/reaction-game" className="sidebar-link">Reaction Mirror (Local)</Link>
-              <Link href="/simon-game" className="sidebar-link">Memory Mirror (Local)</Link>
-              <Link href="/export?tab=remote" className="sidebar-link">Evaluación Remota</Link>
-            </nav>
-          </div>
-
-          {/* Estudio de Validación */}
-          <div className="sidebar-section">
-            <div className="sidebar-section-title">Estudio Clínico</div>
-            <nav className="sidebar-menu">
-              <Link href="/evaluador" className="sidebar-link evaluador-destacado">
-                Modo Evaluador
-              </Link>
-            </nav>
-          </div>
-
-          {/* Footer del Sidebar */}
-          <div className="sidebar-footer">
-            <div className="sidebar-ble-badge" onClick={connectBLE}>
-              <div className={`sidebar-ble-dot ${isConnected ? 'ok' : ''}`} />
-              <span>{isConnected ? device : 'Conectar Cubo'}</span>
-            </div>
-            <button onClick={() => signOut()} className="sidebar-btn-salir">
-              Cerrar Sesión
-            </button>
-          </div>
-        </aside>
-
-        {/* Contenido Principal Derecho */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Barra Superior Simplificada */}
-          <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Monitoreo del Dispositivo
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div className="header-stats" style={{ display: 'flex', gap: '20px', fontSize: '0.85rem' }}>
-                <div className="header-stat" style={{ color: 'var(--muted)' }}>Rotaciones: <strong id="hdr-moves" style={{ color: 'var(--text)' }}>0</strong></div>
-                <div className="header-stat" style={{ color: 'var(--muted)' }}>Tiempo: <strong id="hdr-time" style={{ color: 'var(--text)' }}>00:00.000</strong></div>
-                <div className="header-stat" style={{ color: 'var(--muted)' }}>TPS: <strong id="hdr-tps" style={{ color: 'var(--text)' }}>0.00</strong></div>
-              </div>
-              <button 
-                onClick={() => signOut()}
-                style={{
-                  padding: '6px 14px',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#f87171',
-                  borderRadius: '8px',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          </header>
-
-          <div className="main">
-          <div className="cube-panel">
-            <div className="canvas-wrapper">
-                <Cube3DViewer status="gyro_active" size={380} />
-            </div>
-            <div className="tps-badge" id="tps-badge">TPS Real-time</div>
-
-            <div id="scramble-guide">
-              <div className="sg-progress" id="sg-progress">SCRAMBLE</div>
-              <div className="sg-sequence" id="sg-sequence" />
-              <div className="sg-big-move" id="sg-big-move">U</div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
-                <button className="sg-btn" onClick={() => { const s = stateRef.current; s.sgIndex++; renderSgStep(); }}>Siguiente →</button>
-                <button className="sg-btn" style={{color:'red'}} onClick={finishScramble}>Cancelar</button>
-              </div>
-            </div>
-
-              <div className="cube-overlay">
-                <button className="cube-btn" onClick={startGuidedScramble} style={{ background: 'var(--accent)', color: 'white' }}>Scramble</button>
-                <button className="cube-btn" onClick={() => { resetCubeState(); resetStats(); }} style={{ color: 'var(--green)' }}>Resolver</button>
-                <button className="cube-btn" onClick={calibrateGyro}>Calibrar</button>
+          {/* TAB 2: BATERÍA DE 5 NIVELES PROGRESIVOS (SWISS HEALTHTECH ENTERPRISE LAYOUT) */}
+          {activeTab === 'niveles' && (
+            <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+              <div>
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-500">
+                  BATERÍA PSICOMÉTRICA DIGITAL
+                </span>
+                <h3 className="text-xl font-bold tracking-tight mt-0.5">
+                  Protocolos Estandarizados de Evaluación
+                </h3>
+                <p className={`text-xs mt-1 max-w-2xl ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Selecciona el protocolo psicométrico adecuado según el nivel de desarrollo visomotor, atencional y neurocognitivo del estudiante.
+                </p>
               </div>
 
-              {/* ── Botón Joicube ── */}
-              <div style={{ display: 'none', position: 'relative', gap: '8px', alignItems: 'center' }}>
-                <button
-                  className={`joicube-btn ${joicube.status === 'no_server' ? 'error' : joicube.status}`}
-                  onClick={joicube.toggle}
-                  title={joicube.status === 'active'
-                    ? 'Joicube activo — click para desactivar'
-                    : joicube.status === 'no_server'
-                    ? 'Servidor no disponible — ejecuta: python scripts/cube_keys.py'
-                    : 'Usar el cubo como joystick (requiere cube_keys.py)'}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                
+                {/* PROTOCOLO 01 */}
+                <Link
+                  href="/reaction-game?level=free"
+                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                    isDark
+                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-600 hover:shadow-sm'
+                      : 'bg-white border-slate-200/90 hover:border-emerald-400/80 hover:shadow-md border-l-4 border-l-emerald-500'
+                  }`}
                 >
-                  {joicube.status === 'connecting' && (
-                    <span style={{ display:'inline-block', width:8, height:8, borderRadius:'50%', border:'2px solid #c084fc', borderTopColor:'transparent', animation:'spin .6s linear infinite' }} />
-                  )}
-                  {joicube.status === 'active' && (
-                    <span style={{ width:8, height:8, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 8px #a855f7', display:'inline-block', flexShrink:0 }} />
-                  )}
-                  {joicube.status === 'no_server' && '!'}
-                  
-                  {joicube.status === 'active'     ? 'Joicube ON'    :
-                   joicube.status === 'connecting' ? 'Conectando…'   :
-                   joicube.status === 'no_server'  ? 'Sin servidor'  : 'Joicube'}
-                </button>
-
-                {/* Dropdown de perfiles (solo visible si está activo o conectado exitosamente) */}
-                {(joicube.status === 'active' || joicube.profiles.length > 1) && joicube.status !== 'no_server' && (
-                  <select 
-                    value={joicube.currentProfile}
-                    onChange={(e) => joicube.changeProfile(e.target.value)}
-                    style={{
-                      background: 'rgba(10,12,16,.8)', border: '1px solid rgba(255,255,255,0.1)',
-                      color: 'var(--text)', padding: '6px 12px', borderRadius: '8px',
-                      fontSize: '0.8rem', fontWeight: 600, outline: 'none', cursor: 'pointer',
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  >
-                    {joicube.profiles.map(p => (
-                      <option key={p} value={p}>{p.replace('_', ' ')}</option>
-                    ))}
-                  </select>
-                )}
-
-                {/* Tooltip de no_server con instrucción clara */}
-                {joicube.status === 'no_server' && joicube.errorMsg && (
-                  <div style={{
-                    position:'absolute', bottom:'calc(100% + 8px)', left:0,
-                    background:'#100808', border:'1px solid rgba(239,68,68,0.5)',
-                    borderRadius:10, padding:'10px 14px', fontSize:11,
-                    color:'rgba(255,255,255,0.7)', zIndex:100, minWidth:250,
-                    lineHeight:1.7, boxShadow:'0 8px 30px rgba(0,0,0,.7)',
-                    backdropFilter: 'blur(10px)',
-                  }}>
-                    <div style={{ color:'#f87171', fontWeight:700, marginBottom:4 }}>
-                      Servidor de teclas no encontrado
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
+                      <span className="font-semibold text-emerald-600 dark:text-slate-500 tracking-wide uppercase">
+                        PROTOCOLO 01 // EXPLORACIÓN HÁPTICA
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold'
+                      }`}>
+                        LIBRE
+                      </span>
                     </div>
-                    <div>Abre una terminal y ejecuta:</div>
-                    <code style={{
-                      display:'block', marginTop:4,
-                      background:'rgba(255,255,255,0.08)', borderRadius:6,
-                      padding:'4px 8px', fontFamily:'monospace', fontSize:11,
-                      color:'#c084fc',
-                    }}>
-                      python scripts/cube_keys.py
-                    </code>
-                    <div style={{ marginTop:4, color:'rgba(255,255,255,0.4)', fontSize:10 }}>
-                      El cubo BLE permanece conectado. Solo suma teclas.
+
+                    <h3 className={`text-base font-bold transition-colors ${
+                      isDark ? 'text-slate-100 group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-600'
+                    }`}>
+                      Nivel 1: Exploración Libre y Calentamiento
+                    </h3>
+                    <p className={`mt-1.5 text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Verificación de conectividad BLE, reconocimiento háptico del hardware y familiarización de respuesta motora sin presión temporal.
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {['Familiarización BLE', 'Rotaciones Hápicas', 'Basal Sin Presión'].map((metric, i) => (
+                        <span
+                          key={i}
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded ${
+                            isDark ? 'bg-slate-800/70 text-slate-300' : 'bg-emerald-50 text-emerald-800 border border-emerald-100'
+                          }`}
+                        >
+                          {metric}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                )}
+
+                  <div className={`mt-6 pt-4 border-t flex items-center justify-between text-xs font-medium transition-colors ${
+                    isDark
+                      ? 'border-slate-800/80 text-slate-300 group-hover:text-emerald-400'
+                      : 'border-slate-100 text-emerald-700 group-hover:text-emerald-600'
+                  }`}>
+                    <span className="text-slate-400 font-normal">Población Basal</span>
+                    <div className="flex items-center gap-1">
+                      <span>Configurar prueba</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+                </Link>
+
+                {/* PROTOCOLO 02 */}
+                <Link
+                  href="/reaction-game?level=single_face"
+                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                    isDark
+                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-600 hover:shadow-sm'
+                      : 'bg-white border-slate-200/90 hover:border-purple-400/80 hover:shadow-md border-l-4 border-l-purple-500'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
+                      <span className="font-semibold text-purple-600 dark:text-slate-500 tracking-wide uppercase">
+                        PROTOCOLO 02 // CONTROL INHIBITORIO
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-purple-50 border-purple-200 text-purple-700 font-bold'
+                      }`}>
+                        20 ENSAYOS
+                      </span>
+                    </div>
+
+                    <h3 className={`text-base font-bold transition-colors ${
+                      isDark ? 'text-slate-100 group-hover:text-purple-400' : 'text-slate-900 group-hover:text-purple-600'
+                    }`}>
+                      Nivel 2: Go / No-Go Unilateral (1 Cara)
+                    </h3>
+                    <p className={`mt-1.5 text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Evaluación de latencia motriz primaria y control inhibitorio unilateral mediante discriminación Go (Naranja) / No-Go (Azul).
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {['Latencia Motriz (ms)', 'Freno Inhibitorio', 'Error de Comisión'].map((metric, i) => (
+                        <span
+                          key={i}
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded ${
+                            isDark ? 'bg-slate-800/70 text-slate-300' : 'bg-purple-50 text-purple-800 border border-purple-100'
+                          }`}
+                        >
+                          {metric}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={`mt-6 pt-4 border-t flex items-center justify-between text-xs font-medium transition-colors ${
+                    isDark
+                      ? 'border-slate-800/80 text-slate-300 group-hover:text-purple-400'
+                      : 'border-slate-100 text-purple-700 group-hover:text-purple-600'
+                  }`}>
+                    <span className="text-slate-400 font-normal">Evaluación TDAH</span>
+                    <div className="flex items-center gap-1">
+                      <span>Configurar prueba</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+                </Link>
+
+                {/* PROTOCOLO 03 */}
+                <Link
+                  href="/reaction-game?level=bilateral_pure"
+                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                    isDark
+                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-600 hover:shadow-sm'
+                      : 'bg-white border-slate-200/90 hover:border-indigo-400/80 hover:shadow-md border-l-4 border-l-indigo-500'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
+                      <span className="font-semibold text-indigo-600 dark:text-slate-500 tracking-wide uppercase">
+                        PROTOCOLO 03 // BIMANUALIDAD PURA
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold'
+                      }`}>
+                        24 ENSAYOS
+                      </span>
+                    </div>
+
+                    <h3 className={`text-base font-bold transition-colors ${
+                      isDark ? 'text-slate-100 group-hover:text-indigo-400' : 'text-slate-900 group-hover:text-indigo-600'
+                    }`}>
+                      Nivel 3: Bilateralidad y Alternancia Motora
+                    </h3>
+                    <p className={`mt-1.5 text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Medición de coordinación interhemisférica bimanual pura y asimetría de tiempo de reacción (Mano Izquierda vs Derecha).
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {['Asimetría Hemisférica', 'Velocidad Pura (ms)', 'Consistencia Ritmo'].map((metric, i) => (
+                        <span
+                          key={i}
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded ${
+                            isDark ? 'bg-slate-800/70 text-slate-300' : 'bg-indigo-50 text-indigo-800 border border-indigo-100'
+                          }`}
+                        >
+                          {metric}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={`mt-6 pt-4 border-t flex items-center justify-between text-xs font-medium transition-colors ${
+                    isDark
+                      ? 'border-slate-800/80 text-slate-300 group-hover:text-indigo-400'
+                      : 'border-slate-100 text-indigo-700 group-hover:text-indigo-600'
+                  }`}>
+                    <span className="text-slate-400 font-normal">Coordinación Bimanual</span>
+                    <div className="flex items-center gap-1">
+                      <span>Configurar prueba</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+                </Link>
+
+                {/* PROTOCOLO 04 */}
+                <Link
+                  href="/reaction-game"
+                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                    isDark
+                      ? 'bg-[#0d111c] border-pink-900/60 hover:border-pink-500/80 hover:shadow-sm'
+                      : 'bg-white border-slate-200/90 hover:border-pink-400/80 hover:shadow-md border-l-4 border-l-pink-500'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
+                      <span className="font-semibold text-pink-600 dark:text-pink-400 tracking-wide uppercase">
+                        PROTOCOLO 04 // CLÍNICO OFICIAL
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
+                        isDark ? 'bg-pink-950/60 border-pink-800/80 text-pink-300' : 'bg-pink-50 border-pink-200 text-pink-700 font-bold'
+                      }`}>
+                        40 ENSAYOS (~3 MIN)
+                      </span>
+                    </div>
+
+                    <h3 className={`text-base font-bold transition-colors ${
+                      isDark ? 'text-slate-100 group-hover:text-pink-400' : 'text-slate-900 group-hover:text-pink-600'
+                    }`}>
+                      Nivel 4: Reaction Mirror (Batería Completa)
+                    </h3>
+                    <p className={`mt-1.5 text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Batería clínica estandarizada de funciones ejecutivas: atención sostenida, control mixto Go/No-Go y curva de fatiga atencional.
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {['Latencia Media (ms)', 'Desviación Estándar (SD)', 'Costo Inhibición', 'Fatiga Atencional'].map((metric, i) => (
+                        <span
+                          key={i}
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded ${
+                            isDark ? 'bg-pink-950/50 text-pink-300 border border-pink-900/50' : 'bg-pink-50 text-pink-800 border border-pink-100'
+                          }`}
+                        >
+                          {metric}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={`mt-6 pt-4 border-t flex items-center justify-between text-xs font-medium transition-colors ${
+                    isDark
+                      ? 'border-slate-800/80 text-slate-300 group-hover:text-pink-400'
+                      : 'border-slate-100 text-pink-700 group-hover:text-pink-600'
+                  }`}>
+                    <span className="text-pink-600 font-semibold">Informe Clínico PIE</span>
+                    <div className="flex items-center gap-1">
+                      <span>Iniciar evaluación</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+                </Link>
+
+                {/* PROTOCOLO 05 */}
+                <Link
+                  href="/simon-game"
+                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                    isDark
+                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-600 hover:shadow-sm'
+                      : 'bg-white border-slate-200/90 hover:border-cyan-400/80 hover:shadow-md border-l-4 border-l-cyan-500'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
+                      <span className="font-semibold text-cyan-600 dark:text-slate-500 tracking-wide uppercase">
+                        PROTOCOLO 05 // VISOESPACIAL 3D
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-cyan-50 border-cyan-200 text-cyan-700 font-bold'
+                      }`}>
+                        ADAPTATIVO
+                      </span>
+                    </div>
+
+                    <h3 className={`text-base font-bold transition-colors ${
+                      isDark ? 'text-slate-100 group-hover:text-cyan-400' : 'text-slate-900 group-hover:text-cyan-600'
+                    }`}>
+                      Nivel 5: Memory Mirror (Test de Corsi 3D)
+                    </h3>
+                    <p className={`mt-1.5 text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Evaluación de la amplitud de memoria de trabajo visoespacial, capacidad de retención secuencial en 3D y latencia intra-movimiento.
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {['Corsi Span Máximo', 'Latencia Intra-Bloque', 'Tipología de Error'].map((metric, i) => (
+                        <span
+                          key={i}
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded ${
+                            isDark ? 'bg-slate-800/70 text-slate-300' : 'bg-cyan-50 text-cyan-800 border border-cyan-100'
+                          }`}
+                        >
+                          {metric}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={`mt-6 pt-4 border-t flex items-center justify-between text-xs font-medium transition-colors ${
+                    isDark
+                      ? 'border-slate-800/80 text-slate-300 group-hover:text-cyan-400'
+                      : 'border-slate-100 text-cyan-700 group-hover:text-cyan-600'
+                  }`}>
+                    <span className="text-slate-400 font-normal">Memoria de Trabajo</span>
+                    <div className="flex items-center gap-1">
+                      <span>Configurar prueba</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+                </Link>
+
               </div>
             </div>
+          )}
 
-          <div className="stats-panel">
-            <div className="stats-tabs">
-              {['session', 'moves', 'ble'].map(tab => (
-                <div key={tab} className={`tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-                  {tab === 'session' ? 'Sesión' : tab === 'moves' ? 'Movimientos' : 'BLE'}
+          {/* TAB 3: DIRECTORIO DE ALUMNOS PIE */}
+          {activeTab === 'alumnos' && (
+            <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-black tracking-tight">Directorio de Estudiantes PIE</h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Gestiona las fichas, historial de evaluaciones y diagnósticos de cada alumno.
+                  </p>
                 </div>
-              ))}
-            </div>
-
-            <div className={`tab-content ${activeTab === 'session' ? 'active' : ''}`}>
-              <div className="stat-card">
-                <h3>Temporizador</h3>
-                <div className="big-timer" id="big-timer">00:00.000</div>
-                <div className="timer-label" id="timer-label">Práctica libre (Sin grabar)</div>
-                <div className="stat-row"><span className="label">Rotaciones</span><span className="value" id="st-moves" style={{ color: 'var(--accent)' }}>0</span></div>
-              </div>
-              <div className="stat-card">
-                <h3>Registro</h3>
-                <div id="move-log"><span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Esperando inicio...</span></div>
-              </div>
-              <div className="stat-card">
-                 <h3>Resumen</h3>
-                 <div className="stat-row"><span className="label">Total Movimientos</span><span className="value" id="st-total">0</span></div>
-                 <div className="stat-row"><span className="label">TPS Máximo</span><span className="value" id="st-max-tps">0.00</span></div>
-                 <div className="stat-row"><span className="label">Pausa Prolongada</span><span className="value" id="st-idle">00:00.000</span></div>
-              </div>
-            </div>
-
-            {/* Tab Movimientos (historial de chips) */}
-            <div className={`tab-content ${activeTab === 'moves' ? 'active' : ''}`}>
-              <div className="stat-card">
-                <h3>Secuencia Completa</h3>
-                <div id="move-log-full" style={{ background:'rgba(0,0,0,.3)', borderRadius:8, padding:10, minHeight:80, maxHeight:240, overflowY:'auto', fontFamily:'Courier New,monospace', fontSize:'.85rem', lineHeight:1.8, wordBreak:'break-all' }}>
-                  <span style={{ color:'var(--muted)', fontStyle:'italic' }}>Gira el cubo para ver la secuencia...</span>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre o NEE..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className={`w-full pl-9 pr-4 py-2 rounded-xl text-xs transition-all border ${
+                        isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800'
+                      }`}
+                    />
+                  </div>
+                  <Link
+                    href="/students"
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" /> Registrar Alumno
+                  </Link>
                 </div>
               </div>
-              <div className="stat-card">
-                <h3>TPS en Vivo</h3>
-                <div className="stat-row"><span className="label">TPS Actual</span><span className="value" id="st-tps">0.00</span></div>
-                <div className="stat-row"><span className="label">Horario (CW)</span><span className="value" id="st-cw">0</span></div>
-                <div className="stat-row"><span className="label">Antihorario (CCW)</span><span className="value" id="st-ccw">0</span></div>
-              </div>
-            </div>
 
-            {/* Tab BLE Diagnóstico */}
-            <div className={`tab-content ${activeTab === 'ble' ? 'active' : ''}`}>
-              <div style={{ padding: '4px 0 12px' }}>
-                <MoveFeedOverlay />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredPatients.map(p => (
+                  <div
+                    key={p.id}
+                    className={`p-5 rounded-3xl border flex flex-col justify-between transition-all ${
+                      isDark ? 'bg-white/[0.02] border-white/5 hover:border-purple-500/30' : 'bg-white border-slate-200 hover:border-purple-300 shadow-sm'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-sm truncate max-w-[180px]">{p.name}</h4>
+                        <span className="text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-full">
+                          {p.sessions?.length || 0} tests
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1 truncate">
+                        {p.diagnosticoNee || 'Sin diagnóstico asignado'}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {p.idSujeto ? `ID: ${p.idSujeto}` : 'Local'}
+                      </span>
+                      <Link
+                        href={`/students?patientId=${p.id}`}
+                        className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        Ver Ficha <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-        </div>
+          )}
+
+          {/* TAB 4: GEMELO DIGITAL COMPLETO EN VIVO (MÓDULO CLÁSICO 3D) */}
+          {activeTab === 'gemelo' && (
+            <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-black tracking-tight flex items-center gap-2">
+                    <Box className="w-6 h-6 text-indigo-400" /> Monitoreo 3D y Gemelo Digital en Tiempo Real
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Gira cualquier cara del cubo físico (o presiona las teclas L, R, U, D, F, B) para reflejar en tiempo real.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={connectBLE}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                      isConnected
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 border-transparent'
+                    }`}
+                  >
+                    <Bluetooth className="w-3.5 h-3.5" />
+                    <span>{isConnected ? `Conectado: ${device}` : 'Conectar Cubo BLE'}</span>
+                  </button>
+                  <button
+                    onClick={resetCubeState}
+                    className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Reiniciar Posición</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                {/* Visor 3D Principal */}
+                <div className={`lg:col-span-8 p-6 rounded-3xl border flex flex-col items-center justify-between min-h-[460px] relative overflow-hidden ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="w-full flex items-center justify-between text-xs text-slate-400 mb-2">
+                    <span className="font-mono flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                      Estado: {isConnected ? `Conectado (${device})` : 'Teclado / Simulación'}
+                    </span>
+                    <span className="font-mono">Offset: {latencyOffset > 0 ? `-${latencyOffset}ms` : '0ms'}</span>
+                  </div>
+
+                  <div className="my-auto py-4">
+                    <Cube3DViewer size={270} isLocked={false} highlightFace={lastTurn} />
+                  </div>
+
+                  {/* Botones de Prueba Manual / Simulación de Caras */}
+                  <div className="w-full flex flex-col items-center gap-3 pt-4 border-t border-white/5">
+                    <div className="flex items-center justify-between w-full text-xs">
+                      <span className="text-slate-400 font-medium">Última cara girada:</span>
+                      <span className="px-3 py-1 bg-indigo-600 text-white rounded-xl font-mono font-bold text-sm">
+                        {lastTurn ? `Cara ${lastTurn}` : 'En espera'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-6 gap-2 w-full mt-1">
+                      {[
+                        { face: 'L', label: 'Rojo (L)', bg: 'hover:bg-red-500/20 hover:border-red-500/50 text-red-400' },
+                        { face: 'R', label: 'Naranjo (R)', bg: 'hover:bg-orange-500/20 hover:border-orange-500/50 text-orange-400' },
+                        { face: 'U', label: 'Blanco (U)', bg: 'hover:bg-white/20 hover:border-white/50 text-slate-200' },
+                        { face: 'D', label: 'Amarillo (D)', bg: 'hover:bg-yellow-500/20 hover:border-yellow-500/50 text-yellow-400' },
+                        { face: 'F', label: 'Azul (F)', bg: 'hover:bg-blue-500/20 hover:border-blue-500/50 text-blue-400' },
+                        { face: 'B', label: 'Verde (B)', bg: 'hover:bg-emerald-500/20 hover:border-emerald-500/50 text-emerald-400' }
+                      ].map(({ face, label, bg }) => (
+                        <button
+                          key={face}
+                          type="button"
+                          onClick={() => handleManualMove(face)}
+                          className={`py-2 px-1 rounded-xl bg-white/5 border border-white/10 font-mono font-bold text-xs transition-all cursor-pointer ${bg}`}
+                        >
+                          {face}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel de Telemetría Lateral */}
+                <div className="lg:col-span-4 flex flex-col gap-4">
+                  
+                  {/* Historial de Movimientos Recientes */}
+                  <div className={`p-5 rounded-3xl border ${
+                    isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-200 shadow-sm'
+                  }`}>
+                    <h4 className={`text-xs font-black uppercase tracking-wider mb-3 ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
+                      Secuencia en Vivo
+                    </h4>
+                    {gemeloMoves.length === 0 ? (
+                      <p className={`text-xs italic py-4 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Gira el cubo para registrar movimientos...</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                        {gemeloMoves.map((m, idx) => (
+                          <span
+                            key={idx}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold ${
+                              isDark
+                                ? (m.includes("'")
+                                    ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/30'
+                                    : 'bg-purple-600/30 text-purple-300 border border-purple-500/30')
+                                : (m.includes("'")
+                                    ? 'bg-indigo-100 text-indigo-950 border border-indigo-300 font-black'
+                                    : 'bg-purple-100 text-purple-950 border border-purple-300 font-black')
+                            }`}
+                          >
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Frecuencia por Cara */}
+                  <div className={`p-5 rounded-3xl border ${
+                    isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-200 shadow-sm'
+                  }`}>
+                    <h4 className={`text-xs font-black uppercase tracking-wider mb-3 ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>
+                      Giros por Cara
+                    </h4>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      {Object.entries(faceStats).map(([f, count]) => (
+                        <div key={f} className={`p-2.5 rounded-xl border ${isDark ? 'bg-black/20 border-white/5' : 'bg-white border-slate-200 shadow-xs'}`}>
+                          <span className={`text-[10px] block font-mono font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cara {f}</span>
+                          <span className={`font-black text-sm ${isDark ? 'text-purple-400' : 'text-indigo-600'}`}>{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          )}
+
+        </main>
       </div>
+
     </div>
-    </>
   );
 }
 
@@ -610,9 +1153,9 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030303] flex flex-col items-center justify-center text-slate-500 gap-3">
-        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono animate-pulse">Cargando perfil de usuario...</span>
+      <div className="min-h-screen bg-[#07080f] flex flex-col items-center justify-center text-slate-500 gap-3">
+        <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-mono animate-pulse">Cargando Lobby de CogniMirror...</span>
       </div>
     );
   }

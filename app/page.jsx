@@ -217,7 +217,7 @@ export default function LandingPage() {
               <h3 className="text-lg font-bold text-white">El Colapso Administrativo</h3>
               <div className="h-px w-full bg-white/10 my-2" />
               <p className="text-sm text-slate-400 font-light leading-relaxed">
-                Los psicólogos gastan hasta un <strong className="text-white font-semibold">40%</strong> de sus horas en papeleo manual para justificar el <strong className="text-white font-semibold">Decreto 170</strong>.
+                Los psicólogos gastan hasta un <strong className="text-white font-semibold">40%</strong> de sus horas en papeleo manual para justificar los <strong className="text-white font-semibold">Informes PIE</strong>.
               </p>
             </div>
             <div className="glass-panel p-6 rounded-lg flex flex-col gap-4 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">

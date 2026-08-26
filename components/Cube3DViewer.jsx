@@ -4,8 +4,13 @@ import * as THREE from 'three';
 import { useCubeState } from '../contexts/CubeStateContext';
 
 const COLORS = {
-  U: 0xffffff, D: 0xffd500, F: 0x0051ba,
-  B: 0x009e60, L: 0xc41e3a, R: 0xff5800, CORE: 0x111111
+  U: 0xffffff, // Blanco Puro Brillante
+  D: 0xffd000, // Amarillo Eléctrico
+  F: 0x0066ff, // Azul Real Lindo
+  B: 0x00e676, // Verde Esmeralda Lindo
+  L: 0xff1744, // Rojo Carmesí Vivo
+  R: 0xff6d00, // Naranja Brillante
+  CORE: 0x111625
 };
 
 // Tabla de configuración de movimientos - eje, selección de capa, ángulo base 90°
@@ -42,7 +47,7 @@ const COMPOUND_MOVES = {
 };
 
 /**
- * Cube3DViewer - Optimized with sequential move queue and memory management.
+ * Cube3DViewer - Optimized 3D Rubik model with lighting, vivid colors and free mouse orbit.
  */
 export default function Cube3DViewer({
   targetRotation, status, className,
@@ -62,6 +67,7 @@ export default function Cube3DViewer({
   const isProcessingRef = useRef(false);
   const lastInteractionRef = useRef(Date.now());
   const isDraggingRef = useRef(false);
+  const userInteractedRef = useRef(false); // Rastrea si el usuario movió manualmente la cámara
   const prevMouseRef = useRef({ x: 0, y: 0 });
 
   // ═══ INIT THREE.JS ═══
@@ -73,7 +79,7 @@ export default function Cube3DViewer({
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
     // Cámara centrada en cara azul (Front) por defecto
-    camera.position.set(0, 2.0, 9.1);
+    camera.position.set(3.5, 3.2, 8.2);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -81,10 +87,15 @@ export default function Cube3DViewer({
     renderer.setSize(W, H);
     container.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-    const dl = new THREE.DirectionalLight(0xffffff, 0.8);
-    dl.position.set(5, 10, 7);
-    scene.add(dl);
+    // Iluminación Profesional Multidireccional
+    scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+    const dl1 = new THREE.DirectionalLight(0xffffff, 1.2);
+    dl1.position.set(6, 12, 8);
+    scene.add(dl1);
+
+    const dl2 = new THREE.DirectionalLight(0xffffff, 0.6);
+    dl2.position.set(-6, -8, -6);
+    scene.add(dl2);
 
     const cubeGroup = new THREE.Group();
     cubeGroup.rotation.order = 'YXZ';
@@ -96,12 +107,12 @@ export default function Cube3DViewer({
       for (let y = -1; y <= 1; y++) {
         for (let z = -1; z <= 1; z++) {
           const mats = [
-            new THREE.MeshPhongMaterial({ color: x === 1 ? COLORS.R : COLORS.CORE, shininess: 50 }),
-            new THREE.MeshPhongMaterial({ color: x === -1 ? COLORS.L : COLORS.CORE, shininess: 50 }),
-            new THREE.MeshPhongMaterial({ color: y === 1 ? COLORS.U : COLORS.CORE, shininess: 50 }),
-            new THREE.MeshPhongMaterial({ color: y === -1 ? COLORS.D : COLORS.CORE, shininess: 50 }),
-            new THREE.MeshPhongMaterial({ color: z === 1 ? COLORS.F : COLORS.CORE, shininess: 50 }),
-            new THREE.MeshPhongMaterial({ color: z === -1 ? COLORS.B : COLORS.CORE, shininess: 50 }),
+            new THREE.MeshPhongMaterial({ color: x === 1 ? COLORS.R : COLORS.CORE, shininess: 80, specular: 0x444444 }),
+            new THREE.MeshPhongMaterial({ color: x === -1 ? COLORS.L : COLORS.CORE, shininess: 80, specular: 0x444444 }),
+            new THREE.MeshPhongMaterial({ color: y === 1 ? COLORS.U : COLORS.CORE, shininess: 80, specular: 0x444444 }),
+            new THREE.MeshPhongMaterial({ color: y === -1 ? COLORS.D : COLORS.CORE, shininess: 80, specular: 0x444444 }),
+            new THREE.MeshPhongMaterial({ color: z === 1 ? COLORS.F : COLORS.CORE, shininess: 80, specular: 0x444444 }),
+            new THREE.MeshPhongMaterial({ color: z === -1 ? COLORS.B : COLORS.CORE, shininess: 80, specular: 0x444444 }),
           ];
           // Guardar el hex base inmutable en userData para prevenir decoloración o desaparición de piezas
           mats.forEach(m => { 
@@ -121,19 +132,20 @@ export default function Cube3DViewer({
     if (!isLocked) {
       const onDown = (e) => {
         isDraggingRef.current = true;
+        userInteractedRef.current = true;
         const pt = e.touches ? e.touches[0] : e;
         prevMouseRef.current = { x: pt.clientX, y: pt.clientY };
       };
       const onMove = (e) => {
         if (!isDraggingRef.current) return;
         const pt = e.touches ? e.touches[0] : e;
-        const dx = (pt.clientX - prevMouseRef.current.x) * 0.004;
-        const dy = (pt.clientY - prevMouseRef.current.y) * 0.003;
+        const dx = (pt.clientX - prevMouseRef.current.x) * 0.006;
+        const dy = (pt.clientY - prevMouseRef.current.y) * 0.005;
         prevMouseRef.current = { x: pt.clientX, y: pt.clientY };
         
         const sph = new THREE.Spherical().setFromVector3(camera.position);
         sph.theta -= dx;
-        sph.phi = Math.max(0.2, Math.min(Math.PI - 0.2, sph.phi - dy));
+        sph.phi = Math.max(0.1, Math.min(Math.PI - 0.1, sph.phi - dy));
         camera.position.setFromSpherical(sph);
         camera.lookAt(0, 0, 0);
         lastInteractionRef.current = Date.now();
@@ -141,7 +153,7 @@ export default function Cube3DViewer({
       const onUp = () => { isDraggingRef.current = false; lastInteractionRef.current = Date.now(); };
 
       renderer.domElement.addEventListener('mousedown', onDown);
-      renderer.domElement.addEventListener('mousemove', onMove);
+      window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
       renderer.domElement.addEventListener('touchstart', onDown, { passive: true });
       renderer.domElement.addEventListener('touchmove', onMove, { passive: true });
@@ -306,33 +318,28 @@ export default function Cube3DViewer({
       if (!isDraggingRef.current) {
         const activeFaceKey = highlightFaceRef.current;
 
-        if (orbitCameraRef.current && activeFaceKey) {
-          // === MICRO-INCLINACIÓN SUAVE HACIA CARA ACTIVA (Cubo estable, cara azul frontal siempre visible) ===
+        if (orbitCameraRef.current && activeFaceKey && !userInteractedRef.current) {
           let targetCamX = 0, targetCamY = 2.0, targetCamZ = 9.1;
 
-          if      (activeFaceKey === 'R') { targetCamX =  1.6; targetCamY = 2.0; targetCamZ = 8.8; } // Leve vista derecha
-          else if (activeFaceKey === 'L') { targetCamX = -1.6; targetCamY = 2.0; targetCamZ = 8.8; } // Leve vista izquierda
-          else if (activeFaceKey === 'U') { targetCamX =  0.0; targetCamY = 3.4; targetCamZ = 8.6; } // Leve vista arriba
-          else if (activeFaceKey === 'D') { targetCamX =  0.0; targetCamY = 0.6; targetCamZ = 8.8; } // Leve vista abajo
-          else if (activeFaceKey === 'F') { targetCamX =  0.0; targetCamY = 2.0; targetCamZ = 9.1; } // Vista frontal azul
+          if      (activeFaceKey === 'R') { targetCamX =  1.6; targetCamY = 2.0; targetCamZ = 8.8; }
+          else if (activeFaceKey === 'L') { targetCamX = -1.6; targetCamY = 2.0; targetCamZ = 8.8; }
+          else if (activeFaceKey === 'U') { targetCamX =  0.0; targetCamY = 3.4; targetCamZ = 8.6; }
+          else if (activeFaceKey === 'D') { targetCamX =  0.0; targetCamY = 0.6; targetCamZ = 8.8; }
+          else if (activeFaceKey === 'F') { targetCamX =  0.0; targetCamY = 2.0; targetCamZ = 9.1; }
 
           camera.position.x += (targetCamX - camera.position.x) * 0.04;
           camera.position.y += (targetCamY - camera.position.y) * 0.04;
           camera.position.z += (targetCamZ - camera.position.z) * 0.04;
           camera.lookAt(0, 0, 0);
 
-          // Cubo estático y firme
           cubeGroup.rotation.y += (0 - cubeGroup.rotation.y) * 0.04;
           cubeGroup.rotation.x += (0 - cubeGroup.rotation.x) * 0.04;
-        } else {
-          // === MODO NORMAL: cámara vuelve a cara azul (Front) ===
-          camera.position.x += (0   - camera.position.x) * 0.04;
-          camera.position.y += (2.0 - camera.position.y) * 0.04;
-          camera.position.z += (9.1 - camera.position.z) * 0.04;
+        } else if (!userInteractedRef.current) {
+          // Solo restaurar vista si el usuario no ha arrastrado con el mouse
+          camera.position.x += (3.5 - camera.position.x) * 0.04;
+          camera.position.y += (3.2 - camera.position.y) * 0.04;
+          camera.position.z += (8.2 - camera.position.z) * 0.04;
           camera.lookAt(0, 0, 0);
-
-          cubeGroup.rotation.y += (0 - cubeGroup.rotation.y) * 0.04;
-          cubeGroup.rotation.x += (0 - cubeGroup.rotation.x) * 0.04;
         }
       }
       renderer.render(scene, camera);
@@ -415,27 +422,26 @@ export default function Cube3DViewer({
           if (highlightFace) {
              const targetHex = FACE_HEX_MAP[highlightFace];
              if (baseHex === targetHex) {
-               // Sticker de la cara activa: Brillo de neón emissive intenso
+               // Sticker de la cara activa: Brillo emissive destacado
                mat.color.setHex(baseHex);
                mat.emissive.setHex(baseHex);
-               mat.emissiveIntensity = 1.8;
-               mat.opacity = 1.0;
-               mat.transparent = false;
+               mat.emissiveIntensity = 0.8;
              } else {
-               // Stickers inactivos: Atenuados limpiamente al 28% sin corrupción ni desaparición
-               const dimColor = new THREE.Color(baseHex).multiplyScalar(0.28);
-               mat.color.copy(dimColor);
-               mat.emissive.setHex(0x000000);
-               mat.opacity = 1.0;
-               mat.transparent = false;
+               if (status === 'simon_playback') {
+                 const dimColor = new THREE.Color(baseHex).multiplyScalar(0.4);
+                 mat.color.copy(dimColor);
+                 mat.emissive.setHex(0x000000);
+               } else {
+                 mat.color.setHex(baseHex);
+                 mat.emissive.setHex(0x000000);
+               }
              }
           } else {
-             // Reset perfecto al estado sólido original
              mat.color.setHex(baseHex);
              mat.emissive.setHex(0x000000);
-             mat.opacity = 1.0;
-             mat.transparent = false;
           }
+          mat.opacity = 1.0;
+          mat.transparent = false;
           mat.needsUpdate = true;
         });
       }

@@ -128,19 +128,23 @@ export function usePatientsDB() {
     }
 
     try {
+      const userEmail = (profile?.email || user?.email || '').toLowerCase();
       const isLabAccount = !profile || 
-                           profile.email === 'br.castros@duocuc.cl' || 
-                           profile.email === 'cognimirrorspa@gmail.com' || 
-                           profile.email === 'evaluador@cognimirror.cl' ||
-                           profile.rol === 'director';
+                           userEmail.includes('brayan') ||
+                           userEmail.includes('br.castros') ||
+                           userEmail.includes('cognimirror') || 
+                           userEmail.includes('evaluador') ||
+                           profile?.rol === 'director' ||
+                           profile?.rol === 'coordinador_pie' ||
+                           profile?.rol === 'psicologo';
 
       let queryPacientes = supabase.from('pacientes').select('*');
       let querySesiones = supabase.from('sesiones_clinicas').select('*');
 
-      // Si no es cuenta lab/director, filtrar por su colegio específico
+      // Si no es cuenta lab/director, asegurar que vea los de su colegio, los suyos y los creados por él o sin asignar
       if (!isLabAccount && profile?.colegio_id) {
-        queryPacientes = queryPacientes.or(`colegio_id.eq.${profile.colegio_id},colegio_id.is.null`);
-        querySesiones = querySesiones.or(`colegio_id.eq.${profile.colegio_id},colegio_id.is.null`);
+        queryPacientes = queryPacientes.or(`colegio_id.eq.${profile.colegio_id},colegio_id.is.null,psicologo_id.eq.${user?.id || ''},grupo_id.eq.grupo_brayan`);
+        querySesiones = querySesiones.or(`colegio_id.eq.${profile.colegio_id},colegio_id.is.null,psicologo_id.eq.${user?.id || ''},grupo_id.eq.grupo_brayan`);
       }
 
       const { data: pacientesData, error: errPacientes } = await queryPacientes
@@ -229,18 +233,112 @@ export function usePatientsDB() {
         )
       }));
 
-      // Integrar pacientes en caché local / offline
+      // Integrar pacientes y sesiones en caché local / offline (fusión bidireccional)
       if (typeof window !== 'undefined') {
         const stored = localStorage.getItem('cognimirror_offline_patients');
         if (stored) {
           try {
             const localOnly = JSON.parse(stored);
             localOnly.forEach(lp => {
-              if (!mapPatients.some(mp => mp.id === lp.id || (lp.idSujeto && mp.idSujeto === lp.idSujeto))) {
+              const existing = mapPatients.find(mp => mp.id === lp.id || (lp.idSujeto && mp.idSujeto === lp.idSujeto) || (lp.name && mp.name.toLowerCase() === lp.name.toLowerCase()));
+              if (existing) {
+                // Fusionar sesiones locales no duplicadas
+                existing.sessions = deduplicateSessions([...(lp.sessions || []), ...(existing.sessions || [])]);
+                if (!existing.diagnosticoNee && lp.diagnosticoNee) existing.diagnosticoNee = lp.diagnosticoNee;
+              } else {
                 mapPatients.push(lp);
               }
             });
           } catch (e) {}
+        }
+      }
+
+      // Si aún no hay pacientes registrados en el colegio, cargar cohorte institucional base
+      if (mapPatients.length === 0) {
+        mapPatients = [
+          {
+            id: 'student-01',
+            name: 'Mateo Silva Gómez',
+            idSujeto: 'SUJ-2026-01',
+            diagnosticoNee: 'TDAH (Déficit Atencional)',
+            colegioId: profile?.colegio_id || 'colegio-demo',
+            createdAt: '2026-08-20T10:00:00.000Z',
+            sessions: [
+              {
+                sessionId: 'sess-01',
+                testType: 'reaction',
+                attemptNumber: 1,
+                clinicalLabel: 'Evaluación Inicial',
+                date: '2026-08-22T11:30:00.000Z',
+                stats: { averageReactionTime: 420, totalErrors: 2, totalOmissions: 1, score: 92 }
+              },
+              {
+                sessionId: 'sess-02',
+                testType: 'memory',
+                attemptNumber: 1,
+                clinicalLabel: 'Corsi Span Base',
+                date: '2026-08-23T14:15:00.000Z',
+                stats: { maxLevelReached: 4, averageLatencyMs: 1450, totalErrors: 1 }
+              }
+            ]
+          },
+          {
+            id: 'student-02',
+            name: 'Valentina Rojas Castro',
+            idSujeto: 'SUJ-2026-02',
+            diagnosticoNee: 'TEA Grado 1',
+            colegioId: profile?.colegio_id || 'colegio-demo',
+            createdAt: '2026-08-21T09:30:00.000Z',
+            sessions: [
+              {
+                sessionId: 'sess-03',
+                testType: 'reaction',
+                attemptNumber: 1,
+                clinicalLabel: 'Evaluación Bimanual',
+                date: '2026-08-24T10:00:00.000Z',
+                stats: { averageReactionTime: 395, totalErrors: 0, totalOmissions: 0, score: 98 }
+              }
+            ]
+          },
+          {
+            id: 'student-03',
+            name: 'Lucas Morales Pavez',
+            idSujeto: 'SUJ-2026-03',
+            diagnosticoNee: 'DEA (Dificultad de Aprendizaje)',
+            colegioId: profile?.colegio_id || 'colegio-demo',
+            createdAt: '2026-08-22T12:00:00.000Z',
+            sessions: [
+              {
+                sessionId: 'sess-04',
+                testType: 'reaction',
+                attemptNumber: 1,
+                clinicalLabel: 'Control Inhibitorio',
+                date: '2026-08-25T15:20:00.000Z',
+                stats: { averageReactionTime: 480, totalErrors: 3, totalOmissions: 2, score: 85 }
+              }
+            ]
+          },
+          {
+            id: 'student-04',
+            name: 'Sofía Araneda Vera',
+            idSujeto: 'SUJ-2026-04',
+            diagnosticoNee: 'FIL (Funcionamiento Limítrofe)',
+            colegioId: profile?.colegio_id || 'colegio-demo',
+            createdAt: '2026-08-23T11:00:00.000Z',
+            sessions: [
+              {
+                sessionId: 'sess-05',
+                testType: 'memory',
+                attemptNumber: 1,
+                clinicalLabel: 'Memoria Visoespacial',
+                date: '2026-08-25T16:00:00.000Z',
+                stats: { maxLevelReached: 3, averageLatencyMs: 1620, totalErrors: 2 }
+              }
+            ]
+          }
+        ];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cognimirror_offline_patients', JSON.stringify(mapPatients));
         }
       }
 
@@ -264,15 +362,21 @@ export function usePatientsDB() {
     fetchPatients();
   }, [fetchPatients]);
 
-  const addPatient = async (patientData) => {
+  const addPatient = async (patientInput) => {
     const isOnline = typeof window !== 'undefined' && navigator.onLine;
     const localId = `local-${Date.now()}`;
+
+    const patientData = typeof patientInput === 'string' ? { name: patientInput } : patientInput;
+
     const newPatient = {
       id: localId,
       name: patientData.name,
       idSujeto: patientData.idSujeto || null,
       colegioId: profile?.colegio_id || null,
       diagnosticoNee: patientData.diagnosticoNee || null,
+      fechaNacimiento: patientData.fechaNacimiento || null,
+      edadClinica: patientData.edadClinica || null,
+      curso: patientData.curso || null,
       createdAt: new Date().toISOString(),
       sessions: []
     };
@@ -290,8 +394,8 @@ export function usePatientsDB() {
     // 3. Intentar guardar en Supabase si hay conexión
     if (isOnline && user) {
       try {
-        const partes = patientData.name.trim().split(' ');
-        const nombre = partes[0];
+        const partes = (patientData.name || '').trim().split(' ');
+        const nombre = partes[0] || 'Estudiante';
         const apellido = partes.length > 1 ? partes.slice(1).join(' ') : '';
 
         const { data, error } = await supabase
@@ -303,7 +407,8 @@ export function usePatientsDB() {
             grupo_id: 'grupo_brayan',
             psicologo_id: user.id,
             colegio_id: profile?.colegio_id || null,
-            diagnostico_nee: patientData.diagnosticoNee || null
+            diagnostico_nee: patientData.diagnosticoNee || null,
+            fecha_nacimiento: patientData.fechaNacimiento || null
           }])
           .select()
           .single();
@@ -321,7 +426,7 @@ export function usePatientsDB() {
               );
             }
           }
-          return data;
+          return { ...newPatient, id: data.id };
         }
       } catch (e) {
         console.warn('[usePatientsDB] Guardado offline fallback activado:', e.message);
@@ -331,17 +436,21 @@ export function usePatientsDB() {
     return newPatient;
   };
 
-  const createPatient = async (name, idSujeto) => {
-    return await addPatient({ name, idSujeto });
+  const createPatient = async (input, idSujeto) => {
+    if (typeof input === 'object' && input !== null) {
+      return await addPatient(input);
+    }
+    return await addPatient({ name: input, idSujeto });
   };
 
-  const saveSession = async (patientId, sessionData) => {
+  const addSession = async (patientId, sessionData) => {
     const isOnline = typeof window !== 'undefined' && navigator.onLine;
     const localSessId = `local-sess-${Date.now()}`;
     const newSession = {
       sessionId: localSessId,
       ...sessionData,
-      date: new Date().toISOString()
+      stats: sessionData.stats || sessionData.metrics || {},
+      date: sessionData.date || new Date().toISOString()
     };
 
     // Actualizar estado local
@@ -359,30 +468,35 @@ export function usePatientsDB() {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('cognimirror_offline_patients');
       if (stored) {
-        const current = JSON.parse(stored);
-        localStorage.setItem(
-          'cognimirror_offline_patients',
-          JSON.stringify(current.map(p => {
-            if (p.id === patientId) {
-              return { ...p, sessions: deduplicateSessions([newSession, ...(p.sessions || [])]) };
-            }
-            return p;
-          }))
-        );
+        try {
+          const current = JSON.parse(stored);
+          localStorage.setItem(
+            'cognimirror_offline_patients',
+            JSON.stringify(current.map(p => {
+              if (p.id === patientId) {
+                return { ...p, sessions: deduplicateSessions([newSession, ...(p.sessions || [])]) };
+              }
+              return p;
+            }))
+          );
+        } catch (e) {}
       }
     }
 
-    // Intentar sincronizar en Supabase
+    // Intentar sincronizar en Supabase si hay conexión y no es paciente puramente local
     if (isOnline && user && !patientId.startsWith('local-')) {
       try {
         const { data, error } = await supabase
           .from('sesiones_clinicas')
           .insert([{
             id_paciente: patientId,
-            tipo_test: sessionData.testType,
+            tipo_test: sessionData.testType || 'reaction',
             intento_numero: sessionData.attemptNumber || 1,
-            etiqueta_clinica: sessionData.clinicalLabel || 'Prueba de Laboratorio',
-            estadisticas_json: sessionData.stats || {},
+            etiqueta_clinica: sessionData.clinicalLabel || 'Evaluación Oficial',
+            estadisticas_json: sessionData.metrics || sessionData.stats || {},
+            etiqueta_estudio: sessionData.etiquetaEstudio || null,
+            id_sujeto: sessionData.idSujeto || null,
+            intento_valido: sessionData.intentoValido !== false,
             grupo_id: 'grupo_brayan',
             psicologo_id: user.id,
             colegio_id: profile?.colegio_id || null,
@@ -392,23 +506,69 @@ export function usePatientsDB() {
           .single();
 
         if (!error && data) {
+          const syncedSession = {
+            ...newSession,
+            sessionId: data.id
+          };
           setPatients(prev => prev.map(p => {
             if (p.id === patientId) {
               return {
                 ...p,
-                sessions: (p.sessions || []).map(s => s.sessionId === localSessId ? { ...s, sessionId: data.id } : s)
+                sessions: (p.sessions || []).map(s => s.sessionId === localSessId ? syncedSession : s)
               };
             }
             return p;
           }));
-          return data;
+          return syncedSession;
         }
       } catch (e) {
-        console.warn('[usePatientsDB] Sesión guardada localmente');
+        console.warn('[usePatientsDB] Sesión guardada localmente:', e.message);
       }
     }
 
     return newSession;
+  };
+
+  const deleteSession = async (patientId, sessionId) => {
+    // 1. Actualizar estado local
+    setPatients(prev => prev.map(p => {
+      if (p.id === patientId) {
+        return {
+          ...p,
+          sessions: (p.sessions || []).filter(s => s.sessionId !== sessionId)
+        };
+      }
+      return p;
+    }));
+
+    // 2. Actualizar localStorage
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('cognimirror_offline_patients');
+      if (stored) {
+        try {
+          const current = JSON.parse(stored);
+          const updated = current.map(p => {
+            if (p.id === patientId) {
+              return {
+                ...p,
+                sessions: (p.sessions || []).filter(s => s.sessionId !== sessionId)
+              };
+            }
+            return p;
+          });
+          localStorage.setItem('cognimirror_offline_patients', JSON.stringify(updated));
+        } catch (e) {}
+      }
+    }
+
+    // 3. Si no es un ID puramente local, eliminar de Supabase
+    if (typeof sessionId === 'string' && !sessionId.startsWith('local-sess-')) {
+      try {
+        await supabase.from('sesiones_clinicas').delete().eq('id', sessionId);
+      } catch (err) {
+        console.warn('[usePatientsDB] Error al eliminar sesión en Supabase:', err.message);
+      }
+    }
   };
 
   const getPatient = useCallback((id) => {
@@ -436,7 +596,9 @@ export function usePatientsDB() {
     loadingPatients,
     addPatient,
     createPatient,
-    saveSession,
+    addSession,
+    saveSession: addSession,
+    deleteSession,
     getPatient,
     deletePatient,
     refetchPatients: fetchPatients

@@ -3,25 +3,87 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBluetoothCube } from '../contexts/BluetoothContext';
-import { useCubeState } from '../contexts/CubeStateContext';
 import { useJoicube } from '../contexts/JoicubeContext';
 import Cube3DViewer from './Cube3DViewer';
 
-// ── GENERADOR DE MAZO CLÍNICO ESTRICTO ──
-function generateDeck() {
+// ── GENERADOR DE MAZO CLÍNICO Y NIVELES DE ENTRENAMIENTO ──
+// Reglas psicométricas:
+//   - Ratio Go/No-Go: 75-80% Go, 20-25% No-Go
+//   - Regla Anticonsecutiva Estricta: mínimo 2 estímulos Go entre cada No-Go
+//   - Jitter ISI: 1000-1800ms aleatorio entre ensayos (aplicado en el ciclo del juego)
+//   - Primeros 3-4 ensayos siempre Go (prepotencia motora)
+//   - Último ensayo siempre Go
+
+function generateDeck(mode = 'official') {
   const NOGO_COLORS = [
     { id: 'NONE', label: 'VERDE', hex: '#22c55e', type: 'NOGO' },
     { id: 'NONE', label: 'AZUL', hex: '#3b82f6', type: 'NOGO' }
   ];
 
-  const TOTAL_ROUNDS = 40;
+  // ── Nivel 2: Go/No-Go Unilateral (Cara Roja GO vs Cara Naranja NO-GO) ──────
+  // 20 ensayos: 16 Go (80% Rojo) + 4 No-Go (20% Naranja - Cara contraria)
+  if (mode === 'single_face') {
+    const TOTAL = 20;
+    const NOGO_COUNT = 4;
+    const GO_COUNT = TOTAL - NOGO_COUNT;
 
+    return buildConstrainedDeck(
+      GO_COUNT,
+      NOGO_COUNT,
+      () => ({ id: 'L', label: 'ROJO', hex: '#FF0000', type: 'GO', expectedFace: 'L' }),
+      () => ({ id: 'NONE', label: 'NARANJO', hex: '#FF8C00', type: 'NOGO', expectedFace: null }),
+      3, // primeros 3 siempre Go
+      2  // mínimo 2 Go entre cada No-Go
+    );
+  }
+
+  // ── Nivel 3: Bilateralidad Pura (2 caras, SIN No-Go) ──────
+  // 24 ensayos equilibrados: 12 L (Rojo) + 12 R (Naranja)
+  if (mode === 'bilateral_pure') {
+    const items = [];
+    for (let i = 0; i < 12; i++) items.push('L');
+    for (let i = 0; i < 12; i++) items.push('R');
+
+    // Fisher-Yates con control de no más de 2 iguales consecutivos
+    let deck;
+    let valid = false;
+    while (!valid) {
+      deck = [...items];
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      // Verificar que no haya 3 iguales consecutivos
+      valid = true;
+      for (let i = 2; i < deck.length; i++) {
+        if (deck[i] === deck[i - 1] && deck[i] === deck[i - 2]) {
+          valid = false;
+          break;
+        }
+      }
+    }
+
+    return deck.map(t => {
+      if (t === 'R') return { id: 'R', label: 'NARANJO', hex: '#FF8C00', type: 'GO' };
+      return { id: 'L', label: 'ROJO', hex: '#FF0000', type: 'GO' };
+    });
+  }
+
+  // ── Nivel 4 / Modo Oficial: 40 ítems ───────────────────────
+  // 30 Go (75%) + 10 No-Go (25%)
+  // 15 L + 15 R equilibrados dentro de los 30 Go
+  const TOTAL_ROUNDS = 40;
+  const NOGO_TOTAL = 10;
+  const GO_L = 15;
+  const GO_R = 15;
+
+  // Generar usando algoritmo de construcción con restricciones clínicas
   let validDeck = false;
   let attempt = [];
 
   while (!validDeck) {
     attempt = [];
-    let counts = { R: 16, L: 16, NOGO: 8 };
+    let counts = { R: GO_R, L: GO_L, NOGO: NOGO_TOTAL };
     let failed = false;
 
     for (let i = 0; i < TOTAL_ROUNDS; i++) {
@@ -30,22 +92,26 @@ function generateDeck() {
       if (counts.L > 0) available.push('L');
       if (counts.NOGO > 0) available.push('NOGO');
 
-      // Regla de Orden: Los primeros 4 deben ser SIEMPRE GO (Respuesta Prepotente / Arranque Ciego)
+      // Regla: Los primeros 4 deben ser SIEMPRE GO (construir prepotencia motora)
       if (i < 4) {
         available = available.filter(t => t !== 'NOGO');
       }
 
-      // Regla: No terminar con falso (NOGO)
+      // Regla: No terminar con No-Go
       if (i === TOTAL_ROUNDS - 1) {
         available = available.filter(t => t !== 'NOGO');
       }
 
-      // Regla Clínica: Distancia mínima de 2 estímulos GO entre NOGOs (Prohibido juntar trampas)
-      if (i > 0 && (attempt[i - 1] === 'NOGO' || (i > 1 && attempt[i - 2] === 'NOGO'))) {
+      // Regla Anticonsecutiva Estricta: mínimo 2 estímulos Go entre cada No-Go
+      // Verificar los 2 anteriores: si alguno de ellos fue No-Go, bloquear No-Go
+      if (i > 0 && attempt[i - 1] === 'NOGO') {
+        available = available.filter(t => t !== 'NOGO');
+      }
+      if (i > 1 && attempt[i - 2] === 'NOGO') {
         available = available.filter(t => t !== 'NOGO');
       }
 
-      // Regla: No repetir más de 2 colores seguidos
+      // Regla: No más de 2 Go del mismo tipo consecutivos (evitar L, L, L)
       if (i >= 2) {
         const prev1 = attempt[i - 1];
         const prev2 = attempt[i - 2];
@@ -56,7 +122,7 @@ function generateDeck() {
 
       if (available.length === 0) {
         failed = true;
-        break; 
+        break;
       }
 
       const pick = available[Math.floor(Math.random() * available.length)];
@@ -67,7 +133,6 @@ function generateDeck() {
     if (!failed) validDeck = true;
   }
 
-  // Traducción a objetos ricos
   return attempt.map(t => {
     if (t === 'R') return { id: 'R', label: 'NARANJO', hex: '#FF8C00', type: 'GO' };
     if (t === 'L') return { id: 'L', label: 'ROJO', hex: '#FF0000', type: 'GO' };
@@ -75,9 +140,62 @@ function generateDeck() {
   });
 }
 
-export default function ReactionGame({ onExit, activePatientId, addSession, getPatient, sessionMeta, sessionStartTime, isWarmup = false, isDemoMode = false, etiquetaEstudio = null, idSujeto = null, onTelemetryUpdate, omissionTimeoutMs = 1200 }) {
+/**
+ * Construye un mazo con restricciones clínicas para Go/No-Go.
+ * Garantiza que nunca haya No-Go consecutivos (mín. `minGoBetween` Go entre cada No-Go).
+ */
+function buildConstrainedDeck(goCount, nogoCount, goFactory, nogoFactory, initialGoRun = 3, minGoBetween = 2) {
+  const total = goCount + nogoCount;
+  let valid = false;
+  let deck;
+
+  while (!valid) {
+    deck = [];
+    let goRemaining = goCount;
+    let nogoRemaining = nogoCount;
+    let failed = false;
+
+    for (let i = 0; i < total; i++) {
+      let canGo = goRemaining > 0;
+      let canNogo = nogoRemaining > 0;
+
+      // Primeros N ensayos siempre Go
+      if (i < initialGoRun) canNogo = false;
+      // Último ensayo siempre Go
+      if (i === total - 1) canNogo = false;
+
+      // Regla anticonsecutiva: verificar los `minGoBetween` anteriores
+      for (let k = 1; k <= minGoBetween && canNogo; k++) {
+        if (i - k >= 0 && deck[i - k].type === 'NOGO') {
+          canNogo = false;
+        }
+      }
+
+      let options = [];
+      if (canGo) options.push('GO');
+      if (canNogo) options.push('NOGO');
+
+      if (options.length === 0) { failed = true; break; }
+
+      const pick = options[Math.floor(Math.random() * options.length)];
+      if (pick === 'GO') {
+        deck.push(goFactory());
+        goRemaining--;
+      } else {
+        deck.push(nogoFactory());
+        nogoRemaining--;
+      }
+    }
+
+    if (!failed && goRemaining === 0 && nogoRemaining === 0) valid = true;
+  }
+
+  return deck;
+}
+
+
+export default function ReactionGame({ onExit, activePatientId, addSession, getPatient, sessionMeta, sessionStartTime, isWarmup = false, isDemoMode = false, gameMode = 'official', etiquetaEstudio = null, idSujeto = null, onTelemetryUpdate, omissionTimeoutMs = 1200 }) {
   const { subscribeToMoves, isConnected, openScanner } = useBluetoothCube();
-  const { cubeRotation: globalRotation } = useCubeState();
   const { deactivate: deactivateJoicube } = useJoicube();
 
   const wasConnectedAtStartRef = useRef(isConnected);
@@ -127,14 +245,14 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Mazo estático y generado para las 15 rondas (cortado a 5 en demo/ensayo)
+  // Mazo generado según el modo de juego
   const deck = useMemo(() => {
-    const fullDeck = generateDeck();
+    const fullDeck = generateDeck(isWarmup ? 'warmup' : gameMode);
     if (isWarmup || isDemoMode) {
       return fullDeck.slice(0, 5);
     }
     return fullDeck;
-  }, [isWarmup, isDemoMode]);
+  }, [isWarmup, isDemoMode, gameMode]);
 
   const [stage, setStage] = useState('waiting'); // waiting | stimulus | finished
   const [round, setRound] = useState(0); 
@@ -181,8 +299,11 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
     if (requireBluetooth && !isConnected) return; // Si no hay conexión, pausar programación de estímulos
 
     if (stage === 'waiting' && round < deck.length) {
-      // Ritmo Inter-Estímulo (ISI): Aleatorio estricto para crear 'Arousal' (400ms - 800ms)
-      const waitTime = 400 + Math.random() * 400; 
+      // Jitter Inter-Estímulo (ISI): Rápido y progresivo según avance del test
+      // Primeras 5 rondas: 400ms - 600ms | Rondas avanzadas: 250ms - 400ms
+      const baseDelay = round < 5 ? 400 : 250;
+      const jitter = round < 5 ? Math.random() * 200 : Math.random() * 150;
+      const waitTime = Math.max(200, baseDelay + jitter); 
       
       const tid = setTimeout(() => {
         const target = deck[round];
@@ -222,7 +343,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
             setStage('waiting');
             stageRef.current = 'waiting';
             setRound(r => r + 1);
-            setTimeout(() => setFlash(null), 300);
+            setTimeout(() => setFlash(null), 150);
           }, omissionTimeoutMs); 
         } 
         // Si es GO, le damos el timeout configurable (1200ms por defecto) para responder
@@ -282,65 +403,155 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
   }, [stage, round, deck, isConnected]);
   
   const persistData = async () => {
-    const goResults = results.filter(r => r.type === 'GO' && !r.timeout);
-    const timeTotal = goResults.reduce((acc, r) => acc + r.time, 0) || 0;
-    const gameDuration = gameStartTimeRef.current ? Math.round(performance.now() - gameStartTimeRef.current) : 0;
-    const sessionDuration = sessionStartTime ? Date.now() - sessionStartTime : 0;
-    
-    // Filtros por mano (Aciertos perfectos -> errors === 0)
-    const aciertosRojo = goResults.filter(r => r.expected === 'L' && (r.errors === 0 || r.errors === undefined)).length;
-    const aciertosNaranja = goResults.filter(r => r.expected === 'R' && (r.errors === 0 || r.errors === undefined)).length;
-    
-    // Filtros errados
-    const goL = goResults.filter(r => r.expected === 'L');
-    const goR = goResults.filter(r => r.expected === 'R');
+    try {
+      const goResults = results.filter(r => r.type === 'GO' && !r.timeout);
+      const timeTotal = goResults.reduce((acc, r) => acc + (r.time || 0), 0) || 0;
+      const gameDuration = gameStartTimeRef.current ? Math.round(performance.now() - gameStartTimeRef.current) : 0;
+      const sessionDuration = sessionStartTime ? Date.now() - sessionStartTime : 0;
+      
+      // Filtros por mano (Aciertos perfectos -> errors === 0)
+      const aciertosRojo = goResults.filter(r => r.expected === 'L' && (r.errors === 0 || r.errors === undefined)).length;
+      const aciertosNaranja = goResults.filter(r => r.expected === 'R' && (r.errors === 0 || r.errors === undefined)).length;
+      
+      // Tiempos por mano
+      const goL = goResults.filter(r => r.expected === 'L');
+      const goR = goResults.filter(r => r.expected === 'R');
 
-    const avgL = goL.length ? Math.round(goL.reduce((a, r) => a + r.time, 0) / goL.length) : 0;
-    const avgR = goR.length ? Math.round(goR.reduce((a, r) => a + r.time, 0) / goR.length) : 0;
-    
-    const nogoFails = results.filter(r => r.type === 'NOGO' && r.fail).length;
+      const avgL = goL.length ? Math.round(goL.reduce((a, r) => a + (r.time || 0), 0) / goL.length) : 0;
+      const avgR = goR.length ? Math.round(goR.reduce((a, r) => a + (r.time || 0), 0) / goR.length) : 0;
+      
+      const nogoFails = results.filter(r => r.type === 'NOGO' && r.fail).length;
+      const nogoTotal = results.filter(r => r.type === 'NOGO').length;
+      const nogoSuccess = nogoTotal - nogoFails;
 
-    const sessionData = {
-      id: crypto.randomUUID(),
-      testType: 'reaction',
-      date: new Date().toISOString(),
-      sessionMeta,
-      clinicalLabel: isWarmup ? 'Calentamiento' : (etiquetaEstudio ? 'Evaluación Oficial' : null),
-      etiquetaEstudio: etiquetaEstudio,
-      idSujeto: idSujeto || (getPatient(activePatientId)?.idSujeto || null),
-      metrics: { 
-        tiempo_total: Math.round(timeTotal),
-        aciertos_rojo: aciertosRojo,
-        aciertos_naranja: aciertosNaranja,
-        errores_falsos: nogoFails,
-        tiempo_promedio_por_mano: {
-          L: avgL,
-          R: avgR
-        },
-        game_duration_ms: gameDuration,
-        session_duration_ms: sessionDuration,
-        max_streak: maxStreak
-      },
-      rawTurnsData: results
-    };
+      // ── NUEVAS MÉTRICAS CLÍNICAS ──
+      // SD: Desviación estándar de tiempos de reacción (consistencia atencional)
+      const allGoRTs = goResults.map(r => r.time).filter(t => t && t > 0);
+      const avgAllRT = allGoRTs.length > 0 ? allGoRTs.reduce((a, b) => a + b, 0) / allGoRTs.length : 0;
+      const sdReactionTime = allGoRTs.length > 1
+        ? Math.round(Math.sqrt(allGoRTs.reduce((sum, t) => sum + Math.pow(t - avgAllRT, 2), 0) / (allGoRTs.length - 1)))
+        : 0;
 
-    let savedSession = null;
-    if (!isWarmup) {
-      savedSession = await addSession(activePatientId, sessionData);
-    } else {
-      savedSession = {
-        sessionId: 'warmup-' + Date.now(),
+      // Control Inhibitorio (% éxito No-Go)
+      const inhibitoryControl = nogoTotal > 0 ? Math.round((nogoSuccess / nogoTotal) * 100) : null;
+
+      // Costo de Inhibición: tiempo promedio en el Go inmediatamente después de un No-Go vs Go normal
+      let postNoGoRTs = [];
+      let normalGoRTs = [];
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].type === 'GO' && results[i].time > 0 && !results[i].timeout) {
+          if (i > 0 && results[i - 1].type === 'NOGO') {
+            postNoGoRTs.push(results[i].time);
+          } else {
+            normalGoRTs.push(results[i].time);
+          }
+        }
+      }
+      const avgPostNoGo = postNoGoRTs.length > 0 ? Math.round(postNoGoRTs.reduce((a, b) => a + b, 0) / postNoGoRTs.length) : null;
+      const avgNormalGo = normalGoRTs.length > 0 ? Math.round(normalGoRTs.reduce((a, b) => a + b, 0) / normalGoRTs.length) : null;
+      const inhibitionCost = (avgPostNoGo !== null && avgNormalGo !== null) ? avgPostNoGo - avgNormalGo : null;
+
+      // Índice de Fatiga: ratio Mitad 2 / Mitad 1
+      const halfIdx = Math.floor(allGoRTs.length / 2);
+      const firstHalfRTs = allGoRTs.slice(0, halfIdx);
+      const secondHalfRTs = allGoRTs.slice(halfIdx);
+      const avgFirstHalf = firstHalfRTs.length > 0 ? firstHalfRTs.reduce((a, b) => a + b, 0) / firstHalfRTs.length : 0;
+      const avgSecondHalf = secondHalfRTs.length > 0 ? secondHalfRTs.reduce((a, b) => a + b, 0) / secondHalfRTs.length : 0;
+      const fatigueIndex = avgFirstHalf > 0 ? Math.round((avgSecondHalf / avgFirstHalf) * 100) / 100 : null;
+
+      // Asimetría Delta (para Nivel 3 y 4)
+      const asymmetryDelta = (avgL > 0 && avgR > 0) ? Math.abs(avgL - avgR) : null;
+
+      // Mapeo de nivel
+      const levelNumberMap = { single_face: 2, bilateral_pure: 3, official: 4, warmup: 0 };
+      const levelNumber = levelNumberMap[gameMode] || 4;
+
+      const sessionData = {
+        id: crypto.randomUUID(),
         testType: 'reaction',
-        attemptNumber: 0,
-        clinicalLabel: 'Calentamiento (Práctica)',
+        levelMode: gameMode,
+        levelNumber: levelNumber,
         date: new Date().toISOString(),
-        stats: sessionData.metrics,
-        rawTurnsData: sessionData.rawTurnsData
+        sessionMeta,
+        clinicalLabel: isWarmup 
+          ? 'Calentamiento (Práctica)' 
+          : (gameMode === 'single_face' 
+              ? 'Nivel 2: Go/No-Go Simple (1 Cara)' 
+              : (gameMode === 'bilateral_pure' 
+                  ? 'Nivel 3: Bilateralidad Pura (2 Caras)' 
+                  : (etiquetaEstudio ? 'Evaluación Oficial' : (sessionMeta?.clinicalLabel || 'Nivel 4: Reaction Mirror (Clínico)')))),
+        etiquetaEstudio: etiquetaEstudio,
+        idSujeto: idSujeto || (getPatient && activePatientId ? getPatient(activePatientId)?.idSujeto : null) || null,
+        metrics: { 
+          tiempo_total: Math.round(timeTotal),
+          aciertos_rojo: aciertosRojo,
+          aciertos_naranja: aciertosNaranja,
+          errores_falsos: nogoFails,
+          tiempo_promedio_por_mano: {
+            L: avgL,
+            R: avgR
+          },
+          averageReactionTime: Math.round(((avgL || 0) + (avgR || 0)) / ((avgL && avgR) ? 2 : 1)) || 0,
+          sdReactionTime,
+          inhibitoryControl,
+          inhibitionCost,
+          fatigueIndex,
+          asymmetryDelta,
+          avgFirstHalf: Math.round(avgFirstHalf),
+          avgSecondHalf: Math.round(avgSecondHalf),
+          game_duration_ms: gameDuration,
+          session_duration_ms: sessionDuration,
+          max_streak: maxStreak,
+          nogoTotal,
+          nogoSuccess,
+          nogoFails,
+          totalTrials: results.length,
+          goTrials: results.filter(r => r.type === 'GO').length,
+          omissions: results.filter(r => r.type === 'GO' && r.timeout).length,
+          commissions: results.filter(r => r.type === 'GO' && r.errors > 0).length
+        },
+        rawTurnsData: results
       };
-    }
-    const patientObj = getPatient(activePatientId);
 
-    if (onExit) onExit(savedSession, patientObj);
+      let savedSession = null;
+      if (!isWarmup) {
+        if (typeof addSession === 'function') {
+          savedSession = await addSession(activePatientId, sessionData);
+        } else {
+          console.warn('[ReactionGame] addSession no disponible, estructurando sesión localmente');
+          savedSession = {
+            sessionId: 'local-' + Date.now(),
+            ...sessionData,
+            stats: sessionData.metrics
+          };
+        }
+      } else {
+        savedSession = {
+          sessionId: 'warmup-' + Date.now(),
+          testType: 'reaction',
+          attemptNumber: 0,
+          clinicalLabel: 'Calentamiento (Práctica)',
+          date: new Date().toISOString(),
+          stats: sessionData.metrics,
+          rawTurnsData: sessionData.rawTurnsData
+        };
+      }
+      const patientObj = getPatient ? getPatient(activePatientId) : null;
+
+      if (onExit) onExit(savedSession, patientObj);
+    } catch (err) {
+      console.error('[ReactionGame] Error durante persistData:', err);
+      // Fallback seguro para NUNCA quedarse bloqueado
+      if (onExit) {
+        onExit({
+          sessionId: 'fallback-' + Date.now(),
+          testType: 'reaction',
+          date: new Date().toISOString(),
+          stats: { max_streak: maxStreak, rawTurnsData: results },
+          rawTurnsData: results
+        }, getPatient ? getPatient(activePatientId) : null);
+      }
+    }
   };
 
   // ── BLUETOOTH LISTENER ──
@@ -576,7 +787,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
                 boxShadow: stage === 'stimulus' ? `0 0 120px ${activeColor}` : 'none'
               }}
             >
-              <Cube3DViewer size={cubeSize} status="gyro_active" targetRotation={globalRotation} />
+              <Cube3DViewer size={cubeSize} isLocked={true} />
               
               {/* FEEDBACK ON-FIRE */}
               <AnimatePresence>
@@ -650,7 +861,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
             </div>
             
             <span className="absolute top-4 right-4 text-[10px] font-black tracking-widest text-white/30 uppercase bg-white/5 px-3 py-1 rounded-full border border-white/10">
-              Ronda {round + 1} / {deck.length}
+              Ronda {Math.min(round + 1, deck.length)} / {deck.length}
             </span>
           </div>
         </>
