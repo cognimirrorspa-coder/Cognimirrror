@@ -43,7 +43,10 @@ import {
   Box,
   Sliders,
   Play,
-  RotateCw
+  RotateCw,
+  X,
+  Download,
+  Filter
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -97,6 +100,82 @@ function ClassicDashboard() {
   const [gemeloTimer, setGemeloTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [faceStats, setFaceStats] = useState({ L: 0, R: 0, U: 0, D: 0, F: 0, B: 0 });
+
+  // Estados de Auditoría y Trazabilidad Inmutable
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditSearchQuery, setAuditSearchQuery] = useState('');
+  const [auditCategoryFilter, setAuditCategoryFilter] = useState('Todos');
+
+  const initialAuditLog = [
+    {
+      id: 'aud-1',
+      title: 'Inicio de sesión',
+      author: 'Josué Alarcón (Coordinador)',
+      details: '',
+      timeAgo: 'Hace 5 min',
+      fullDate: 'Hoy, 18:05',
+      category: 'Logins'
+    },
+    {
+      id: 'aud-2',
+      title: 'Carga masiva completada',
+      author: 'Sistema',
+      details: 'Se importaron 45 estudiantes',
+      timeAgo: 'Hace 2 horas',
+      fullDate: 'Hoy, 16:10',
+      category: 'Estudiantes'
+    },
+    {
+      id: 'aud-3',
+      title: 'Nuevo terapeuta vinculado',
+      author: 'Josué Alarcón',
+      details: 'Dra. María González',
+      timeAgo: 'Ayer, 14:30',
+      fullDate: 'Ayer, 14:30',
+      category: 'Sistema'
+    },
+    {
+      id: 'aud-4',
+      title: 'Batería de 5 Niveles Lanzada',
+      author: 'Ps. Brayan Castro',
+      details: 'Protocolo 04: Reaction Mirror (40 Ensayos)',
+      timeAgo: '25 Aug, 11:15',
+      fullDate: '25 Aug 2026, 11:15',
+      category: 'Evaluaciones'
+    },
+    {
+      id: 'aud-5',
+      title: 'Evaluación Remota Completada',
+      author: 'Sistema',
+      details: 'ID Estudiante: PIE-042 - Latencia: 379ms',
+      timeAgo: '24 Aug, 16:45',
+      fullDate: '24 Aug 2026, 16:45',
+      category: 'Evaluaciones'
+    },
+    {
+      id: 'aud-6',
+      title: 'Configuración de Parámetros',
+      author: 'Josué Alarcón',
+      details: 'Actualizado Eje: Resiliencia Climática & TDAH',
+      timeAgo: '22 Aug, 09:20',
+      fullDate: '22 Aug 2026, 09:20',
+      category: 'Sistema'
+    }
+  ];
+
+  const [auditLog, setAuditLog] = useState(initialAuditLog);
+
+  const filteredAuditLog = useMemo(() => {
+    return auditLog.filter(event => {
+      const matchCategory = auditCategoryFilter === 'Todos' || event.category === auditCategoryFilter;
+      const q = auditSearchQuery.toLowerCase();
+      const matchQuery = !q || 
+        event.title.toLowerCase().includes(q) || 
+        event.author.toLowerCase().includes(q) || 
+        (event.details && event.details.toLowerCase().includes(q));
+      return matchCategory && matchQuery;
+    });
+  }, [auditLog, auditCategoryFilter, auditSearchQuery]);
 
   // Cargar tema guardado
   useEffect(() => {
@@ -654,73 +733,125 @@ function ClassicDashboard() {
 
               </div>
 
-              {/* TABLA DE PROGRESO DE ESTUDIANTES PIE */}
-              <div className={`p-6 rounded-3xl border ${
-                isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                  <div>
-                    <h4 className="text-base font-black tracking-tight">Registro y Avance de Estudiantes</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Estado de evaluaciones y diagnóstico de cada alumno</p>
+              {/* SECCIÓN INFERIOR: TABLA DE ESTUDIANTES + AUDITORÍA Y TRAZABILIDAD */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                {/* TABLA DE PROGRESO DE ESTUDIANTES PIE (lg:col-span-7) */}
+                <div className={`lg:col-span-7 p-6 rounded-3xl border ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                      <h4 className="text-base font-black tracking-tight">Registro y Avance de Estudiantes</h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Estado de evaluaciones y diagnóstico de cada alumno</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setActiveTab('niveles')}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-purple-600/20"
+                      >
+                        <span>Lanzar Batería</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className={`border-b ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Estudiante</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Diagnóstico NEE</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Evaluaciones</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Último Registro</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {patients.map(p => {
+                          const lastSess = p.sessions?.[0];
+                          return (
+                            <tr key={p.id} className={`transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
+                              <td className="py-3.5 px-4 font-bold">
+                                <div>
+                                  <span className="text-sm">{p.name}</span>
+                                  {p.idSujeto && <span className="block text-[10px] text-slate-400 font-mono">ID: {p.idSujeto}</span>}
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 text-slate-400">
+                                {p.diagnosticoNee || 'Sin Asignar'}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className="font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 text-xs">
+                                  {p.sessions?.length || 0} sesiones
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-slate-400">
+                                {lastSess ? new Date(lastSess.date).toLocaleDateString() : 'Sin registros'}
+                              </td>
+                              <td className="py-3.5 px-4 text-right">
+                                <Link
+                                  href={`/students?patientId=${p.id}`}
+                                  className="text-xs font-bold text-purple-400 hover:text-purple-300 inline-flex items-center gap-1"
+                                >
+                                  Ver Ficha <ChevronRight className="w-3.5 h-3.5" />
+                                </Link>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* TARJETA AUDITORÍA Y TRAZABILIDAD (lg:col-span-5) */}
+                <div className={`lg:col-span-5 p-6 rounded-3xl border flex flex-col justify-between ${
+                  isDark ? 'bg-[#0c101d] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-base font-black tracking-tight flex items-center gap-2.5">
+                        <FileText className="w-5 h-5 text-amber-400" />
+                        <span>Auditoría y Trazabilidad</span>
+                      </h4>
+                    </div>
+
+                    {/* Lista Trazabilidad con línea vertical conectora (idéntica a la imagen) */}
+                    <div className="relative pl-4 space-y-6 border-l-2 border-slate-800/80 my-4">
+                      {auditLog.slice(0, 3).map((event, idx) => (
+                        <div key={event.id || idx} className="relative group">
+                          {/* Punto indicador de evento en la línea vertical */}
+                          <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-[#0c101d]" />
+
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h5 className="text-sm font-bold text-slate-100 group-hover:text-amber-300 transition-colors">
+                                {event.title}
+                              </h5>
+                              <p className="text-xs text-slate-400 font-medium">{event.author}</p>
+                              {event.details && (
+                                <p className="text-xs italic text-slate-500 mt-0.5 font-mono">{event.details}</p>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-mono text-slate-500 shrink-0">{event.timeAgo}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botón Ver Historial Completo */}
+                  <div className="pt-4 border-t border-white/5">
                     <button
-                      onClick={() => setActiveTab('niveles')}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-purple-600/20"
+                      onClick={() => setIsAuditModalOpen(true)}
+                      className="w-full py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white text-xs font-bold transition-all text-center cursor-pointer shadow-inner"
                     >
-                      <span>Lanzar Batería</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      Ver Historial Completo
                     </button>
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className={`border-b ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Estudiante</th>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Diagnóstico NEE</th>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Evaluaciones</th>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Último Registro</th>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {patients.map(p => {
-                        const lastSess = p.sessions?.[0];
-                        return (
-                          <tr key={p.id} className={`transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
-                            <td className="py-3.5 px-4 font-bold">
-                              <div>
-                                <span className="text-sm">{p.name}</span>
-                                {p.idSujeto && <span className="block text-[10px] text-slate-400 font-mono">ID: {p.idSujeto}</span>}
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-400">
-                              {p.diagnosticoNee || 'Sin Asignar'}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 text-xs">
-                                {p.sessions?.length || 0} sesiones
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-400">
-                              {lastSess ? new Date(lastSess.date).toLocaleDateString() : 'Sin registros'}
-                            </td>
-                            <td className="py-3.5 px-4 text-right">
-                              <Link
-                                href={`/students?patientId=${p.id}`}
-                                className="text-xs font-bold text-purple-400 hover:text-purple-300 inline-flex items-center gap-1"
-                              >
-                                Ver Ficha <ChevronRight className="w-3.5 h-3.5" />
-                              </Link>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
               </div>
 
             </div>
@@ -1244,9 +1375,114 @@ function ClassicDashboard() {
         </main>
       </div>
 
+      {/* MODAL DE HISTORIAL COMPLETO DE AUDITORÍA Y TRAZABILIDAD */}
+      {isAuditModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-[#0c101d] border border-white/10 rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative">
+            
+            {/* Header del Modal */}
+            <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                    <span>Historial Completo de Auditoría y Trazabilidad</span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase">
+                      Inmutable
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">Trazabilidad histórica continua de cambios, accesos y evaluaciones</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAuditModalOpen(false)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Barra de Búsqueda y Filtros */}
+            <div className="px-6 py-3.5 border-b border-white/5 bg-white/[0.01] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Buscar por título, autor o detalle..."
+                  value={auditSearchQuery}
+                  onChange={(e) => setAuditSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                {['Todos', 'Logins', 'Evaluaciones', 'Estudiantes', 'Sistema'].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setAuditCategoryFilter(cat)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      auditCategoryFilter === cat
+                        ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300'
+                        : 'bg-white/5 hover:bg-white/10 text-slate-400 border border-transparent'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Lista del Historial Completo */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              <div className="relative pl-6 space-y-6 border-l-2 border-slate-800">
+                {filteredAuditLog.map((event, idx) => (
+                  <div key={event.id || idx} className="relative group">
+                    <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-amber-500 ring-4 ring-[#0c101d] shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+
+                    <div className="bg-white/[0.02] border border-white/5 hover:border-amber-500/30 rounded-2xl p-4 transition-all">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                        <h5 className="text-sm font-bold text-slate-100 group-hover:text-amber-300 transition-colors flex items-center gap-2">
+                          <span>{event.title}</span>
+                          <span className="text-[9px] font-mono px-2 py-0.2 rounded bg-slate-800 text-slate-400">
+                            {event.category || 'Sistema'}
+                          </span>
+                        </h5>
+                        <span className="text-xs font-mono text-slate-500">{event.fullDate || event.timeAgo}</span>
+                      </div>
+                      <p className="text-xs text-slate-300 font-medium">{event.author}</p>
+                      {event.details && (
+                        <p className="text-xs italic text-amber-200/80 mt-1 font-mono bg-amber-500/5 p-2 rounded-xl border border-amber-500/10">
+                          {event.details}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {filteredAuditLog.length === 0 && (
+                  <p className="text-xs text-slate-500 italic py-6 text-center">No se encontraron registros de auditoría.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer del Modal */}
+            <div className="px-6 py-4 border-t border-white/10 bg-white/[0.01] flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-mono">Total Registros: {filteredAuditLog.length} eventos</span>
+              <button
+                onClick={() => setIsAuditModalOpen(false)}
+                className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
+              >
+                Cerrar Historial
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default function Dashboard() {
   const { profile, loading } = useAuth();
