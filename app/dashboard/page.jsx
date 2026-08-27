@@ -51,6 +51,9 @@ import {
   Line,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -238,6 +241,41 @@ function ClassicDashboard() {
       ];
     }
 
+    // Demographic Data (Donut Chart)
+    const demoCounts = {
+      'TDAH': 0,
+      'TEA Nivel 1': 0,
+      'Dispraxia': 0,
+      'Otros': 0
+    };
+
+    studentsList.forEach(p => {
+      const diag = (p.diagnosticoNee || '').toLowerCase();
+      if (diag.includes('tdah')) demoCounts['TDAH']++;
+      else if (diag.includes('tea')) demoCounts['TEA Nivel 1']++;
+      else if (diag.includes('dispraxia') || diag.includes('motriz')) demoCounts['Dispraxia']++;
+      else demoCounts['Otros']++;
+    });
+
+    let demographicData = [
+      { name: 'TDAH', value: demoCounts['TDAH'], color: '#3b82f6' },
+      { name: 'TEA Nivel 1', value: demoCounts['TEA Nivel 1'], color: '#a855f7' },
+      { name: 'Dispraxia', value: demoCounts['Dispraxia'], color: '#f59e0b' },
+      { name: 'Otros', value: demoCounts['Otros'], color: '#10b981' }
+    ];
+
+    let totalDemographicCount = studentsList.length;
+
+    if (totalDemographicCount === 0 || demographicData.every(d => d.value === 0)) {
+      demographicData = [
+        { name: 'TDAH', value: 1, color: '#3b82f6' },
+        { name: 'TEA Nivel 1', value: 1, color: '#a855f7' },
+        { name: 'Dispraxia', value: 1, color: '#f59e0b' },
+        { name: 'Otros', value: 1, color: '#10b981' }
+      ];
+      totalDemographicCount = 3;
+    }
+
     return {
       totalStudents,
       totalSessions,
@@ -246,7 +284,9 @@ function ClassicDashboard() {
       averageReaction,
       adhesionPIE: totalStudents > 0 ? Math.min(100, Math.round(85 + (totalSessions * 2))) : 96,
       timelineData,
-      diagnosticsData
+      diagnosticsData,
+      demographicData,
+      totalDemographicCount
     };
   }, [patients]);
 
@@ -477,7 +517,7 @@ function ClassicDashboard() {
               </div>
 
               {/* GRÁFICOS INSTITUCIONALES DEL PROGRESO DEL COLEGIO */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* Gráfico 1: Evolución Temporal */}
                 <div className={`p-6 rounded-3xl border ${
@@ -549,6 +589,66 @@ function ClassicDashboard() {
                         <Bar dataKey="Promedio" fill="#6366f1" radius={[8, 8, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Gráfico 3: Perfil Demográfico (Donut / Pie Chart) */}
+                <div className={`p-6 rounded-3xl border flex flex-col justify-between ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h4 className="text-sm font-black tracking-tight flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-purple-400" />
+                          <span>Perfil Demográfico</span>
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">Distribución de diagnósticos en el programa PIE</p>
+                      </div>
+                    </div>
+
+                    <div className="relative h-48 w-full flex items-center justify-center my-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={dashboardMetrics.demographicData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={52}
+                            outerRadius={72}
+                            paddingAngle={4}
+                            dataKey="value"
+                          >
+                            {dashboardMetrics.demographicData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                              borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              color: isDark ? '#ffffff' : '#000000'
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-2xl font-black text-slate-100">{dashboardMetrics.totalDemographicCount}</span>
+                        <span className="text-[9px] font-bold tracking-wider text-slate-500 uppercase">TOTAL</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Leyenda en cuadrícula de 2 columnas idéntica a la imagen de referencia */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 pt-3 border-t border-white/5 text-xs">
+                    {dashboardMetrics.demographicData.map((item, idx) => (
+                      <div key={`legend-${idx}`} className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-slate-300 font-medium truncate text-[11px]">{item.name}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
