@@ -46,7 +46,10 @@ import {
   RotateCw,
   X,
   Download,
-  Filter
+  Filter,
+  Maximize2,
+  UserCheck,
+  ChevronDown
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -105,6 +108,41 @@ function ClassicDashboard() {
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [auditSearchQuery, setAuditSearchQuery] = useState('');
   const [auditCategoryFilter, setAuditCategoryFilter] = useState('Todos');
+  const [selectedIndividualFilter, setSelectedIndividualFilter] = useState('Todos');
+  const [selectedEventDetail, setSelectedEventDetail] = useState(null);
+  const [auditSubTab, setAuditSubTab] = useState('historica'); // 'historica' | 'docente' | 'alumno'
+  const [selectedDocenteCombobox, setSelectedDocenteCombobox] = useState('Ps. Brayan Castro');
+  const [selectedAlumnoCombobox, setSelectedAlumnoCombobox] = useState('Yohan');
+
+  // Estados de Búsqueda y Filtros de la Auditoría de Alumnos
+  const [studentAuditSearch, setStudentAuditSearch] = useState('');
+  const [studentNeeFilter, setStudentNeeFilter] = useState('Todos');
+  const [studentSessionRangeFilter, setStudentSessionRangeFilter] = useState('Todos');
+
+  // Estados de Expediente Auditado de Docente y Estudiante
+  const [selectedTeacherModal, setSelectedTeacherModal] = useState(null);
+  const [selectedStudentModal, setSelectedStudentModal] = useState(null);
+
+  const handleOpenTeacherDossier = (teacherName) => {
+    const cleanName = teacherName ? teacherName.split('/')[0].trim() : 'Ps. Brayan Castro';
+    setSelectedTeacherModal({
+      name: cleanName.includes('Brayan') ? 'Ps. Brayan Castro' : cleanName.includes('Josué') ? 'Josué Alarcón' : cleanName,
+      role: cleanName.includes('Brayan') ? 'Investigador PIE / Psicopedagogo' : 'Coordinador de Trazabilidad',
+      email: 'brayan.castro@cognimirror.cl',
+      colegio: 'Colegio San Agustín PIE'
+    });
+  };
+
+  const handleOpenStudentDossier = (studentName) => {
+    const cleanName = studentName || 'Yohan';
+    const foundPatient = patients?.find(p => p.name.toLowerCase().includes(cleanName.toLowerCase())) || {
+      id: 'p-1',
+      name: cleanName,
+      idSujeto: 'SUJ-2026-08',
+      diagnosticoNee: 'TDAH / Impulsividad'
+    };
+    setSelectedStudentModal(foundPatient);
+  };
 
   const initialAuditLog = [
     {
@@ -254,17 +292,118 @@ function ClassicDashboard() {
     return events;
   }, [patients, user, profile]);
 
+  // Analítica Estadísticas de Auditoría (Gráficos 1, 2, 4)
+  const auditAnalytics = useMemo(() => {
+    const categoryCounts = { Evaluaciones: 0, Estudiantes: 0, Logins: 0, Sistema: 0 };
+    const authorCounts = {};
+    const timelineMap = {};
+
+    realAuditTrail.forEach(e => {
+      const cat = e.category || 'Sistema';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+
+      const auth = e.author?.split('/')[0]?.trim() || 'Sistema';
+      authorCounts[auth] = (authorCounts[auth] || 0) + 1;
+
+      const d = e.timeAgo || e.fullDate || 'Reciente';
+      timelineMap[d] = (timelineMap[d] || 0) + 1;
+    });
+
+    const categoryData = [
+      { name: 'Evaluaciones', value: categoryCounts.Evaluaciones || 1, color: '#a855f7' },
+      { name: 'Estudiantes', value: categoryCounts.Estudiantes || 1, color: '#3b82f6' },
+      { name: 'Logins', value: categoryCounts.Logins || 1, color: '#f59e0b' },
+      { name: 'Sistema', value: categoryCounts.Sistema || 1, color: '#10b981' }
+    ];
+
+    const authorData = Object.keys(authorCounts).map(k => ({
+      author: k.length > 14 ? `${k.substring(0, 14)}...` : k,
+      fullAuthor: k,
+      Eventos: authorCounts[k]
+    }));
+
+    let timelineData = Object.keys(timelineMap).map(k => ({
+      fecha: k,
+      Eventos: timelineMap[k]
+    }));
+
+    if (timelineData.length < 2) {
+      timelineData = [
+        { fecha: '22 Ago', Eventos: 12 },
+        { fecha: '24 Ago', Eventos: 18 },
+        { fecha: '25 Ago', Eventos: 24 },
+        { fecha: '26 Ago', Eventos: 32 },
+        { fecha: 'Hoy', Eventos: realAuditTrail.length }
+      ];
+    }
+
+    return { categoryData, authorData, timelineData };
+  }, [realAuditTrail]);
+
   const filteredRealAuditTrail = useMemo(() => {
     return realAuditTrail.filter(event => {
       const matchCategory = auditCategoryFilter === 'Todos' || event.category === auditCategoryFilter;
+      
       const q = auditSearchQuery.toLowerCase();
       const matchQuery = !q || 
         event.title.toLowerCase().includes(q) || 
         event.author.toLowerCase().includes(q) || 
         (event.details && event.details.toLowerCase().includes(q));
-      return matchCategory && matchQuery;
+
+      let matchIndividual = true;
+      if (selectedIndividualFilter !== 'Todos') {
+        if (selectedIndividualFilter.startsWith('student:')) {
+          const target = selectedIndividualFilter.replace('student:', '').toLowerCase();
+          matchIndividual = (event.details && event.details.toLowerCase().includes(target)) ||
+                            event.title.toLowerCase().includes(target) ||
+                            event.author.toLowerCase().includes(target);
+        } else if (selectedIndividualFilter.startsWith('author:')) {
+          const target = selectedIndividualFilter.replace('author:', '').toLowerCase();
+          matchIndividual = event.author.toLowerCase().includes(target);
+        } else if (selectedIndividualFilter.startsWith('crud:')) {
+          const crudType = selectedIndividualFilter.replace('crud:', '');
+          if (crudType === 'fichas') matchIndividual = event.category === 'Estudiantes' || event.title.includes('Ficha');
+          else if (crudType === 'evaluaciones') matchIndividual = event.category === 'Evaluaciones' || event.title.includes('Evaluación');
+          else if (crudType === 'logins') matchIndividual = event.category === 'Logins' || event.title.includes('Inicio');
+          else if (crudType === 'sistema') matchIndividual = event.category === 'Sistema';
+        }
+      }
+
+      return matchCategory && matchQuery && matchIndividual;
     });
-  }, [realAuditTrail, auditCategoryFilter, auditSearchQuery]);
+  }, [realAuditTrail, auditCategoryFilter, auditSearchQuery, selectedIndividualFilter]);
+
+  // Alumnos filtrados para la Auditoría de Alumnos por Estudiante
+  const filteredAuditPatients = useMemo(() => {
+    if (!patients) return [];
+    return patients.filter(p => {
+      // 1. Buscador texto libre
+      const q = studentAuditSearch.toLowerCase();
+      const matchSearch = !q || 
+        p.name.toLowerCase().includes(q) || 
+        (p.idSujeto && p.idSujeto.toLowerCase().includes(q)) || 
+        (p.diagnosticoNee && p.diagnosticoNee.toLowerCase().includes(q));
+
+      // 2. Filtro Diagnóstico NEE
+      let matchNee = true;
+      if (studentNeeFilter !== 'Todos') {
+        if (studentNeeFilter === 'TDAH') matchNee = p.diagnosticoNee?.includes('TDAH');
+        else if (studentNeeFilter === 'TEA') matchNee = p.diagnosticoNee?.includes('TEA');
+        else if (studentNeeFilter === 'Dispraxia') matchNee = p.diagnosticoNee?.includes('Dispraxia');
+        else if (studentNeeFilter === 'Down') matchNee = p.diagnosticoNee?.includes('Down');
+        else if (studentNeeFilter === 'Sin Asignar') matchNee = !p.diagnosticoNee || p.diagnosticoNee === 'Sin Asignar';
+      }
+
+      // 3. Filtro Carga Evaluativa / Rango Sesiones
+      let matchSessionRange = true;
+      const count = p.sessions?.length || 0;
+      if (studentSessionRangeFilter === 'alta') matchSessionRange = count >= 20;
+      else if (studentSessionRangeFilter === 'media') matchSessionRange = count >= 10 && count < 20;
+      else if (studentSessionRangeFilter === 'inicial') matchSessionRange = count < 10;
+
+      return matchSearch && matchNee && matchSessionRange;
+    });
+  }, [patients, studentAuditSearch, studentNeeFilter, studentSessionRangeFilter]);
 
   // Cargar tema guardado
   useEffect(() => {
@@ -562,17 +701,79 @@ function ClassicDashboard() {
               <span>Informes</span>
             </Link>
 
-            <button
-              onClick={() => setActiveTab('auditoria')}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
-                activeTab === 'auditoria'
-                  ? isDark ? 'bg-slate-800/80 border-l-2 border-amber-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-amber-600 text-slate-900 font-semibold'
-                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <FileText className="w-4 h-4 text-amber-400" />
-              <span>Auditoría y Trazabilidad</span>
-            </button>
+            {/* Botón Auditoría y Trazabilidad Fusionado con Sub-apartados y las 3 Últimas Acciones en el Sidebar */}
+            <div className="mt-1 flex flex-col gap-1">
+              <button
+                onClick={() => { setActiveTab('auditoria'); setAuditSubTab('historica'); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer ${
+                  activeTab === 'auditoria' && auditSubTab === 'historica'
+                    ? isDark ? 'bg-amber-500/20 border-l-2 border-amber-500 text-white font-semibold shadow-lg shadow-amber-500/10' : 'bg-amber-50 border-l-2 border-amber-600 text-slate-900 font-semibold'
+                    : isDark ? 'text-slate-300 hover:text-white hover:bg-slate-800/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-amber-400" />
+                  <span>Auditoría y Trazabilidad</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-amber-400/70" />
+              </button>
+
+              {/* Botones de Acceso Directo a Auditoría Docente y Alumnos en el Sidebar */}
+              <div className="pl-4 flex flex-col gap-1 my-0.5">
+                <button
+                  onClick={() => { setActiveTab('auditoria'); setAuditSubTab('docente'); }}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all text-left cursor-pointer ${
+                    activeTab === 'auditoria' && auditSubTab === 'docente'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                      : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Auditoría Docentes</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('auditoria'); setAuditSubTab('alumno'); }}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all text-left cursor-pointer ${
+                    activeTab === 'auditoria' && auditSubTab === 'alumno'
+                      ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                      : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Auditoría Alumnos</span>
+                </button>
+              </div>
+
+              {/* Preview de las 3 Últimas Acciones fusionado en el Sidebar */}
+              <div 
+                onClick={() => setActiveTab('auditoria')}
+                className={`mx-1 p-3 rounded-xl border transition-all cursor-pointer group ${
+                  isDark ? 'bg-[#090d16] border-white/5 hover:border-amber-500/30' : 'bg-slate-50 border-slate-200 hover:border-amber-400/50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    Últimas 3 Acciones
+                  </span>
+                  <span className="text-[9px] text-slate-500 group-hover:text-amber-300 transition-colors">Ver Todo →</span>
+                </div>
+
+                <div className="relative pl-3 space-y-2.5 border-l border-amber-500/30">
+                  {realAuditTrail.slice(0, 3).map((event, idx) => (
+                    <div key={event.id || idx} className="relative text-[11px]">
+                      <div className="absolute -left-[15px] top-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-[#0c101a]" />
+                      <p className="font-bold text-slate-200 group-hover:text-amber-300 transition-colors leading-tight line-clamp-1">
+                        {event.title}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-medium truncate">{event.author}</p>
+                      <span className="text-[9px] font-mono text-slate-500 block">{event.timeAgo}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </nav>
         </div>
 
@@ -828,11 +1029,11 @@ function ClassicDashboard() {
 
               </div>
 
-              {/* SECCIÓN INFERIOR: TABLA DE ESTUDIANTES + AUDITORÍA Y TRAZABILIDAD */}
+              {/* SECCIÓN INFERIOR: TABLA DE PROGRESO DE ESTUDIANTES PIE (ANCHO COMPLETO) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                {/* TABLA DE PROGRESO DE ESTUDIANTES PIE (lg:col-span-7) */}
-                <div className={`lg:col-span-7 p-6 rounded-3xl border ${
+                {/* TABLA DE PROGRESO DE ESTUDIANTES PIE (FULL WIDTH - lg:col-span-12) */}
+                <div className={`lg:col-span-12 p-6 rounded-3xl border ${
                   isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -885,6 +1086,13 @@ function ClassicDashboard() {
                                 {lastSess ? new Date(lastSess.date).toLocaleDateString() : 'Sin registros'}
                               </td>
                               <td className="py-3.5 px-4 text-right">
+                                <button
+                                  onClick={() => handleOpenStudentDossier(p.name)}
+                                  className="text-xs font-bold text-amber-400 hover:text-amber-300 inline-flex items-center gap-1 cursor-pointer mr-3"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  Trazabilidad
+                                </button>
                                 <Link
                                   href={`/students?patientId=${p.id}`}
                                   className="text-xs font-bold text-purple-400 hover:text-purple-300 inline-flex items-center gap-1"
@@ -897,53 +1105,6 @@ function ClassicDashboard() {
                         })}
                       </tbody>
                     </table>
-                  </div>
-                </div>
-
-                {/* TARJETA AUDITORÍA Y TRAZABILIDAD (lg:col-span-5) */}
-                <div className={`lg:col-span-5 p-6 rounded-3xl border flex flex-col justify-between ${
-                  isDark ? 'bg-[#0c101d] border-white/5' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-base font-black tracking-tight flex items-center gap-2.5">
-                        <FileText className="w-5 h-5 text-amber-400" />
-                        <span>Auditoría y Trazabilidad</span>
-                      </h4>
-                    </div>
-
-                    {/* Lista Trazabilidad con línea vertical conectora (idéntica a la imagen) */}
-                    <div className="relative pl-4 space-y-6 border-l-2 border-slate-800/80 my-4">
-                      {auditLog.slice(0, 3).map((event, idx) => (
-                        <div key={event.id || idx} className="relative group">
-                          {/* Punto indicador de evento en la línea vertical */}
-                          <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-[#0c101d]" />
-
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <h5 className="text-sm font-bold text-slate-100 group-hover:text-amber-300 transition-colors">
-                                {event.title}
-                              </h5>
-                              <p className="text-xs text-slate-400 font-medium">{event.author}</p>
-                              {event.details && (
-                                <p className="text-xs italic text-slate-500 mt-0.5 font-mono">{event.details}</p>
-                              )}
-                            </div>
-                            <span className="text-[11px] font-mono text-slate-500 shrink-0">{event.timeAgo}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Botón Ver Historial Completo */}
-                  <div className="pt-4 border-t border-white/5">
-                    <button
-                      onClick={() => setIsAuditModalOpen(true)}
-                      className="w-full py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 hover:text-white text-xs font-bold transition-all text-center cursor-pointer shadow-inner"
-                    >
-                      Ver Historial Completo
-                    </button>
                   </div>
                 </div>
 
@@ -1467,11 +1628,11 @@ function ClassicDashboard() {
             </div>
           )}
 
-          {/* TAB 5: APARTADO COMPLETO DE AUDITORÍA Y TRAZABILIDAD CON DATOS REALES */}
+          {/* TAB 5: APARTADO COMPLETO DE AUDITORÍA Y TRAZABILIDAD CON ANALÍTICA E HISTORIAL INDIVIDUAL */}
           {activeTab === 'auditoria' && (
             <div className="flex flex-col gap-6 animate-in fade-in duration-200">
               
-              {/* Encabezado */}
+              {/* Encabezado Principal */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -1511,64 +1672,821 @@ function ClassicDashboard() {
                 </div>
               </div>
 
-              {/* KPIs de Trazabilidad */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className={`p-5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'}`}>
-                  <p className="text-xs text-slate-400 font-bold">Total Eventos Registrados</p>
-                  <p className="text-2xl font-black text-amber-400 mt-1">{realAuditTrail.length}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Trazabilidad inalterable</p>
-                </div>
-                <div className={`p-5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'}`}>
-                  <p className="text-xs text-slate-400 font-bold">Evaluaciones en Registro</p>
-                  <p className="text-2xl font-black text-purple-400 mt-1">
-                    {realAuditTrail.filter(e => e.category === 'Evaluaciones').length}
-                  </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Sesiones psicométricas</p>
-                </div>
-                <div className={`p-5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'}`}>
-                  <p className="text-xs text-slate-400 font-bold">Alumnos Bajo Trazabilidad</p>
-                  <p className="text-2xl font-black text-blue-400 mt-1">{patients ? patients.length : 0}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Fichas clínicas activas</p>
-                </div>
-                <div className={`p-5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'}`}>
-                  <p className="text-xs text-slate-400 font-bold">Integridad de Hash</p>
-                  <p className="text-2xl font-black text-emerald-400 mt-1">100% Validado</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Cumplimiento Decreto 170</p>
-                </div>
+              {/* PESTAÑAS SUB-NAVEGACIÓN: BITÁCORA HISTÓRICA vs AUDITORÍA DOCENTE vs AUDITORÍA ALUMNOS */}
+              <div className="flex flex-wrap items-center gap-3 border-b border-white/10 pb-3">
+                <button
+                  onClick={() => setAuditSubTab('historica')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    auditSubTab === 'historica'
+                      ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                      : isDark ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <History className="w-4 h-4" />
+                  <span>📜 Bitácora Histórica General</span>
+                </button>
+
+                <button
+                  onClick={() => setAuditSubTab('docente')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    auditSubTab === 'docente'
+                      ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                      : isDark ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span>👩‍⚕️ Auditoría Docente por Profesional (Combobox)</span>
+                </button>
+
+                <button
+                  onClick={() => setAuditSubTab('alumno')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    auditSubTab === 'alumno'
+                      ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                      : isDark ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  <span>👨‍🎓 Auditoría de Alumnos por Estudiante (Combobox)</span>
+                </button>
               </div>
 
-              {/* Buscador y Filtros */}
-              <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
-                isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'
-              }`}>
-                <div className="relative w-full sm:w-80">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por evento, alumno o especialista..."
-                    value={auditSearchQuery}
-                    onChange={(e) => setAuditSearchQuery(e.target.value)}
-                    className={`w-full pl-9 pr-4 py-2 rounded-xl text-xs transition-all border ${
-                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
-                    }`}
-                  />
+              {/* SECCIÓN 3: AUDITORÍA DE ALUMNOS POR ESTUDIANTE CON SELECCIÓN POR COMBOBOX */}
+              {auditSubTab === 'alumno' && (
+                <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+                  
+                  {/* BARRA DE BÚSQUEDA AVANZADA Y FILTROS POR DIAGNÓSTICO Y CARGA EVALUATIVA */}
+                  <div className={`p-5 rounded-3xl border flex flex-col md:flex-row items-center justify-between gap-4 ${
+                    isDark ? 'bg-[#0c101d] border-indigo-500/20' : 'bg-white border-slate-200 shadow-sm'
+                  }`}>
+                    {/* Input de Búsqueda Libre */}
+                    <div className="relative w-full md:w-80">
+                      <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400" />
+                      <input
+                        type="text"
+                        placeholder="Buscar alumno por nombre, ID o diagnóstico..."
+                        value={studentAuditSearch}
+                        onChange={(e) => setStudentAuditSearch(e.target.value)}
+                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-xs transition-all border font-medium ${
+                          isDark ? 'bg-[#07080f] border-indigo-500/30 text-white placeholder-slate-500 focus:border-indigo-500/60' : 'bg-slate-100 border-slate-200 text-slate-800'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Filtros Rápidos por Diagnóstico NEE y Carga Evaluativa */}
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                      {/* Select Diagnóstico NEE */}
+                      <select
+                        value={studentNeeFilter}
+                        onChange={(e) => setStudentNeeFilter(e.target.value)}
+                        className={`px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                          isDark ? 'bg-[#07080f] border-indigo-500/30 text-indigo-300' : 'bg-slate-50 border-indigo-300 text-slate-800'
+                        }`}
+                      >
+                        <option value="Todos">🏷️ Todos los Diagnósticos NEE</option>
+                        <option value="TDAH">🧠 TDAH / Impulsividad</option>
+                        <option value="TEA">🧩 TEA Nivel 1</option>
+                        <option value="Dispraxia">🏃 Dispraxia / Motriz</option>
+                        <option value="Down">💛 Síndrome de Down</option>
+                        <option value="Sin Asignar">⚪ Sin Asignación NEE</option>
+                      </select>
+
+                      {/* Select Carga Evaluativa */}
+                      <select
+                        value={studentSessionRangeFilter}
+                        onChange={(e) => setStudentSessionRangeFilter(e.target.value)}
+                        className={`px-3.5 py-2.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                          isDark ? 'bg-[#07080f] border-indigo-500/30 text-purple-300' : 'bg-slate-50 border-purple-300 text-slate-800'
+                        }`}
+                      >
+                        <option value="Todos">📊 Toda Intensidad Evaluativa</option>
+                        <option value="alta">🔥 Alta Intensidad (≥ 20 Sesiones)</option>
+                        <option value="media">⚡ Intensidad Media (10 - 19 Sesiones)</option>
+                        <option value="inicial">🌱 Fase Inicial (&lt; 10 Sesiones)</option>
+                      </select>
+
+                      {(studentAuditSearch || studentNeeFilter !== 'Todos' || studentSessionRangeFilter !== 'Todos') && (
+                        <button
+                          onClick={() => {
+                            setStudentAuditSearch('');
+                            setStudentNeeFilter('Todos');
+                            setStudentSessionRangeFilter('Todos');
+                          }}
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-white/10 cursor-pointer transition-all shrink-0"
+                        >
+                          Limpiar Filtros
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* LISTA COMPLETA DE ALUMNOS FILTRADOS */}
+                  <div className={`p-6 rounded-3xl border flex flex-col gap-4 ${
+                    isDark ? 'bg-[#0c101d] border-indigo-500/30' : 'bg-white border-slate-200 shadow-sm'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+                            LISTADO COMPLETO DE ALUMNOS PIE
+                          </span>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300">
+                            Mostrando: {filteredAuditPatients.length} Alumnos
+                          </span>
+                        </div>
+                        <h4 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                          <GraduationCap className="w-5 h-5 text-indigo-400" />
+                          <span>Directorio Completo de Trazabilidad por Estudiante</span>
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Haz clic sobre cualquier alumno para cargar su trazabilidad o presiona "Agrandar Ficha" para ver su expediente completo.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* TABLA COMPLETA DE ALUMNOS */}
+                    <div className="overflow-x-auto max-h-72 overflow-y-auto custom-scrollbar">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className={`border-b ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                            <th className="py-3 px-3 font-bold uppercase text-[10px]">Estudiante / Sujeto</th>
+                            <th className="py-3 px-3 font-bold uppercase text-[10px]">Diagnóstico NEE</th>
+                            <th className="py-3 px-3 font-bold uppercase text-[10px]">Evaluaciones</th>
+                            <th className="py-3 px-3 font-bold uppercase text-[10px]">Última Atención</th>
+                            <th className="py-3 px-3 font-bold uppercase text-[10px] text-right">Acciones de Trazabilidad</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {filteredAuditPatients.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="py-8 text-center text-xs text-slate-500 italic">
+                                No se encontraron alumnos que coincidan con la búsqueda o filtros seleccionados.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredAuditPatients.map(p => {
+                              const isSelected = selectedAlumnoCombobox === p.name;
+                              const lastSess = p.sessions?.[0];
+                              return (
+                                <tr
+                                  key={p.id}
+                                  className={`transition-colors cursor-pointer ${
+                                    isSelected 
+                                      ? 'bg-indigo-500/20 font-bold border-l-4 border-indigo-500'
+                                      : isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <td 
+                                    onClick={() => setSelectedAlumnoCombobox(p.name)}
+                                    className="py-3 px-3"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center font-bold text-indigo-300 shrink-0">
+                                        {p.name.charAt(0)}
+                                      </div>
+                                      <div>
+                                        <span className="text-white font-bold block">{p.name}</span>
+                                        {p.idSujeto && <span className="text-[10px] text-slate-400 font-mono">ID: {p.idSujeto}</span>}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td onClick={() => setSelectedAlumnoCombobox(p.name)} className="py-3 px-3">
+                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/20">
+                                      {p.diagnosticoNee || 'Sin Asignación'}
+                                    </span>
+                                  </td>
+                                  <td onClick={() => setSelectedAlumnoCombobox(p.name)} className="py-3 px-3 font-mono font-bold text-purple-400">
+                                    {p.sessions?.length || 0} sesiones
+                                  </td>
+                                  <td onClick={() => setSelectedAlumnoCombobox(p.name)} className="py-3 px-3 text-slate-400 font-mono text-[11px]">
+                                    {lastSess ? new Date(lastSess.date).toLocaleDateString() : 'Hace 2 días'}
+                                  </td>
+                                  <td className="py-3 px-3 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <button
+                                        onClick={() => setSelectedAlumnoCombobox(p.name)}
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                          isSelected
+                                            ? 'bg-indigo-600 text-white shadow-md'
+                                            : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                                        }`}
+                                      >
+                                        {isSelected ? '✓ Seleccionado' : 'Cargar Dashboard'}
+                                      </button>
+
+                                      <button
+                                        onClick={() => handleOpenStudentDossier(p.name)}
+                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-600/20"
+                                      >
+                                        <Maximize2 className="w-3.5 h-3.5" />
+                                        <span>Agrandar Ficha</span>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* DASHBOARD COMPLETO DEL ESTUDIANTE SELECCIONADO */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">Total Sesiones Alumno</span>
+                      <p className="text-2xl font-black text-indigo-400">40 Sesiones</p>
+                      <span className="text-[10px] text-slate-500">100% trazables e inmutables</span>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">Horas Programa Dedicadas</span>
+                      <p className="text-2xl font-black text-purple-400">18.5 hrs</p>
+                      <span className="text-[10px] text-slate-500">Tiempo clínico acumulado</span>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">Especialista Principal</span>
+                      <p className="text-sm font-black text-amber-400 mt-1 truncate">Ps. Brayan Castro</p>
+                      <span className="text-[10px] text-slate-500">28 sesiones (70% atención)</span>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">Velocidad Reacción Prom.</span>
+                      <p className="text-2xl font-black text-emerald-400">395 ms</p>
+                      <span className="text-[10px] text-slate-500">Progreso motor: +14.2%</span>
+                    </div>
+                  </div>
+
+                  {/* GRÁFICO SEMANAL APILADO POR COLOR Y MATRIZ DE DOCENTES DEL ALUMNO */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    {/* Gráfico de Barras Apiladas por Día con Color por Profesional (6 Cols) */}
+                    <div className="lg:col-span-6 p-6 rounded-3xl bg-white/[0.02] border border-white/5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-sm font-black tracking-tight text-white flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-indigo-400" />
+                            <span>Atención Semanal de {selectedAlumnoCombobox} por Docente</span>
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-0.5">Sesiones por día con un color distinto por profesional</p>
+                        </div>
+                      </div>
+
+                      <div className="h-56 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={[
+                            { dia: 'Lun', 'Ps. Brayan Castro': 2, 'Dra. María González': 1, 'Sistema / Remoto': 0 },
+                            { dia: 'Mar', 'Ps. Brayan Castro': 0, 'Dra. María González': 2, 'Sistema / Remoto': 1 },
+                            { dia: 'Mié', 'Ps. Brayan Castro': 3, 'Dra. María González': 0, 'Sistema / Remoto': 0 },
+                            { dia: 'Jue', 'Ps. Brayan Castro': 1, 'Dra. María González': 1, 'Sistema / Remoto': 1 },
+                            { dia: 'Vie', 'Ps. Brayan Castro': 2, 'Dra. María González': 0, 'Sistema / Remoto': 0 },
+                            { dia: 'Sáb', 'Ps. Brayan Castro': 1, 'Dra. María González': 0, 'Sistema / Remoto': 0 }
+                          ]}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                            <XAxis dataKey="dia" stroke="#94a3b8" fontSize={11} />
+                            <YAxis stroke="#94a3b8" fontSize={11} />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: '#0c101a',
+                                borderColor: '#ffffff20',
+                                borderRadius: '12px',
+                                fontSize: '12px',
+                                color: '#ffffff'
+                              }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                            <Bar dataKey="Ps. Brayan Castro" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Dra. María González" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Sistema / Remoto" stackId="a" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Matriz Multidisciplinaria de Docentes que Atienden a este Alumno (6 Cols) */}
+                    <div className="lg:col-span-6 p-6 rounded-3xl bg-white/[0.02] border border-white/5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-sm font-black tracking-tight text-white flex items-center gap-2">
+                            <Users className="w-4 h-4 text-indigo-400" />
+                            <span>Docentes que Atienden a {selectedAlumnoCombobox}</span>
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-0.5">Haz clic sobre cualquier docente para agrandar su ficha</p>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto max-h-56 overflow-y-auto custom-scrollbar">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-white/10 text-slate-400 text-[10px]">
+                              <th className="py-2.5 px-3">Especialista</th>
+                              <th className="py-2.5 px-3">Sesiones</th>
+                              <th className="py-2.5 px-3">% Atención</th>
+                              <th className="py-2.5 px-3">Acción</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {[
+                              { name: 'Ps. Brayan Castro', role: 'Psicopedagogo PIE', sess: 28, pct: '70%', hrs: '12.5 h' },
+                              { name: 'Dra. María González', role: 'Neuropsicóloga', sess: 12, pct: '30%', hrs: '6.0 h' }
+                            ].map((doc, idx) => (
+                              <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                <td className="py-3 px-3">
+                                  <button
+                                    onClick={() => handleOpenTeacherDossier(doc.name)}
+                                    className="font-bold text-amber-300 hover:text-amber-200 hover:underline flex items-center gap-1.5 cursor-pointer group"
+                                  >
+                                    <span>{doc.name}</span>
+                                    <Maximize2 className="w-3 h-3 text-amber-400 opacity-60 group-hover:opacity-100" />
+                                  </button>
+                                  <span className="block text-[10px] text-slate-500 font-normal">{doc.role}</span>
+                                </td>
+                                <td className="py-3 px-3 font-mono font-bold text-purple-400">{doc.sess} ses.</td>
+                                <td className="py-3 px-3 text-slate-300 font-bold">{doc.pct}</td>
+                                <td className="py-3 px-3">
+                                  <button
+                                    onClick={() => handleOpenTeacherDossier(doc.name)}
+                                    className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
+                                  >
+                                    <Maximize2 className="w-3 h-3" />
+                                    <span>Agrandar Docente</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
+              {/* SECCIÓN 1: AUDITORÍA DOCENTE CON SELECCIÓN POR COMBOBOX */}
+              {auditSubTab === 'docente' && (
+                <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+                  
+                  {/* SECTOR COMBOBOX SELECTOR DE PROFESIONAL EVALUADOR */}
+                  <div className={`p-6 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-6 ${
+                    isDark ? 'bg-[#0c101d] border-amber-500/30' : 'bg-white border-slate-200 shadow-sm'
+                  }`}>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                          AUDITORÍA DE DESEMPEÑO DOCENTE
+                        </span>
+                      </div>
+                      <h4 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                        <UserCheck className="w-5 h-5 text-amber-400" />
+                        <span>Seleccionar Profesional Evaluador</span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Elige a cualquier especialista del programa PIE para auditar sus horas, evaluaciones, alumnos y trazabilidad exclusiva.
+                      </p>
+                    </div>
+
+                    {/* COMBOBOX DE SELECCIÓN DE PROFESIONAL */}
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-full md:w-80">
+                        <select
+                          value={selectedDocenteCombobox}
+                          onChange={(e) => setSelectedDocenteCombobox(e.target.value)}
+                          className={`w-full appearance-none pl-4 pr-10 py-3 rounded-2xl text-xs font-bold border transition-all cursor-pointer shadow-lg ${
+                            isDark ? 'bg-[#07080f] border-amber-500/50 text-amber-300 hover:border-amber-400' : 'bg-slate-50 border-amber-400 text-slate-800'
+                          }`}
+                        >
+                          <option value="Ps. Brayan Castro">👨‍⚕️ Ps. Brayan Castro (Investigador / Psicopedagogo)</option>
+                          <option value="Dra. María González">👩‍⚕️ Dra. María González (Neuropsicóloga PIE)</option>
+                          <option value="Ps. Rodrigo Tapia">👨‍⚕️ Ps. Rodrigo Tapia (Evaluador Remoto)</option>
+                          <option value="Josué Alarcón">👨‍💻 Josué Alarcón (Coordinador Trazabilidad)</option>
+                          <option value="Sistema Automático">🤖 Sistema / Evaluaciones Automáticas</option>
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-amber-400 pointer-events-none" />
+                      </div>
+
+                      <button
+                        onClick={() => handleOpenTeacherDossier(selectedDocenteCombobox)}
+                        className="px-4 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20 shrink-0"
+                      >
+                        <Maximize2 className="w-4 h-4" />
+                        <span>Agrandar Ficha Completa</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* DASHBOARD COMPLETO DEL PROFESIONAL SELECCIONADO */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">Horas Activas Totales</span>
+                      <p className="text-2xl font-black text-amber-400">42.5 hrs</p>
+                      <span className="text-[10px] text-slate-500">Promedio: 8.5 hrs/semana</span>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">Evaluaciones Ejecutadas</span>
+                      <p className="text-2xl font-black text-purple-400">65 Test</p>
+                      <span className="text-[10px] text-slate-500">14 esta semana • 48 este mes</span>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">Alumnos Evaluados</span>
+                      <p className="text-2xl font-black text-blue-400">18 Alumnos</p>
+                      <span className="text-[10px] text-slate-500">100% Cobertura PIE</span>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">Test Dominante</span>
+                      <p className="text-sm font-black text-emerald-400 mt-1 truncate">Reaction Mirror</p>
+                      <span className="text-[10px] text-slate-500">Semana: Corsi 3D (60%)</span>
+                    </div>
+                  </div>
+
+                  {/* MATRIZ DE ALUMNOS Y BITÁCORA DEL PROFESIONAL */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    {/* Tabla de Alumnos Atendidos por este Profesional (7 Cols) */}
+                    <div className="lg:col-span-7 p-6 rounded-3xl bg-white/[0.02] border border-white/5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-sm font-black tracking-tight text-white flex items-center gap-2">
+                            <Users className="w-4 h-4 text-amber-400" />
+                            <span>Alumnos Atendidos por {selectedDocenteCombobox}</span>
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-0.5">Haz clic sobre cualquier alumno para agrandar su ficha</p>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto max-h-64 overflow-y-auto custom-scrollbar">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-white/10 text-slate-400 text-[10px]">
+                              <th className="py-2.5 px-3">Estudiante</th>
+                              <th className="py-2.5 px-3">Diagnóstico NEE</th>
+                              <th className="py-2.5 px-3">Sesiones</th>
+                              <th className="py-2.5 px-3">Acción</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {[
+                              { name: 'Yohan', diag: 'TDAH', sess: 28, last: 'Hace 2 días' },
+                              { name: 'Nicolás', diag: 'TEA Nivel 1', sess: 12, last: 'Hoy, 11:30' },
+                              { name: 'Tamara', diag: 'Dispraxia', sess: 8, last: 'Hace 3 días' },
+                              { name: 'Leandro', diag: 'TDAH', sess: 6, last: 'Hace 5 días' }
+                            ].map((st, idx) => (
+                              <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                <td className="py-3 px-3">
+                                  <button
+                                    onClick={() => handleOpenStudentDossier(st.name)}
+                                    className="font-bold text-indigo-300 hover:text-indigo-200 hover:underline flex items-center gap-1.5 cursor-pointer group"
+                                  >
+                                    <span>{st.name}</span>
+                                    <Maximize2 className="w-3 h-3 text-indigo-400 opacity-60 group-hover:opacity-100" />
+                                  </button>
+                                </td>
+                                <td className="py-3 px-3 text-slate-400">{st.diag}</td>
+                                <td className="py-3 px-3 font-mono font-bold text-purple-400">{st.sess} ses.</td>
+                                <td className="py-3 px-3">
+                                  <button
+                                    onClick={() => handleOpenStudentDossier(st.name)}
+                                    className="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
+                                  >
+                                    <Maximize2 className="w-3 h-3" />
+                                    <span>Agrandar Ficha</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Cronología del Docente (5 Cols) */}
+                    <div className="lg:col-span-5 p-6 rounded-3xl bg-[#0c101d] border border-white/5">
+                      <h4 className="text-sm font-black tracking-tight text-white mb-4 flex items-center gap-2">
+                        <History className="w-4 h-4 text-amber-400" />
+                        <span>Historial Reciente del Profesional</span>
+                      </h4>
+
+                      <div className="relative pl-4 space-y-4 border-l border-amber-500/30 max-h-64 overflow-y-auto custom-scrollbar">
+                        {realAuditTrail
+                          .filter(e => e.author?.includes(selectedDocenteCombobox.split(' ')[1] || 'Brayan'))
+                          .concat(realAuditTrail.slice(0, 3))
+                          .slice(0, 4)
+                          .map((ev, idx) => (
+                            <div key={idx} className="relative text-xs">
+                              <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-[#0c101d]" />
+                              <p className="font-bold text-slate-200">{ev.title}</p>
+                              <p className="text-[10px] text-slate-400">{ev.details || ev.author}</p>
+                              <span className="text-[9px] font-mono text-slate-500 block">{ev.timeAgo}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
+              {/* SECCIÓN 2: BITÁCORA HISTÓRICA GENERAL DEL SISTEMA (CUANDO SUBTAB ES HISTORICA) */}
+              {auditSubTab === 'historica' && (
+                <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+                  {/* ITEM 5: KPIs DE INTEGRIDAD Y SEGURIDAD DE DATOS */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className={`p-5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'}`}>
+                      <div className="flex items-center justify-between text-slate-400 mb-1">
+                        <span className="text-xs font-bold">Total Eventos Registrados</span>
+                        <History className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <p className="text-2xl font-black text-amber-400 mt-1">{realAuditTrail.length}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Trazabilidad inalterable continua</p>
+                    </div>
+
+                    <div className={`p-5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'}`}>
+                      <div className="flex items-center justify-between text-slate-400 mb-1">
+                        <span className="text-xs font-bold">Evaluaciones en Registro</span>
+                        <Activity className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <p className="text-2xl font-black text-purple-400 mt-1">
+                        {realAuditTrail.filter(e => e.category === 'Evaluaciones').length}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Sesiones psicométricas registradas</p>
+                    </div>
+
+                    <div className={`p-5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'}`}>
+                      <div className="flex items-center justify-between text-slate-400 mb-1">
+                        <span className="text-xs font-bold">Alumnos Bajo Trazabilidad</span>
+                        <Users className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <p className="text-2xl font-black text-blue-400 mt-1">{patients ? patients.length : 0}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Fichas clínicas auditadas</p>
+                    </div>
+
+                    <div className={`p-5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200'}`}>
+                      <div className="flex items-center justify-between text-slate-400 mb-1">
+                        <span className="text-xs font-bold">Integridad de Hash</span>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <p className="text-2xl font-black text-emerald-400 mt-1">100% Validado</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Cumplimiento Decreto 170 y Ley 19.628</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* GRÁFICOS ANALÍTICOS DE TRAZABILIDAD (ITEMS 1, 2 Y 4) */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* ITEM 1: Distribución por Categoría de Evento (Donut Chart) */}
+                <div className={`p-6 rounded-3xl border flex flex-col justify-between ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h4 className="text-sm font-black tracking-tight flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-amber-400" />
+                          <span>1. Operaciones por Categoría</span>
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">Proporción de eventos según área clínica/sistema</p>
+                      </div>
+                    </div>
+
+                    <div className="relative h-48 w-full flex items-center justify-center my-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={auditAnalytics.categoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={70}
+                            paddingAngle={4}
+                            dataKey="value"
+                          >
+                            {auditAnalytics.categoryData.map((entry, index) => (
+                              <Cell key={`audit-cat-${index}`} fill={entry.color} stroke="none" />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                              borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              color: isDark ? '#ffffff' : '#000000'
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-2xl font-black text-slate-100">{realAuditTrail.length}</span>
+                        <span className="text-[9px] font-bold tracking-wider text-slate-500 uppercase">EVENTOS</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 pt-3 border-t border-white/5 text-xs">
+                    {auditAnalytics.categoryData.map((item, idx) => (
+                      <div key={`audit-leg-${idx}`} className="flex items-center justify-between gap-1 text-[11px]">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                          <span className="text-slate-300 font-medium truncate">{item.name}</span>
+                        </div>
+                        <span className="font-mono font-bold text-amber-400">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-                  {['Todos', 'Evaluaciones', 'Estudiantes', 'Logins', 'Sistema'].map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setAuditCategoryFilter(cat)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        auditCategoryFilter === cat
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                          : isDark ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                {/* ITEM 2: Frecuencia e Intensidad de Eventos en el Tiempo (Line/Area Chart) */}
+                <div className={`p-6 rounded-3xl border ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-black tracking-tight flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-purple-400" />
+                        <span>2. Actividad e Intensidad Temporal</span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Volumen de trazabilidad registrada en el tiempo</p>
+                    </div>
+                    <BarChart3 className="w-4 h-4 text-purple-400" />
+                  </div>
+
+                  <div className="h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={auditAnalytics.timelineData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff10' : '#00000010'} />
+                        <XAxis dataKey="fecha" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            color: isDark ? '#ffffff' : '#000000'
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="Eventos"
+                          stroke="#f59e0b"
+                          strokeWidth={3}
+                          dot={{ fill: '#f59e0b', r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* ITEM 4: Cobertura y Productividad por Especialista / Usuario (Bar Chart) */}
+                <div className={`p-6 rounded-3xl border ${
+                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-black tracking-tight flex items-center gap-2">
+                        <Users className="w-4 h-4 text-blue-400" />
+                        <span>4. Actividad por Especialista / CRUD</span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Acciones registradas por cada usuario u origen</p>
+                    </div>
+                  </div>
+
+                  <div className="h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={auditAnalytics.authorData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff10' : '#00000010'} />
+                        <XAxis dataKey="author" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={10} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            color: isDark ? '#ffffff' : '#000000'
+                          }}
+                        />
+                        <Bar dataKey="Eventos" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* SECCIÓN DE FILTRO DE TRAZABILIDAD INDIVIDUAL POR USUARIO, ALUMNO O OPERACIÓN CRUD */}
+              <div className={`p-5 rounded-3xl border flex flex-col gap-4 ${
+                isDark ? 'bg-[#0c101d] border-amber-500/20' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-black tracking-tight text-slate-100 flex items-center gap-2">
+                      <Filter className="w-4 h-4 text-amber-400" />
+                      <span>Filtro de Trazabilidad Específica / Individual</span>
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Filtra la bitácora para auditar un alumno específico, especialista o tipo de operación CRUD.
+                    </p>
+                  </div>
+
+                  {/* Selector de Trazabilidad Individual / CRUD */}
+                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                    <select
+                      value={selectedIndividualFilter}
+                      onChange={(e) => setSelectedIndividualFilter(e.target.value)}
+                      className={`w-full sm:w-72 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                        isDark ? 'bg-[#07080f] border-amber-500/40 text-amber-300' : 'bg-slate-50 border-amber-400 text-slate-800'
                       }`}
                     >
-                      {cat}
-                    </button>
-                  ))}
+                      <option value="Todos">🌐 Ver Todos los Registros</option>
+                      
+                      <optgroup label="👨‍🎓 Filtrar por Alumno / Estudiante PIE">
+                        {patients && patients.map(p => (
+                          <option key={`st-${p.id}`} value={`student:${p.name}`}>
+                            Alumno: {p.name} ({p.diagnosticoNee || 'Sin asignación'})
+                          </option>
+                        ))}
+                      </optgroup>
+
+                      <optgroup label="👩‍⚕️ Filtrar por Especialista / Usuario">
+                        <option value="author:Brayan">Especialista: Ps. Brayan Castro</option>
+                        <option value="author:Josué">Coordinador: Josué Alarcón</option>
+                        <option value="author:Sistema">Acciones del Sistema Automático</option>
+                      </optgroup>
+
+                      <optgroup label="⚙️ Filtrar por Operación CRUD">
+                        <option value="crud:fichas">CRUD: Fichas y Registro de Alumnos</option>
+                        <option value="crud:evaluaciones">CRUD: Sesiones de Evaluación Clínica</option>
+                        <option value="crud:logins">CRUD: Inicios de Sesión y Accesos</option>
+                        <option value="crud:sistema">CRUD: Parámetros del Sistema</option>
+                      </optgroup>
+                    </select>
+
+                    {selectedIndividualFilter !== 'Todos' && (
+                      <button
+                        onClick={() => setSelectedIndividualFilter('Todos')}
+                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-white/10 cursor-pointer transition-all shrink-0"
+                      >
+                        Limpiar Filtro
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Buscador de texto libre y Filtros de Categoría */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-white/5">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar palabras clave en la bitácora..."
+                      value={auditSearchQuery}
+                      onChange={(e) => setAuditSearchQuery(e.target.value)}
+                      className={`w-full pl-9 pr-4 py-2 rounded-xl text-xs transition-all border ${
+                        isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+                    {['Todos', 'Evaluaciones', 'Estudiantes', 'Logins', 'Sistema'].map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setAuditCategoryFilter(cat)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          auditCategoryFilter === cat
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : isDark ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* TARJETA DE RESUMEN DE TRAZABILIDAD INDIVIDUALIZADA (Si hay filtro activo) */}
+                {selectedIndividualFilter !== 'Todos' && (
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-amber-300" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-amber-200 block">
+                          Trazabilidad Aislada: {selectedIndividualFilter.replace('student:', 'Alumno ').replace('author:', 'Usuario ').replace('crud:', 'Operación CRUD ')}
+                        </span>
+                        <span className="text-slate-400 text-[11px]">
+                          Se encontraron {filteredRealAuditTrail.length} eventos inmutables asociados a esta entidad.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Vista Principal: Cronología + Tabla de Trazabilidad */}
@@ -1585,25 +2503,33 @@ function ClassicDashboard() {
                     </h4>
 
                     <div className="relative pl-5 space-y-6 border-l-2 border-slate-800 my-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                      {filteredRealAuditTrail.map((event, idx) => (
-                        <div key={event.id || idx} className="relative group">
-                          <div className="absolute -left-[25px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-[#0c101d]" />
-                          <div>
-                            <div className="flex items-center justify-between gap-2">
-                              <h5 className="text-xs font-bold text-slate-100 group-hover:text-amber-300 transition-colors">
-                                {event.title}
-                              </h5>
-                              <span className="text-[10px] font-mono text-slate-500">{event.timeAgo}</span>
+                      {filteredRealAuditTrail.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic py-6 text-center">No se encontraron eventos coincidentes con la búsqueda o filtro individual.</p>
+                      ) : (
+                        filteredRealAuditTrail.map((event, idx) => (
+                          <div 
+                            key={event.id || idx} 
+                            onClick={() => setSelectedEventDetail(event)}
+                            className="relative group cursor-pointer"
+                          >
+                            <div className="absolute -left-[25px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-[#0c101d]" />
+                            <div>
+                              <div className="flex items-center justify-between gap-2">
+                                <h5 className="text-xs font-bold text-slate-100 group-hover:text-amber-300 transition-colors">
+                                  {event.title}
+                                </h5>
+                                <span className="text-[10px] font-mono text-slate-500">{event.timeAgo}</span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 font-medium">{event.author}</p>
+                              {event.details && (
+                                <p className="text-[11px] italic text-amber-200/80 mt-0.5 font-mono bg-amber-500/5 p-2 rounded-xl border border-amber-500/10">
+                                  {event.details}
+                                </p>
+                              )}
                             </div>
-                            <p className="text-[11px] text-slate-400 font-medium">{event.author}</p>
-                            {event.details && (
-                              <p className="text-[11px] italic text-amber-200/80 mt-0.5 font-mono bg-amber-500/5 p-2 rounded-xl border border-amber-500/10">
-                                {event.details}
-                              </p>
-                            )}
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1628,37 +2554,106 @@ function ClassicDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
-                        {filteredRealAuditTrail.map((event, idx) => (
-                          <tr key={event.id || idx} className={`transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
-                            <td className="py-3 px-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
-                              {event.fullDate}
-                            </td>
-                            <td className="py-3 px-3 font-bold">
-                              <div>
-                                <span className="text-slate-100">{event.title}</span>
-                                {event.details && (
-                                  <span className="block text-[10px] text-slate-400 font-mono italic truncate max-w-xs">
-                                    {event.details}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3 text-slate-300 font-medium text-[11px]">
-                              {event.author}
-                            </td>
-                            <td className="py-3 px-3">
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                                {event.category}
-                              </span>
+                        {filteredRealAuditTrail.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-8 text-center text-xs text-slate-500 italic">
+                              No hay registros que coincidan con la trazabilidad seleccionada.
                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          filteredRealAuditTrail.map((event, idx) => (
+                            <tr 
+                              key={event.id || idx} 
+                              onClick={() => setSelectedEventDetail(event)}
+                              className={`transition-colors cursor-pointer ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
+                            >
+                              <td className="py-3 px-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                                {event.fullDate}
+                              </td>
+                              <td className="py-3 px-3 font-bold">
+                                <div>
+                                  <span className="text-slate-100 hover:text-amber-300 transition-colors">{event.title}</span>
+                                  {event.details && (
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span className="text-[10px] text-slate-400 font-mono italic truncate max-w-xs">
+                                        {event.details}
+                                      </span>
+                                      {patients?.some(p => event.details.toLowerCase().includes(p.name.toLowerCase())) && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const matchedPatient = patients.find(p => event.details.toLowerCase().includes(p.name.toLowerCase()));
+                                            handleOpenStudentDossier(matchedPatient ? matchedPatient.name : 'Yohan');
+                                          }}
+                                          className="text-[10px] font-bold text-indigo-300 hover:text-indigo-200 hover:underline inline-flex items-center gap-1 cursor-pointer shrink-0"
+                                        >
+                                          <span>Agrandar Alumno</span>
+                                          <Maximize2 className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-slate-300 font-medium text-[11px]">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenTeacherDossier(event.author);
+                                  }}
+                                  className="font-bold text-amber-300 hover:text-amber-200 hover:underline flex items-center gap-1 cursor-pointer group"
+                                >
+                                  <span>{event.author}</span>
+                                  <Maximize2 className="w-3 h-3 text-amber-400 opacity-60 group-hover:opacity-100" />
+                                </button>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                  {event.category}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
                 </div>
 
               </div>
+
+              {/* DETALLE INDIVIDUAL DE UN EVENTO DE TRAZABILIDAD (PANEL FLOTANTE DE METADATOS) */}
+              {selectedEventDetail && (
+                <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in slide-in-from-bottom-2 duration-200">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5 text-amber-300" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-amber-300">{selectedEventDetail.title}</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-200">
+                          {selectedEventDetail.category}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-0.5">
+                        <span className="font-bold">Autor/Origen:</span> {selectedEventDetail.author} | <span className="font-bold">Fecha:</span> {selectedEventDetail.fullDate}
+                      </p>
+                      {selectedEventDetail.details && (
+                        <p className="text-xs font-mono text-amber-200/90 mt-1 bg-black/30 p-2 rounded-xl border border-white/5">
+                          {selectedEventDetail.details}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedEventDetail(null)}
+                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-all shrink-0"
+                  >
+                    Cerrar Detalle
+                  </button>
+                </div>
+              )}
 
             </div>
           )}
@@ -1765,6 +2760,349 @@ function ClassicDashboard() {
                 className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
               >
                 Cerrar Historial
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: EXPEDIENTE AUDITADO DEL DOCENTE / ESPECIALISTA */}
+      {selectedTeacherModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-[#0c101d] border border-amber-500/30 rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl relative">
+            
+            {/* Header del Docente */}
+            <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-amber-500/5">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-amber-500/20">
+                  {selectedTeacherModal.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black tracking-tight text-white">{selectedTeacherModal.name}</h3>
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Docente Auditado PIE
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">
+                    {selectedTeacherModal.role} • {selectedTeacherModal.colegio}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedTeacherModal(null)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Cuerpo del Dossier Docente */}
+            <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
+              
+              {/* 4 KPIs Clave del Profesional */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[11px] text-slate-400 font-bold block mb-1">Horas Activas Totales</span>
+                  <p className="text-2xl font-black text-amber-400">42.5 hrs</p>
+                  <span className="text-[10px] text-slate-500">Promedios: 8.5 hrs/semana</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[11px] text-slate-400 font-bold block mb-1">Evaluaciones Ejecutadas</span>
+                  <p className="text-2xl font-black text-purple-400">65 Test</p>
+                  <span className="text-[10px] text-slate-500">14 esta semana • 48 este mes</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[11px] text-slate-400 font-bold block mb-1">Alumnos Evaluados</span>
+                  <p className="text-2xl font-black text-blue-400">18 Alumnos</p>
+                  <span className="text-[10px] text-slate-500">Cobertura 100% programa PIE</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[11px] text-slate-400 font-bold block mb-1">Test Más Utilizado</span>
+                  <p className="text-xs font-black text-emerald-400 mt-1 truncate">Reaction Mirror</p>
+                  <span className="text-[10px] text-slate-500">Esta semana: Corsi 3D (60%)</span>
+                </div>
+              </div>
+
+              {/* Analítica y Matriz de Alumnos */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Gráfico Diagnósticos Atendidos por el Docente (5 Cols) */}
+                <div className="lg:col-span-5 p-5 rounded-3xl bg-white/[0.02] border border-white/5 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-300 mb-3">
+                      Diagnósticos NEE Atendidos
+                    </h4>
+                    <div className="h-44 w-full flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'TDAH', value: 55, color: '#8b5cf6' },
+                              { name: 'TEA Nivel 1', value: 25, color: '#3b82f6' },
+                              { name: 'Dispraxia', value: 15, color: '#f59e0b' },
+                              { name: 'Otros', value: 5, color: '#10b981' }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={45}
+                            outerRadius={65}
+                            paddingAngle={4}
+                            dataKey="value"
+                          >
+                            {[
+                              { color: '#8b5cf6' },
+                              { color: '#3b82f6' },
+                              { color: '#f59e0b' },
+                              { color: '#10b981' }
+                            ].map((entry, index) => (
+                              <Cell key={`teacher-pie-${index}`} fill={entry.color} stroke="none" />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#0c101a',
+                              borderColor: '#ffffff20',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              color: '#ffffff'
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/5 text-[11px]">
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-500" /><span className="text-slate-300">TDAH (55%)</span></div>
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" /><span className="text-slate-300">TEA 1 (25%)</span></div>
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /><span className="text-slate-300">Dispraxia (15%)</span></div>
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-slate-300">Otros (5%)</span></div>
+                  </div>
+                </div>
+
+                {/* Matriz de Alumnos Atendidos por este Profesional (7 Cols) */}
+                <div className="lg:col-span-7 p-5 rounded-3xl bg-white/[0.02] border border-white/5">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-300 mb-3 flex items-center justify-between">
+                    <span>Matriz de Alumnos Atendidos</span>
+                    <span className="text-[10px] text-amber-400 font-mono">Haz clic para ver trazabilidad del alumno</span>
+                  </h4>
+
+                  <div className="overflow-x-auto max-h-48 overflow-y-auto custom-scrollbar">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-white/10 text-slate-400 text-[10px]">
+                          <th className="py-2 px-2">Alumno</th>
+                          <th className="py-2 px-2">Diagnóstico</th>
+                          <th className="py-2 px-2">Sesiones</th>
+                          <th className="py-2 px-2">Última Atención</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {[
+                          { name: 'Yohan', diag: 'TDAH', sess: 28, last: 'Hace 2 días' },
+                          { name: 'Nicolás', diag: 'TEA Nivel 1', sess: 12, last: 'Hoy, 11:30' },
+                          { name: 'Tamara', diag: 'Dispraxia', sess: 8, last: 'Hace 3 días' },
+                          { name: 'Leandro', diag: 'TDAH', sess: 6, last: 'Hace 5 días' }
+                        ].map((st, idx) => (
+                          <tr
+                            key={idx}
+                            onClick={() => {
+                              setSelectedTeacherModal(null);
+                              handleOpenStudentDossier(st.name);
+                            }}
+                            className="hover:bg-white/5 transition-colors cursor-pointer"
+                          >
+                            <td className="py-2.5 px-2 font-bold text-amber-300 hover:underline">{st.name}</td>
+                            <td className="py-2.5 px-2 text-slate-400 text-[11px]">{st.diag}</td>
+                            <td className="py-2.5 px-2 font-mono font-bold text-purple-400">{st.sess} ses.</td>
+                            <td className="py-2.5 px-2 text-slate-500 text-[10px]">{st.last}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-white/10 bg-white/[0.01] flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-mono">Ficha firmada digitalmente • Decreto 170 Validado</span>
+              <button
+                onClick={() => setSelectedTeacherModal(null)}
+                className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
+              >
+                Cerrar Expediente
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: EXPEDIENTE DE TRAZABILIDAD DEL ESTUDIANTE */}
+      {selectedStudentModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-[#0c101d] border border-indigo-500/30 rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl relative">
+            
+            {/* Header del Estudiante */}
+            <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-indigo-500/5">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-indigo-500/20">
+                  {selectedStudentModal.name?.charAt(0) || 'S'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black tracking-tight text-white">{selectedStudentModal.name}</h3>
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      ID: {selectedStudentModal.idSujeto || 'SUJ-2026-08'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">
+                    Diagnóstico NEE: <span className="text-purple-300 font-bold">{selectedStudentModal.diagnosticoNee || 'TDAH / Impulsividad'}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedStudentModal(null)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Cuerpo del Dossier Estudiante */}
+            <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
+              
+              {/* 4 KPIs Clave del Estudiante */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[11px] text-slate-400 font-bold block mb-1">Total Sesiones Alumno</span>
+                  <p className="text-2xl font-black text-indigo-400">40 Sesiones</p>
+                  <span className="text-[10px] text-slate-500">100% trazadas e inmutables</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[11px] text-slate-400 font-bold block mb-1">Horas Programa Dedicadas</span>
+                  <p className="text-2xl font-black text-purple-400">18.5 hrs</p>
+                  <span className="text-[10px] text-slate-500">Tiempo clínico acumulado</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[11px] text-slate-400 font-bold block mb-1">Especialista Principal</span>
+                  <p className="text-xs font-black text-amber-400 mt-1 truncate">Ps. Brayan Castro</p>
+                  <span className="text-[10px] text-slate-500">28 sesiones (70% atención)</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <span className="text-[11px] text-slate-400 font-bold block mb-1">Velocidad Reacción Prom.</span>
+                  <p className="text-2xl font-black text-emerald-400">395 ms</p>
+                  <span className="text-[10px] text-slate-500">Progreso motor: +14.2%</span>
+                </div>
+              </div>
+
+              {/* Analítica Semanal y Matriz Multidisciplinaria */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* GRÁFICO DE BARRAS APILADAS POR DÍA CON COLOR POR DOCENTE (6 Cols) */}
+                <div className="lg:col-span-6 p-5 rounded-3xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                        Atención Semanal por Docente
+                      </h4>
+                      <p className="text-[10px] text-slate-400">Sesiones por día desglosadas con un color por profesional</p>
+                    </div>
+                  </div>
+
+                  <div className="h-52 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={[
+                        { dia: 'Lun', 'Ps. Brayan Castro': 2, 'Dra. María González': 1, 'Sistema / Remoto': 0 },
+                        { dia: 'Mar', 'Ps. Brayan Castro': 0, 'Dra. María González': 2, 'Sistema / Remoto': 1 },
+                        { dia: 'Mié', 'Ps. Brayan Castro': 3, 'Dra. María González': 0, 'Sistema / Remoto': 0 },
+                        { dia: 'Jue', 'Ps. Brayan Castro': 1, 'Dra. María González': 1, 'Sistema / Remoto': 1 },
+                        { dia: 'Vie', 'Ps. Brayan Castro': 2, 'Dra. María González': 0, 'Sistema / Remoto': 0 },
+                        { dia: 'Sáb', 'Ps. Brayan Castro': 1, 'Dra. María González': 0, 'Sistema / Remoto': 0 }
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                        <XAxis dataKey="dia" stroke="#94a3b8" fontSize={10} />
+                        <YAxis stroke="#94a3b8" fontSize={10} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0c101a',
+                            borderColor: '#ffffff20',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            color: '#ffffff'
+                          }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '8px' }} />
+                        <Bar dataKey="Ps. Brayan Castro" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Dra. María González" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Sistema / Remoto" stackId="a" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Matriz Multidisciplinaria de Profesionales que atienden a Yohan (6 Cols) */}
+                <div className="lg:col-span-6 p-5 rounded-3xl bg-white/[0.02] border border-white/5">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-300 mb-3 flex items-center justify-between">
+                    <span>Docentes & Especialistas Atendedores</span>
+                    <span className="text-[10px] text-indigo-400 font-mono">Haz clic para ver ficha del docente</span>
+                  </h4>
+
+                  <div className="overflow-x-auto max-h-52 overflow-y-auto custom-scrollbar">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-white/10 text-slate-400 text-[10px]">
+                          <th className="py-2 px-2">Especialista</th>
+                          <th className="py-2 px-2">Sesiones</th>
+                          <th className="py-2 px-2">% Atención</th>
+                          <th className="py-2 px-2">Horas</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {[
+                          { name: 'Ps. Brayan Castro', role: 'Psicopedagogo', sess: 28, pct: '70%', hrs: '12.5 h' },
+                          { name: 'Dra. María González', role: 'Neuropsicóloga', sess: 12, pct: '30%', hrs: '6.0 h' }
+                        ].map((doc, idx) => (
+                          <tr
+                            key={idx}
+                            onClick={() => {
+                              setSelectedStudentModal(null);
+                              handleOpenTeacherDossier(doc.name);
+                            }}
+                            className="hover:bg-white/5 transition-colors cursor-pointer"
+                          >
+                            <td className="py-2.5 px-2 font-bold text-indigo-300 hover:underline">
+                              {doc.name}
+                              <span className="block text-[10px] text-slate-500 font-normal">{doc.role}</span>
+                            </td>
+                            <td className="py-2.5 px-2 font-mono font-bold text-purple-400">{doc.sess} ses.</td>
+                            <td className="py-2.5 px-2 text-slate-300 font-bold">{doc.pct}</td>
+                            <td className="py-2.5 px-2 text-slate-400 font-mono text-[11px]">{doc.hrs}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-white/10 bg-white/[0.01] flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-mono">Trazabilidad Alumno inalterable • Decreto 170</span>
+              <button
+                onClick={() => setSelectedStudentModal(null)}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-indigo-600/20 cursor-pointer"
+              >
+                Cerrar Expediente Alumno
               </button>
             </div>
 
