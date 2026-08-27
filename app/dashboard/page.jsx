@@ -165,17 +165,26 @@ function ClassicDashboard() {
 
   const [auditLog, setAuditLog] = useState(initialAuditLog);
 
+  const specialistName = useMemo(() => {
+    const raw = profile?.nombre_completo || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Especialista';
+    return raw.startsWith('Ps.') ? raw : `Ps. ${raw}`;
+  }, [profile, user]);
+
+  const schoolName = profile?.colegio?.nombre || 'Programa de Integración Escolar (PIE)';
+
   // Trazabilidad Completa Dinámica con Datos Reales
   const realAuditTrail = useMemo(() => {
     const events = [];
+    const specName = profile?.nombre_completo ? (profile.nombre_completo.startsWith('Ps.') ? profile.nombre_completo : `Ps. ${profile.nombre_completo}`) : (user?.user_metadata?.full_name ? `Ps. ${user.user_metadata.full_name}` : 'Ps. Especialista PIE');
+    const schName = profile?.colegio?.nombre || 'Programa de Integración Escolar (PIE)';
 
     // 1. Evento de inicio de sesión real
     if (user || profile) {
       events.push({
         id: 'aud-user-login',
         title: 'Inicio de sesión autenticado',
-        author: specialistName,
-        details: `Acceso concedido al panel clínico de ${schoolName}`,
+        author: specName,
+        details: `Acceso concedido al panel clínico de ${schName}`,
         timeAgo: 'Hace 2 min',
         fullDate: new Date().toLocaleString('es-CL', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
         category: 'Logins'
@@ -189,7 +198,7 @@ function ClassicDashboard() {
         events.push({
           id: `aud-student-${p.id}`,
           title: `Ficha de Estudiante Activa`,
-          author: specialistName,
+          author: specName,
           details: `Alumno: ${p.name} - NEE: ${p.diagnosticoNee || 'Sin asignación'}`,
           timeAgo: p.createdAt ? new Date(p.createdAt).toLocaleDateString('es-CL') : 'Registro activo',
           fullDate: p.createdAt ? new Date(p.createdAt).toLocaleString('es-CL') : 'Ficha creada',
@@ -233,7 +242,7 @@ function ClassicDashboard() {
         {
           id: 'aud-fallback-2',
           title: 'Nuevo terapeuta vinculado',
-          author: specialistName,
+          author: specName,
           details: 'Dra. María González - Especialista Neurocognitivo',
           timeAgo: 'Ayer, 14:30',
           fullDate: 'Ayer, 14:30',
@@ -243,7 +252,7 @@ function ClassicDashboard() {
     }
 
     return events;
-  }, [patients, user, profile, specialistName, schoolName]);
+  }, [patients, user, profile]);
 
   const filteredRealAuditTrail = useMemo(() => {
     return realAuditTrail.filter(event => {
@@ -460,12 +469,6 @@ function ClassicDashboard() {
     );
   }, [patients, searchQuery]);
 
-  const specialistName = useMemo(() => {
-    const raw = profile?.nombre_completo || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Especialista';
-    return raw.startsWith('Ps.') ? raw : `Ps. ${raw}`;
-  }, [profile, user]);
-
-  const schoolName = profile?.colegio?.nombre || 'Programa de Integración Escolar (PIE)';
   const isDark = theme === 'dark';
 
   return (
