@@ -1,29 +1,37 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+// Colores del Cerebro 3D: Cyan (Reacción #38bdf8) y Púrpura (Memory #a855f7)
+const BRAIN_COLORS = [
+  { hex: '#38bdf8', r: 56, g: 189, b: 248 },  // Cyan (Reacción Mirror)
+  { hex: '#a855f7', r: 168, g: 85, b: 247 },  // Purple (Memory Mirror)
+];
 
 export const NeuralBackground3D = () => {
   const canvasRef = useRef(null);
 
-  useEffect(() => {
+  useGSAP(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // --- Parámetros Calibrados: Elegante, Suave y Equilibrado ---
-    const NODE_COUNT = 65;            // Cantidad moderada de nodos
-    const MOUSE_RADIUS = 150;         // Radio sutil de interacción
-    const NODE_CONNECT_DIST = 130;     // Distancia máxima de conexión
-    const ATTRACT_STRENGTH = 0.006;    // Atracción muy suave (evita aglomeración)
+    const NODE_COUNT = 75;             // Cantidad óptima de nodos
+    const MOUSE_RADIUS = 160;          // Radio sutil de interacción
+    const NODE_CONNECT_DIST = 145;      // Distancia máxima de conexión
+    const ATTRACT_STRENGTH = 0.005;     // Atracción suave
 
-    let width, height;
+    let width = (canvas.width = canvas.offsetWidth);
+    let height = (canvas.height = canvas.offsetHeight);
     const mouse = { x: -9999, y: -9999, active: false };
 
     const resize = () => {
       width = canvas.width = canvas.offsetWidth;
       height = canvas.height = canvas.offsetHeight;
     };
-    resize();
+
     window.addEventListener('resize', resize);
 
     const onMouseMove = (e) => {
@@ -42,34 +50,35 @@ export const NeuralBackground3D = () => {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseleave', onMouseLeave);
 
-    // Nodos
-    const nodes = Array.from({ length: NODE_COUNT }, () => ({
-      x: Math.random() * (width || 800),
-      y: Math.random() * (height || 600),
-      vx: (Math.random() - 0.5) * 0.35,
-      vy: (Math.random() - 0.5) * 0.35,
-      radius: 1.8 + Math.random() * 2.0,
-      baseAlpha: 0.25 + Math.random() * 0.35,
-      phase: Math.random() * Math.PI * 2,
-    }));
+    // Inicializar Nodos asignando equitativamente los 2 colores del cerebro 3D
+    const nodes = Array.from({ length: NODE_COUNT }, (_, idx) => {
+      const color = BRAIN_COLORS[idx % BRAIN_COLORS.length];
+      return {
+        x: Math.random() * (width || 800),
+        y: Math.random() * (height || 600),
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        radius: 2.0 + Math.random() * 2.2,
+        baseAlpha: 0.35 + Math.random() * 0.35,
+        phase: Math.random() * Math.PI * 2,
+        pulseSpeed: 0.012 + Math.random() * 0.015,
+        color,
+      };
+    });
 
-    // Impulsos eléctricos sutiles
     const pulses = [];
-    const maxPulses = 8;
+    const maxPulses = 10;
 
-    let frameId;
-
-    const draw = () => {
-      frameId = requestAnimationFrame(draw);
+    // Loop de renderizado sincronizado con GSAP Ticker
+    const render = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Mover Nodos
-      nodes.forEach(n => {
-        n.phase += 0.01;
+      // 1. Actualización de Posición de Nodos
+      nodes.forEach((n) => {
+        n.phase += n.pulseSpeed;
         n.x += n.vx;
         n.y += n.vy;
 
-        // Atracción muy suave al puntero (movimiento orgánico)
         if (mouse.active) {
           const dx = mouse.x - n.x;
           const dy = mouse.y - n.y;
@@ -81,21 +90,19 @@ export const NeuralBackground3D = () => {
           }
         }
 
-        // Límite de velocidad
-        const speed = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
-        if (speed > 1.0) {
-          n.vx = (n.vx / speed) * 1.0;
-          n.vy = (n.vy / speed) * 1.0;
+        const speed = Math.hypot(n.vx, n.vy);
+        if (speed > 0.9) {
+          n.vx = (n.vx / speed) * 0.9;
+          n.vy = (n.vy / speed) * 0.9;
         }
 
-        // Rebote elástico en bordes
         if (n.x < 0) { n.x = 0; n.vx *= -1; }
         if (n.x > width) { n.x = width; n.vx *= -1; }
         if (n.y < 0) { n.y = 0; n.vy *= -1; }
         if (n.y > height) { n.y = height; n.vy *= -1; }
       });
 
-      // 2. Conexiones entre Nodos
+      // 2. Dibujar Conexiones (Lineas levemente visibles de fondo)
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
         const distMouseA = mouse.active ? Math.hypot(a.x - mouse.x, a.y - mouse.y) : 9999;
@@ -115,113 +122,87 @@ export const NeuralBackground3D = () => {
               ? Math.max(0, 1 - Math.min(distMouseA, distMouseB) / MOUSE_RADIUS)
               : 0;
 
-            const baseAlpha = (1 - dist / NODE_CONNECT_DIST) * 0.18;
-            const finalAlpha = Math.min(0.55, baseAlpha + mouseFactor * 0.35);
-            const lineWidth = 0.7 + mouseFactor * 0.9; // Máximo 1.6px de grosor
+            // Opacidad base constante para que la red sea siempre levemente visible
+            const distRatio = 1 - dist / NODE_CONNECT_DIST;
+            const baseAlpha = 0.09 + distRatio * 0.22;
+            const finalAlpha = Math.min(0.65, baseAlpha + mouseFactor * 0.4);
+            const lineWidth = 0.8 + mouseFactor * 0.9;
+
+            // Gradiente lineal entre el color del nodo A y del nodo B
+            const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+            grad.addColorStop(0, `rgba(${a.color.r}, ${a.color.g}, ${a.color.b}, ${finalAlpha})`);
+            grad.addColorStop(1, `rgba(${b.color.r}, ${b.color.g}, ${b.color.b}, ${finalAlpha})`);
 
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
-
-            if (mouseFactor > 0.1) {
-              ctx.strokeStyle = `rgba(56, 189, 248, ${finalAlpha})`;
-            } else {
-              ctx.strokeStyle = `rgba(125, 175, 255, ${finalAlpha})`;
-            }
-
+            ctx.strokeStyle = grad;
             ctx.lineWidth = lineWidth;
             ctx.stroke();
 
-            // Impulsos eléctricos ligeros
-            if (mouseFactor > 0.4 && Math.random() < 0.008 && pulses.length < maxPulses) {
-              pulses.push({
-                x: a.x, y: a.y,
-                tx: b.x, ty: b.y,
-                progress: 0,
-                speed: 0.02 + Math.random() * 0.03
-              });
-            }
+            // Generar impulsos de luz de color cyan/purple sin puntos blancos
           }
         }
 
-        // 3. Conexión suave directa al mouse
+        // Conexión directa al puntero
         if (inMouseZoneA) {
-          const mouseAlpha = (1 - distMouseA / MOUSE_RADIUS) * 0.45;
+          const mouseAlpha = (1 - distMouseA / MOUSE_RADIUS) * 0.5;
+          const gradMouse = ctx.createLinearGradient(a.x, a.y, mouse.x, mouse.y);
+          gradMouse.addColorStop(0, `rgba(${a.color.r}, ${a.color.g}, ${a.color.b}, ${mouseAlpha})`);
+          gradMouse.addColorStop(1, `rgba(56, 189, 248, ${mouseAlpha})`);
+
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(mouse.x, mouse.y);
-          ctx.strokeStyle = `rgba(56, 189, 248, ${mouseAlpha})`;
-          ctx.lineWidth = 0.8 + mouseAlpha * 0.8;
+          ctx.strokeStyle = gradMouse;
+          ctx.lineWidth = 0.9 + mouseAlpha * 0.8;
           ctx.stroke();
         }
       }
 
-      // 4. Impulsos
-      for (let p = pulses.length - 1; p >= 0; p--) {
-        const pulse = pulses[p];
-        pulse.progress += pulse.speed;
-
-        if (pulse.progress >= 1) {
-          pulses.splice(p, 1);
-          continue;
-        }
-
-        const currX = pulse.x + (pulse.tx - pulse.x) * pulse.progress;
-        const currY = pulse.y + (pulse.ty - pulse.y) * pulse.progress;
-
-        ctx.beginPath();
-        ctx.arc(currX, currY, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 6;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-
-      // 5. Aura Suave del Puntero
+      // Aura de interacción en el ratón
       if (mouse.active) {
-        const mouseGlow = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 25);
-        mouseGlow.addColorStop(0, 'rgba(56, 189, 248, 0.18)');
-        mouseGlow.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        const mouseGlow = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 30);
+        mouseGlow.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+        mouseGlow.addColorStop(0.5, 'rgba(168, 85, 247, 0.1)');
+        mouseGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.beginPath();
-        ctx.arc(mouse.x, mouse.y, 25, 0, Math.PI * 2);
+        ctx.arc(mouse.x, mouse.y, 30, 0, Math.PI * 2);
         ctx.fillStyle = mouseGlow;
         ctx.fill();
       }
 
-      // 6. Nodos
-      nodes.forEach(n => {
+      // Dibujar Nodos únicamente con los 2 colores del Cerebro 3D (Cyan y Purple, sin puntos blancos)
+      nodes.forEach((n) => {
         const distMouse = mouse.active ? Math.hypot(n.x - mouse.x, n.y - mouse.y) : 9999;
         const mouseFactor = mouse.active ? Math.max(0, 1 - distMouse / MOUSE_RADIUS) : 0;
 
         const pulse = (Math.sin(n.phase) + 1) / 2;
-        const alpha = Math.min(0.85, n.baseAlpha * 0.7 + mouseFactor * 0.35 + pulse * 0.1);
-        const radius = n.radius + mouseFactor * 1.0;
+        const alpha = Math.min(0.9, n.baseAlpha + mouseFactor * 0.35 + pulse * 0.15);
+        const radius = n.radius + mouseFactor * 1.2;
 
-        const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, radius * 3);
-        if (mouseFactor > 0.2) {
-          grd.addColorStop(0, `rgba(56, 189, 248, ${alpha * 0.7})`);
-          grd.addColorStop(1, `rgba(56, 189, 248, 0)`);
-        } else {
-          grd.addColorStop(0, `rgba(147, 197, 253, ${alpha * 0.4})`);
-          grd.addColorStop(1, `rgba(147, 197, 253, 0)`);
-        }
+        // Halo resplandeciente exterior
+        const haloGrad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, radius * 3.5);
+        haloGrad.addColorStop(0, `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, ${alpha * 0.6})`);
+        haloGrad.addColorStop(1, `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, 0)`);
         ctx.beginPath();
-        ctx.arc(n.x, n.y, radius * 3, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
+        ctx.arc(n.x, n.y, radius * 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = haloGrad;
         ctx.fill();
 
+        // Núcleo central del nodo (Color puro Cyan o Purple)
         ctx.beginPath();
         ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = mouseFactor > 0.2 ? 'rgba(240, 249, 255, 0.9)' : `rgba(200, 225, 255, ${alpha})`;
+        ctx.fillStyle = `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, ${alpha})`;
         ctx.fill();
       });
     };
 
-    draw();
+    // Agregar callback al ticker de GSAP
+    gsap.ticker.add(render);
 
     return () => {
-      cancelAnimationFrame(frameId);
+      gsap.ticker.remove(render);
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseleave', onMouseLeave);
@@ -236,3 +217,4 @@ export const NeuralBackground3D = () => {
     />
   );
 };
+

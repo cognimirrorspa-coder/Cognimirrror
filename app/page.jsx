@@ -30,6 +30,12 @@ const Cube3DViewer = dynamic(
   { ssr: false }
 );
 
+// MorphingCardIcon dinámico
+const MorphingCardIcon = dynamic(
+  () => import('../components/animations/MorphingCardIcon').then(m => ({ default: m.MorphingCardIcon })),
+  { ssr: false }
+);
+
 export default function LandingPage() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -54,7 +60,7 @@ export default function LandingPage() {
   const goToLogin = () => router.push('/login');
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-[#e1e2ec] font-sans antialiased selection:bg-blue-500/30 selection:text-blue-100 overflow-x-hidden relative">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_#1a263a_0%,_#111827_60%,_#0b0f19_100%)] text-[#e1e2ec] font-sans antialiased selection:bg-blue-500/30 selection:text-blue-100 overflow-x-hidden relative">
 
       {/* ===== FONDO: RED NEURONAL 3D ===== */}
       <div className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
@@ -62,7 +68,7 @@ export default function LandingPage() {
       </div>
 
       {/* ===== NAVBAR ===== */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F19]/80 backdrop-blur-md border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111827]/80 backdrop-blur-md border-b border-white/5">
         <div className="container mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="CogniMirror" className="w-8 h-8 object-contain" />
@@ -211,7 +217,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="glass-panel p-6 rounded-lg flex flex-col gap-4 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
               <div className="w-12 h-12 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-2">
-                <ClipboardX className="w-6 h-6 text-red-400" />
+                <MorphingCardIcon iconType="clipboardX" color="#f87171" size={24} delay={0} />
               </div>
               <div className="text-5xl md:text-7xl font-mono text-[#3B82F6] font-bold select-none leading-none mb-2">40%</div>
               <h3 className="text-lg font-bold text-white">El Colapso Administrativo</h3>
@@ -222,7 +228,7 @@ export default function LandingPage() {
             </div>
             <div className="glass-panel p-6 rounded-lg flex flex-col gap-4 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
               <div className="w-12 h-12 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-2">
-                <Smartphone className="w-6 h-6 text-orange-300" />
+                <MorphingCardIcon iconType="smartphone" color="#fdba74" size={24} delay={150} />
               </div>
               <div className="text-5xl md:text-7xl font-mono text-indigo-400 font-bold select-none leading-none mb-2">D.170</div>
               <h3 className="text-lg font-bold text-white">El Villano del &apos;Scroll Infinito&apos;</h3>
@@ -233,7 +239,7 @@ export default function LandingPage() {
             </div>
             <div className="glass-panel p-6 rounded-lg flex flex-col gap-4 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
               <div className="w-12 h-12 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-2">
-                <EyeOff className="w-6 h-6 text-slate-400" />
+                <MorphingCardIcon iconType="eyeOff" color="#94a3b8" size={24} delay={300} />
               </div>
               <div className="text-5xl md:text-7xl font-mono text-slate-500 font-bold select-none leading-none mb-2">1/100</div>
               <h3 className="text-lg font-bold text-white">Evaluaciones a &apos;Ojo Humano&apos;</h3>
@@ -403,34 +409,45 @@ export default function LandingPage() {
       </section>
 
 
-      {/* ===== SECCIÓN 4: CON EL APOYO DE ===== */}
-      <section className="py-20 px-4 relative">
-        <div className="container mx-auto max-w-4xl">
-          {/* Label */}
-          <p className="text-center text-xs font-mono tracking-[0.3em] uppercase text-slate-500 mb-10">
-            Con el Apoyo de
-          </p>
+      {/* ===== SECCIÓN 4: RESPALDO INSTITUCIONAL ===== */}
+      <section className="py-20 px-4 relative flex flex-col items-center justify-center">
+        <div className="w-full max-w-4xl mx-auto flex flex-col items-center text-center space-y-8">
+          {/* Línea Divisora Superior */}
+          <div className="w-full h-px bg-white/15" />
 
-          {/* Tarjeta blanca centrada — no cubre todo el ancho */}
-          <div className="flex items-center justify-center">
+          {/* Encabezado Institucional */}
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl md:text-4xl font-bold tracking-[0.18em] text-slate-100 uppercase">
+              RESPALDO INSTITUCIONAL
+            </h2>
+            <p className="text-xs md:text-sm font-mono tracking-[0.3em] text-slate-400 uppercase">
+              CON EL APOYO DE
+            </p>
+          </div>
+
+          {/* Tarjeta Oscura Institucional con Logo Grande y Centrado */}
+          <div className="w-full bg-[#0c1424]/90 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-10 shadow-2xl flex items-center justify-center min-h-[180px] md:min-h-[240px]">
             <a
               href="https://www.corfo.cl/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative flex flex-col items-center gap-5 transition-all duration-300"
+              className="group flex items-center justify-center w-full h-full"
             >
-              <div className="bg-white rounded-3xl px-16 py-10 shadow-[0_8px_40px_rgba(0,0,0,0.25)] group-hover:shadow-[0_12px_50px_rgba(0,0,0,0.35)] group-hover:scale-[1.02] transition-all duration-300">
-                <img
-                  src="/logo-corfo.png"
-                  alt="Startup Chile by CORFO"
-                  className="h-14 md:h-16 object-contain"
-                />
-              </div>
-              <p className="text-xs text-slate-400 font-mono tracking-wider group-hover:text-slate-300 transition-colors">
-                Cofinanciados por el Estado de Chile
-              </p>
+              <img
+                src="/logo-corfo.png"
+                alt="CORFO y Gobierno de Chile"
+                className="h-20 md:h-28 max-h-[140px] md:max-h-[180px] w-auto object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] group-hover:scale-[1.03] transition-transform duration-300 mx-auto"
+              />
             </a>
           </div>
+
+          {/* Texto Inferior */}
+          <p className="text-center text-xl md:text-3xl font-semibold text-slate-100 tracking-wide pt-2">
+            Cofinanciados por el Estado de Chile
+          </p>
+
+          {/* Línea Divisora Inferior */}
+          <div className="w-full h-px bg-white/15" />
         </div>
       </section>
 

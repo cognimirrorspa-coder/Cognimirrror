@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 200" width="100%" height="100%">
+  <defs>
+    <style>
+      .text-sub { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 19px; fill: rgba(255, 255, 255, 0.7); font-weight: 400; letter-spacing: 0.5px; }
+      .text-corfo { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 58px; font-weight: 900; fill: #0091FF; letter-spacing: -1px; }
+      .gob-title { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 700; fill: #ffffff; line-height: 1.1; }
+      .gob-sub { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; font-weight: 400; fill: #ffffff; }
+    </style>
+    <filter id="glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0091FF" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- LADO IZQUIERDO: CORFO -->
+  <g transform="translate(10, 20)">
+    <!-- Texto "Proyecto apoyado por" -->
+    <text x="0" y="32" class="text-sub">Proyecto apoyado por</text>
+    
+    <!-- Texto CORFO -->
+    <text x="0" y="112" class="text-corfo" filter="url(#glow)">CORFO</text>
+    
+    <!-- Ícono Humano Resplandeciente CORFO -->
+    <g transform="translate(210, 50)" filter="url(#glow)">
+      <!-- Arco exterior -->
+      <path d="M 45 65 A 40 40 0 0 0 70 5 C 62 18 55 35 45 65 Z" fill="#0091FF" />
+      <path d="M 5 65 C 25 65 52 50 68 8 C 50 25 30 50 5 65 Z" fill="#0091FF" />
+      <!-- Cabeza -->
+      <circle cx="56" cy="18" r="8.5" fill="#0091FF" />
+      <!-- Cuerpo erguido -->
+      <path d="M 48 30 C 52 28 60 28 64 30 C 60 48 54 62 48 68 C 46 54 46 40 48 30 Z" fill="#0091FF" />
+    </g>
+  </g>
+
+  <!-- SEPARADOR DISCRETO -->
+  <line x1="340" y1="40" x2="340" y2="160" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" stroke-dasharray="4 4" />
+
+  <!-- LADO DERECHO: GOBIERNO DE CHILE EMBLEMA OFICIAL -->
+  <g transform="translate(370, 30)">
+    <!-- Bloque Azul Izquierdo (Escudo + Texto) -->
+    <rect x="0" y="0" width="105" height="140" fill="#005B9E" rx="3" />
+    
+    <!-- Dibujo del Escudo Nacional (Simplificado Vectorial Nítido) -->
+    <g transform="translate(22, 16)">
+      <!-- Corona y Penacho -->
+      <path d="M 12 10 Q 30 2 48 10 Q 30 14 12 10 Z" fill="#ffffff" />
+      <!-- Escudo dividido -->
+      <path d="M 15 16 L 45 16 L 45 38 C 45 46 30 52 30 52 C 30 52 15 46 15 38 Z" fill="none" stroke="#ffffff" stroke-width="2.5" />
+      <path d="M 15 16 L 45 16 L 45 32 L 15 32 Z" fill="#ffffff" opacity="0.9" />
+      <!-- Estrella central -->
+      <polygon points="30,20 32,26 38,26 33,30 35,36 30,32 25,36 27,30 22,26 28,26" fill="#005B9E" />
+    </g>
+
+    <!-- Texto "Gobierno de Chile" dentro de la franja azul -->
+    <text x="52" y="88" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Gobierno</text>
+    <text x="52" y="104" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="#ffffff">de Chile</text>
+    <text x="52" y="122" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" font-weight="400" fill="rgba(255,255,255,0.7)">Ministerio de Educación</text>
+
+    <!-- Bloque Rojo Derecho -->
+    <rect x="105" y="0" width="105" height="140" fill="#E5383B" rx="3" />
+  </g>
+</svg>

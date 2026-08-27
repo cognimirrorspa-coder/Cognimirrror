@@ -10,14 +10,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@react-three/drei": "^9.105.6",
     "@react-three/fiber": "^8.16.2",
     "@supabase/supabase-js": "^2.106.2",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.38.0",
+    "gsap": "^3.15.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.378.0",
+    "morphicons": "^1.7.0",
     "next": "14.2.3",
     "pg": "^8.22.0",
     "react": "^18.2.0",
