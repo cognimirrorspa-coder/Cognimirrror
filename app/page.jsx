@@ -294,36 +294,202 @@ export default function LandingPage() {
         </div>
         <div className="container mx-auto max-w-7xl flex flex-col gap-20">
 
-          {/* Feature 1 */}
-          <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-8">
-            <div className="md:col-span-6 glass-panel rounded-lg p-8 h-[400px] w-full flex flex-col justify-between thin-stroke-grid border border-white/10">
-              <div className="flex justify-between items-start">
-                <span className="text-xs font-mono font-medium tracking-wider text-[#3B82F6]">DATA.EXPORT.MINEDUC</span>
-                <FileWarning className="w-5 h-5 text-slate-400" />
-              </div>
-              <div className="bg-[#10131a]/80 p-4 border border-white/5 rounded-lg w-full flex items-center gap-3">
-                <div className="w-9 h-9 bg-blue-500/10 rounded flex items-center justify-center text-[#3B82F6] border border-blue-500/20">
-                  <CheckCircle className="w-4 h-4" />
+          {/* Feature 1: Panel de Cumplimiento MINEDUC (Reconstruido a fidelidad total de Imagen 2) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            {/* Izquierda: Panel Mockup de Informes de Cumplimiento (MINEDUC Decreto 170) */}
+            <div className="lg:col-span-7 w-full">
+              <div className="bg-[#0b101d]/90 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-5 md:p-6 shadow-[0_0_40px_rgba(0,0,0,0.6)] relative overflow-hidden group">
+                
+                {/* Header del Panel */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-5">
+                  <h4 className="text-sm md:text-base font-bold text-white tracking-wide flex items-center gap-2">
+                    <span>Panel de Informes de Cumplimiento (MINEDUC Decreto 170)</span>
+                  </h4>
+                  <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </div>
                 </div>
-                <div className="flex-1 text-left">
-                  <span className="text-[8px] text-slate-500 block font-mono">REPORTE CLINICO</span>
-                  <span className="text-xs font-mono font-bold text-slate-300">decreto_170_evaluacion.pdf</span>
+
+                {/* Grid Interior: Documento PDF + Controles y Gráficos */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
+                  
+                  {/* Columna Izquierda: Documento PDF Estilo Hoja Oficial MINEDUC */}
+                  <div className="md:col-span-6 bg-white rounded-xl p-4 text-slate-900 shadow-2xl flex flex-col justify-between min-h-[310px] border border-slate-300 relative overflow-hidden">
+                    {/* Encabezado con Escudo / Gobierno de Chile */}
+                    <div className="flex items-start justify-between border-b border-slate-200 pb-2 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-[8px] text-white font-bold">🇨🇱</div>
+                        <div className="text-[7px] font-mono leading-tight text-slate-800">
+                          <span className="font-bold block">GOBIERNO DE CHILE</span>
+                          <span>Ministerio de Educación</span>
+                        </div>
+                      </div>
+                      <span className="text-[7px] font-mono text-slate-400 uppercase font-bold">FOLIO: #2026-D170</span>
+                    </div>
+
+                    {/* Título del Informe */}
+                    <div className="text-left space-y-0.5 mb-2">
+                      <div className="text-[9px] font-black tracking-tight text-slate-900 uppercase">
+                        INFORME DE EVALUACIÓN CLÍNICA
+                      </div>
+                      <div className="text-[7px] font-mono text-blue-700 font-bold uppercase">
+                        CUMPLIMIENTO NORMATIVO DECRETO 170
+                      </div>
+                    </div>
+
+                    {/* Simulación de Texto Oficial */}
+                    <div className="text-left space-y-1 text-[6px] leading-relaxed text-slate-600 font-mono mb-2">
+                      <p><strong className="text-slate-800">CUMPLIMIENTO NORMATIVO:</strong> Paciente presenta parámetros dentro de los rangos de atención sostenida y coordinación bimanual.</p>
+                      <p>1. Se comprueba un incremento del 34% en velocidad de procesamiento neuromotor respecto al diagnóstico base.</p>
+                      <p>2. Los datos de telemetría bimanual del Cubo Inteligente muestran una simetría del 92% entre hemisferios.</p>
+                    </div>
+
+                    {/* Gráfico Mini de Barras en el Documento */}
+                    <div className="bg-slate-100 rounded p-2 mb-2 border border-slate-200">
+                      <div className="flex items-end justify-between h-14 gap-1 px-2">
+                        <div className="w-full bg-blue-600 h-[85%] rounded-t" />
+                        <div className="w-full bg-blue-500 h-[60%] rounded-t" />
+                        <div className="w-full bg-blue-400 h-[45%] rounded-t" />
+                        <div className="w-full bg-blue-300 h-[30%] rounded-t" />
+                        <div className="w-full bg-blue-200 h-[18%] rounded-t" />
+                      </div>
+                    </div>
+
+                    {/* Sello de Firma / Timbre Institucional */}
+                    <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-[6px] font-mono text-slate-600">
+                      <div className="flex items-center gap-1">
+                        <div className="w-5 h-5 rounded-full border border-blue-600/40 flex items-center justify-center text-[6px] text-blue-700 font-bold">
+                          ✓
+                        </div>
+                        <span>FIRMA DIGITAL VALIDADA</span>
+                      </div>
+                      <span className="font-bold text-slate-800">VALIDACIÓN AUTOMÁTICA</span>
+                    </div>
+                  </div>
+
+                  {/* Columna Derecha: Tarjetas de Métricas + Control de Selección + Descarga */}
+                  <div className="md:col-span-6 flex flex-col justify-between gap-3">
+                    
+                    {/* Fila Superior: Sub-tarjetas side-by-side */}
+                    <div className="grid grid-cols-2 gap-2 flex-1">
+                      
+                      {/* Sub-tarjeta A: Gráfico Ahorro de Tiempo */}
+                      <div className="bg-[#101524] p-3 rounded-xl border border-white/10 flex flex-col justify-between">
+                        <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wide leading-tight text-left">
+                          Ahorro de Tiempo en Reportes (Horas/Mes)
+                        </div>
+                        <div className="flex items-end gap-1 h-20 pt-2">
+                          <div className="flex-1 bg-blue-600 h-[90%] rounded-t relative group">
+                            <span className="opacity-0 group-hover:opacity-100 text-[6px] text-white absolute -top-3 left-0 right-0 text-center font-mono">100+</span>
+                          </div>
+                          <div className="flex-1 bg-blue-500 h-[65%] rounded-t" />
+                          <div className="flex-1 bg-blue-400 h-[45%] rounded-t" />
+                          <div className="flex-1 bg-blue-300 h-[30%] rounded-t" />
+                          <div className="flex-1 bg-indigo-400 h-[20%] rounded-t" />
+                        </div>
+                        <div className="flex justify-between text-[6px] font-mono text-slate-500 pt-1">
+                          <span>10</span>
+                          <span>20</span>
+                          <span>30</span>
+                          <span>50</span>
+                          <span>100+</span>
+                        </div>
+                      </div>
+
+                      {/* Sub-tarjeta B: Flow de Selección, Generación y Descargar Decreto 170 (Fidelidad 1:1 Imagen 2) */}
+                      <div className="bg-[#101524] p-3 rounded-xl border border-white/10 flex flex-col justify-between text-left relative overflow-hidden">
+                        
+                        {/* Paso 1: Seleccionar Estudiante */}
+                        <div>
+                          <div className="text-[9px] font-bold text-white mb-1">
+                            Seleccionar Estudiante
+                          </div>
+                          <div className="bg-[#161c2e] border border-white/10 rounded-lg px-2 py-1 text-[9px] text-slate-300 font-mono flex justify-between items-center relative overflow-hidden">
+                            {/* Nombre del estudiante difuminado para simular privacidad */}
+                            <span className="truncate filter blur-[5px] select-none font-semibold text-slate-200 tracking-wide">
+                              Benjamín Morales (PIE-042)
+                            </span>
+                            <span className="text-slate-400 text-[8px] ml-1 shrink-0">v</span>
+                          </div>
+                        </div>
+
+                        {/* Flecha Conectora 1 */}
+                        <div className="flex justify-center my-0.5">
+                          <span className="text-slate-400 text-[10px] font-mono leading-none">↓</span>
+                        </div>
+
+                        {/* Paso 2: Generar Reporte */}
+                        <div>
+                          <div className="text-[9px] font-bold text-white mb-1">Generar Reporte</div>
+                          <div className="w-full bg-slate-800/80 h-1.5 rounded-full overflow-hidden border border-white/5">
+                            <div className="bg-[#3B82F6] h-full w-[70%] rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                          </div>
+                        </div>
+
+                        {/* Flecha Conectora 2 */}
+                        <div className="flex justify-center my-0.5">
+                          <span className="text-slate-400 text-[10px] font-mono leading-none">↓</span>
+                        </div>
+
+                        {/* Paso 3: Descargar Decreto 170 + Check Prominente en el lado derecho */}
+                        <div>
+                          <div className="text-[9px] font-bold text-white mb-1">Descargar Decreto 170</div>
+                          <div className="flex justify-end pt-0.5">
+                            <div className="w-9 h-9 rounded-full bg-[#10b981] text-slate-950 flex items-center justify-center font-black text-sm shadow-[0_0_18px_rgba(16,185,129,0.6)] border border-emerald-300">
+                              ✓
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                    {/* Fila Inferior: Botón de Acción de Descarga Directa */}
+                    <div className="bg-[#101524] p-3 rounded-xl border border-blue-500/20 flex items-center gap-3 text-left">
+                      <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                        <CheckCircle className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[8px] text-slate-400 uppercase font-mono block">Descargar</span>
+                        <span className="text-xs font-mono font-bold text-white truncate block">decreto_170_evaluacion.pdf</span>
+                        <span className="text-[8px] text-slate-400 block font-mono">Listo para Click</span>
+                      </div>
+                    </div>
+
+                  </div>
+
                 </div>
-                <button className="px-3 py-1.5 bg-[#3B82F6] hover:bg-blue-600 text-white rounded-lg text-[10px] font-semibold transition-all hover:shadow-[0_0_10px_rgba(59,130,246,0.4)] active:scale-95">Exportar</button>
-              </div>
-              <div className="flex gap-1 items-end h-28">
-                <div className="w-8 bg-[#3B82F6]/10 h-[20%] rounded-t" />
-                <div className="w-8 bg-[#3B82F6]/30 h-[40%] rounded-t" />
-                <div className="w-8 bg-[#3B82F6]/50 h-[60%] rounded-t" />
-                <div className="w-8 bg-[#3B82F6] h-[100%] rounded-t shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+
               </div>
             </div>
-            <div className="md:col-span-6 text-left space-y-4">
-              <h3 className="text-2xl md:text-3xl font-bold text-white">Informes MINEDUC a un Clik</h3>
-              <p className="text-base text-slate-400 font-light leading-relaxed">
-                Generación automática de reportes estandarizados, listos para auditoría y cumplimiento normativo del Decreto 170.
+
+            {/* Derecha: Título, Descripción y Botón "Ver Muestra de Informe" */}
+            <div className="lg:col-span-5 text-left space-y-6 relative">
+              {/* Overlay de código cibernético en el fondo derecho */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-3xl blur-xl pointer-events-none -z-10" />
+              
+              <h3 className="text-3xl md:text-4xl lg:text-5xl font-black text-white leading-[1.15] tracking-tight drop-shadow-md">
+                Cumplimiento MINEDUC Sin Esfuerzo, con un Solo Click
+              </h3>
+
+              <p className="text-sm md:text-base text-slate-300 font-light leading-relaxed">
+                Nuestro sistema avanzado genera automáticamente informes estandarizados y auditables para el Decreto 170. Ahorre horas de trabajo manual, garantice el cumplimiento normativo instantáneo y simplifique sus auditorías, con un click.
               </p>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => openContactModal('Ver Muestra de Informe MINEDUC')}
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-[#1a2333]/90 hover:bg-[#253248] border border-slate-700/80 hover:border-slate-500 text-slate-200 rounded-xl text-xs font-semibold shadow-lg transition-all duration-200 active:scale-95"
+                >
+                  <span>Ver Muestra de Informe</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+              </div>
+
             </div>
+
           </div>
 
           {/* Feature 2 */}
