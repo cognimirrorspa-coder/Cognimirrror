@@ -55,6 +55,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   PieChart,
@@ -565,20 +567,20 @@ function ClassicDashboard() {
     });
 
     let demographicData = [
-      { name: 'TDAH', value: demoCounts['TDAH'], color: '#3b82f6' },
-      { name: 'TEA Nivel 1', value: demoCounts['TEA Nivel 1'], color: '#a855f7' },
-      { name: 'Dispraxia', value: demoCounts['Dispraxia'], color: '#f59e0b' },
-      { name: 'Otros', value: demoCounts['Otros'], color: '#10b981' }
+      { name: 'TDAH', value: demoCounts['TDAH'], color: '#1d5bb9' },
+      { name: 'TEA Nivel 1', value: demoCounts['TEA Nivel 1'], color: '#c5922b' },
+      { name: 'Dispraxia', value: demoCounts['Dispraxia'], color: '#b85d19' },
+      { name: 'Otros', value: demoCounts['Otros'], color: '#48a986' }
     ];
 
     let totalDemographicCount = studentsList.length;
 
     if (totalDemographicCount === 0 || demographicData.every(d => d.value === 0)) {
       demographicData = [
-        { name: 'TDAH', value: 1, color: '#3b82f6' },
-        { name: 'TEA Nivel 1', value: 1, color: '#a855f7' },
-        { name: 'Dispraxia', value: 1, color: '#f59e0b' },
-        { name: 'Otros', value: 1, color: '#10b981' }
+        { name: 'TDAH', value: 1, color: '#1d5bb9' },
+        { name: 'TEA Nivel 1', value: 1, color: '#c5922b' },
+        { name: 'Dispraxia', value: 1, color: '#b85d19' },
+        { name: 'Otros', value: 1, color: '#48a986' }
       ];
       totalDemographicCount = 3;
     }
@@ -612,22 +614,22 @@ function ClassicDashboard() {
 
   return (
     <div className={`min-h-screen font-sans flex transition-colors duration-200 ${
-      isDark ? 'bg-[#07080f] text-slate-100' : 'bg-slate-50 text-slate-800'
+      isDark ? 'bg-[#121622] text-[#e2e8f0]' : 'bg-slate-50 text-slate-800'
     }`}>
       
       {/* ── BARRA LATERAL (SIDEBAR) ── */}
       <aside className={`w-64 border-r flex flex-col justify-between p-5 shrink-0 hidden md:flex transition-colors ${
-        isDark ? 'bg-[#0c101a] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+        isDark ? 'bg-[#0e111a] border-[#1b202e]' : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <div>
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8 px-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-base font-black tracking-tight">CogniMirror</h1>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Panel Clínico</p>
+              <h1 className={`text-base font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>CogniMirror</h1>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">PANEL CLÍNICO</p>
             </div>
           </div>
 
@@ -635,22 +637,22 @@ function ClassicDashboard() {
           <nav className="flex flex-col gap-1 text-xs font-medium">
             <button
               onClick={() => setActiveTab('resumen')}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
                 activeTab === 'resumen'
-                  ? isDark ? 'bg-slate-800/80 border-l-2 border-indigo-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-indigo-600 text-slate-900 font-semibold'
-                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                  : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <School className="w-4 h-4 text-indigo-400" />
+              <School className="w-4 h-4 text-white/90" />
               <span>Dashboard Institucional</span>
             </button>
 
             <button
               onClick={() => setActiveTab('niveles')}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
                 activeTab === 'niveles'
-                  ? isDark ? 'bg-slate-800/80 border-l-2 border-indigo-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-indigo-600 text-slate-900 font-semibold'
-                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                  : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Layers className="w-4 h-4 text-purple-400" />
@@ -659,10 +661,10 @@ function ClassicDashboard() {
 
             <button
               onClick={() => setActiveTab('alumnos')}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
                 activeTab === 'alumnos'
-                  ? isDark ? 'bg-slate-800/80 border-l-2 border-indigo-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-indigo-600 text-slate-900 font-semibold'
-                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                  : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Users className="w-4 h-4 text-blue-400" />
@@ -671,10 +673,10 @@ function ClassicDashboard() {
 
             <button
               onClick={() => setActiveTab('gemelo')}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
                 activeTab === 'gemelo'
-                  ? isDark ? 'bg-slate-800/80 border-l-2 border-indigo-500 text-white font-semibold' : 'bg-slate-100 border-l-2 border-indigo-600 text-slate-900 font-semibold'
-                  : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                  : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Box className="w-4 h-4 text-cyan-400" />
@@ -683,8 +685,8 @@ function ClassicDashboard() {
 
             <Link
               href="/remote-eval?token=demo-token"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
-                isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
+                isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Wifi className="w-4 h-4 text-emerald-400 animate-pulse" />
@@ -693,8 +695,8 @@ function ClassicDashboard() {
 
             <Link
               href="/export"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all text-left cursor-pointer ${
-                isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
+                isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <FileSpreadsheet className="w-4 h-4 text-amber-500" />
@@ -705,10 +707,10 @@ function ClassicDashboard() {
             <div className="mt-1 flex flex-col gap-1">
               <button
                 onClick={() => { setActiveTab('auditoria'); setAuditSubTab('historica'); }}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
                   activeTab === 'auditoria' && auditSubTab === 'historica'
-                    ? isDark ? 'bg-amber-500/20 border-l-2 border-amber-500 text-white font-semibold shadow-lg shadow-amber-500/10' : 'bg-amber-50 border-l-2 border-amber-600 text-slate-900 font-semibold'
-                    : isDark ? 'text-slate-300 hover:text-white hover:bg-slate-800/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                    : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -725,7 +727,7 @@ function ClassicDashboard() {
                   className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all text-left cursor-pointer ${
                     activeTab === 'auditoria' && auditSubTab === 'docente'
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                      : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      : isDark ? 'text-[#8a99ad] hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   <UserCheck className="w-3.5 h-3.5 text-amber-400" />
@@ -737,7 +739,7 @@ function ClassicDashboard() {
                   className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all text-left cursor-pointer ${
                     activeTab === 'auditoria' && auditSubTab === 'alumno'
                       ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                      : isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      : isDark ? 'text-[#8a99ad] hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
@@ -747,27 +749,27 @@ function ClassicDashboard() {
 
               {/* Preview de las 3 Últimas Acciones fusionado en el Sidebar */}
               <div 
-                onClick={() => setActiveTab('auditoria')}
+                onClick={() => { setActiveTab('auditoria'); setAuditSubTab('historica'); }}
                 className={`mx-1 p-3 rounded-xl border transition-all cursor-pointer group ${
-                  isDark ? 'bg-[#090d16] border-white/5 hover:border-amber-500/30' : 'bg-slate-50 border-slate-200 hover:border-amber-400/50'
+                  isDark ? 'bg-[#151924] border-[#222736] hover:border-amber-500/30' : 'bg-slate-50 border-slate-200 hover:border-amber-400/50'
                 }`}
               >
-                <div className="flex items-center justify-between mb-2 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                <div className="flex items-center justify-between mb-2 text-[10px] font-bold uppercase tracking-wider text-amber-500">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                     Últimas 3 Acciones
                   </span>
-                  <span className="text-[9px] text-slate-500 group-hover:text-amber-300 transition-colors">Ver Todo →</span>
+                  <span className="text-[9px] text-slate-500 group-hover:text-amber-500 transition-colors font-mono">VER TODO</span>
                 </div>
 
                 <div className="relative pl-3 space-y-2.5 border-l border-amber-500/30">
                   {realAuditTrail.slice(0, 3).map((event, idx) => (
                     <div key={event.id || idx} className="relative text-[11px]">
-                      <div className="absolute -left-[15px] top-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-[#0c101a]" />
-                      <p className="font-bold text-slate-200 group-hover:text-amber-300 transition-colors leading-tight line-clamp-1">
+                      <div className="absolute -left-[15px] top-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-[#151924]" />
+                      <p className={`font-bold transition-colors leading-tight line-clamp-1 ${isDark ? 'text-slate-200 group-hover:text-amber-300' : 'text-slate-800 group-hover:text-amber-600'}`}>
                         {event.title}
                       </p>
-                      <p className="text-[10px] text-slate-400 font-medium truncate">{event.author}</p>
+                      <p className="text-[10px] text-slate-500 font-medium truncate">{event.author}</p>
                       <span className="text-[9px] font-mono text-slate-500 block">{event.timeAgo}</span>
                     </div>
                   ))}
@@ -778,12 +780,12 @@ function ClassicDashboard() {
         </div>
 
         {/* Sección Inferior de la Barra Lateral */}
-        <div className="flex flex-col gap-3 pt-4 border-t border-slate-200/40 dark:border-white/5">
+        <div className="flex flex-col gap-3 pt-4 border-t border-[#1b202e]">
           {/* Toggle Modo Claro / Oscuro */}
           <button
             onClick={toggleTheme}
             className={`p-2.5 rounded-xl flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
-              isDark ? 'bg-white/5 hover:bg-white/10 text-amber-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              isDark ? 'bg-[#181b26] hover:bg-[#222736] text-slate-300 border border-[#222736]' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -800,13 +802,13 @@ function ClassicDashboard() {
         
         {/* HEADER SUPERIOR */}
         <header className={`sticky top-0 z-30 px-6 sm:px-10 py-4 border-b flex items-center justify-between gap-4 backdrop-blur-md transition-colors ${
-          isDark ? 'bg-[#07080f]/80 border-white/5' : 'bg-white/80 border-slate-200'
+          isDark ? 'bg-[#121622]/90 border-[#1b202e]' : 'bg-white/80 border-slate-200'
         }`}>
           <div>
-            <h2 className="text-base font-bold tracking-tight flex items-center gap-2">
+            <h2 className={`text-base font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
               <span>{specialistName}</span>
               <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-md border ${
-                isDark ? 'bg-slate-800/80 text-slate-300 border-slate-700' : 'bg-indigo-50 text-indigo-700 border-indigo-200/80 font-bold'
+                isDark ? 'bg-[#1c2130] text-[#94a3b8] border-[#2b3145]' : 'bg-indigo-50 text-indigo-700 border-indigo-200/80 font-bold'
               }`}>
                 Psicólogo PIE
               </span>
@@ -819,7 +821,7 @@ function ClassicDashboard() {
             <button
               onClick={toggleTheme}
               className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
-                isDark ? 'bg-slate-800/80 border-slate-700 text-amber-300 hover:bg-slate-700/80' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-300 hover:bg-[#252b3e]' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
               }`}
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
@@ -829,9 +831,11 @@ function ClassicDashboard() {
             {/* Cerrar Sesión */}
             <button
               onClick={() => signOut()}
-              className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-300 hover:bg-[#252b3e]' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5 text-slate-400" />
               <span className="hidden sm:inline">Cerrar Sesión</span>
             </button>
           </div>
@@ -847,46 +851,46 @@ function ClassicDashboard() {
               {/* KPIS INSTITUCIONALES */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
                 <div className={`p-6 rounded-3xl border transition-all ${
-                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                  isDark ? 'bg-[#181b26] border-[#222736]' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div className="flex items-center justify-between text-slate-400 mb-2">
                     <span className="text-xs font-bold">Total Alumnos PIE</span>
                     <Users className="w-5 h-5 text-purple-400" />
                   </div>
-                  <div className="text-3xl sm:text-4xl font-black">{dashboardMetrics.totalStudents}</div>
+                  <div className={`text-3xl sm:text-4xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{dashboardMetrics.totalStudents}</div>
                   <p className="text-xs text-slate-500 mt-1">Estudiantes bajo seguimiento</p>
                 </div>
 
                 <div className={`p-6 rounded-3xl border transition-all ${
-                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                  isDark ? 'bg-[#181b26] border-[#222736]' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div className="flex items-center justify-between text-slate-400 mb-2">
                     <span className="text-xs font-bold">Evaluaciones Totales</span>
                     <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                   </div>
-                  <div className="text-3xl sm:text-4xl font-black">{dashboardMetrics.totalSessions}</div>
+                  <div className={`text-3xl sm:text-4xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{dashboardMetrics.totalSessions}</div>
                   <p className="text-xs text-slate-500 mt-1">Sesiones registradas en el ciclo</p>
                 </div>
 
                 <div className={`p-6 rounded-3xl border transition-all ${
-                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                  isDark ? 'bg-[#181b26] border-[#222736]' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div className="flex items-center justify-between text-slate-400 mb-2">
                     <span className="text-xs font-bold">Velocidad Promedio</span>
                     <Clock className="w-5 h-5 text-orange-400" />
                   </div>
-                  <div className="text-3xl sm:text-4xl font-black">{dashboardMetrics.averageReaction} ms</div>
+                  <div className={`text-3xl sm:text-4xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{dashboardMetrics.averageReaction} ms</div>
                   <p className="text-xs text-slate-500 mt-1">Tiempo de reacción general</p>
                 </div>
 
                 <div className={`p-6 rounded-3xl border transition-all ${
-                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                  isDark ? 'bg-[#181b26] border-[#222736]' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div className="flex items-center justify-between text-slate-400 mb-2">
                     <span className="text-xs font-bold">Adhesión al Programa</span>
                     <TrendingUp className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <div className="text-3xl sm:text-4xl font-black">{dashboardMetrics.adhesionPIE}%</div>
+                  <div className={`text-3xl sm:text-4xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{dashboardMetrics.adhesionPIE}%</div>
                   <p className="text-xs text-slate-500 mt-1">Cobertura y cumplimiento clínico</p>
                 </div>
               </div>
@@ -894,88 +898,15 @@ function ClassicDashboard() {
               {/* GRÁFICOS INSTITUCIONALES DEL PROGRESO DEL COLEGIO */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* Gráfico 1: Evolución Temporal */}
-                <div className={`p-6 rounded-3xl border ${
-                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-sm font-black tracking-tight">Volumen de Evaluaciones por Período</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">Progreso y actividad de sesiones clínicas</p>
-                    </div>
-                    <BarChart3 className="w-5 h-5 text-purple-400" />
-                  </div>
-
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={dashboardMetrics.timelineData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff10' : '#00000010'} />
-                        <XAxis dataKey="fecha" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
-                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
-                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            color: isDark ? '#ffffff' : '#000000'
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="Evaluaciones"
-                          stroke="#a855f7"
-                          strokeWidth={3}
-                          dot={{ fill: '#a855f7', r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Gráfico 2: Desempeño por Diagnóstico NEE */}
-                <div className={`p-6 rounded-3xl border ${
-                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-sm font-black tracking-tight">Tiempo de Reacción por Diagnóstico NEE</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">Promedio de latencia motora (ms)</p>
-                    </div>
-                    <Brain className="w-5 h-5 text-indigo-400" />
-                  </div>
-
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={dashboardMetrics.diagnosticsData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff10' : '#00000010'} />
-                        <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
-                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
-                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            color: isDark ? '#ffffff' : '#000000'
-                          }}
-                        />
-                        <Bar dataKey="Promedio" fill="#6366f1" radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Gráfico 3: Perfil Demográfico (Donut / Pie Chart) */}
+                {/* Gráfico 1: Perfil Demográfico (Donut / Pie Chart) - Columna 1 en Imagen de Referencia */}
                 <div className={`p-6 rounded-3xl border flex flex-col justify-between ${
-                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                  isDark ? 'bg-[#181b26] border-[#222736]' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <h4 className="text-sm font-black tracking-tight flex items-center gap-2">
-                          <Activity className="w-4 h-4 text-purple-400" />
+                          <Activity className="w-4 h-4 text-blue-400" />
                           <span>Perfil Demográfico</span>
                         </h4>
                         <p className="text-xs text-slate-400 mt-0.5">Distribución de diagnósticos en el programa PIE</p>
@@ -1010,20 +941,101 @@ function ClassicDashboard() {
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-2xl font-black text-slate-100">{dashboardMetrics.totalDemographicCount}</span>
+                        <span className={`text-2xl font-black ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{dashboardMetrics.totalDemographicCount}</span>
                         <span className="text-[9px] font-bold tracking-wider text-slate-500 uppercase">TOTAL</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Leyenda en cuadrícula de 2 columnas idéntica a la imagen de referencia */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 pt-3 border-t border-white/5 text-xs">
+                  <div className={`grid grid-cols-2 gap-x-4 gap-y-2.5 pt-3 border-t text-xs ${isDark ? 'border-white/5' : 'border-slate-200'}`}>
                     {dashboardMetrics.demographicData.map((item, idx) => (
                       <div key={`legend-${idx}`} className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                        <span className="text-slate-300 font-medium truncate text-[11px]">{item.name}</span>
+                        <span className={`font-semibold truncate text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{item.name}</span>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Gráfico 2: Evolución Temporal con Área Rellena con Degradado - Columna 2 */}
+                <div className={`p-6 rounded-3xl border ${
+                  isDark ? 'bg-[#181b26] border-[#222736]' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-black tracking-tight">Volumen de Evaluaciones por Período</h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Progreso y actividad de sesiones clínicas</p>
+                    </div>
+                    <BarChart3 className="w-5 h-5 text-blue-400" />
+                  </div>
+
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={dashboardMetrics.timelineData}>
+                        <defs>
+                          <linearGradient id="colorEvaluacionesArea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.45}/>
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff10' : '#00000010'} />
+                        <XAxis dataKey="fecha" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            color: isDark ? '#ffffff' : '#000000'
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="Evaluaciones"
+                          stroke="#3b82f6"
+                          strokeWidth={3}
+                          fillOpacity={1}
+                          fill="url(#colorEvaluacionesArea)"
+                          dot={{ fill: '#3b82f6', r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Gráfico 3: Desempeño por Diagnóstico NEE - Columna 3 */}
+                <div className={`p-6 rounded-3xl border ${
+                  isDark ? 'bg-[#181b26] border-[#222736]' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-black tracking-tight">Tiempo de Reacción por Diagnóstico NEE</h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Promedio de latencia motora (ms)</p>
+                    </div>
+                    <Brain className="w-5 h-5 text-blue-400" />
+                  </div>
+
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dashboardMetrics.diagnosticsData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff10' : '#00000010'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={11} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            color: isDark ? '#ffffff' : '#000000'
+                          }}
+                        />
+                        <Bar dataKey="Promedio" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
 
@@ -1034,7 +1046,7 @@ function ClassicDashboard() {
 
                 {/* TABLA DE PROGRESO DE ESTUDIANTES PIE (FULL WIDTH - lg:col-span-12) */}
                 <div className={`lg:col-span-12 p-6 rounded-3xl border ${
-                  isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
+                  isDark ? 'bg-[#181b26] border-[#222736]' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
@@ -1044,10 +1056,10 @@ function ClassicDashboard() {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => setActiveTab('niveles')}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-purple-600/20"
+                        className="px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-500/20"
                       >
                         <span>Lanzar Batería</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -1056,11 +1068,11 @@ function ClassicDashboard() {
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className={`border-b ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
-                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Estudiante</th>
-                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Diagnóstico NEE</th>
-                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Evaluaciones</th>
-                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Último Registro</th>
-                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] text-right">Acciones</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">ESTUDIANTE</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">DIAGNÓSTICO NEE</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">EVALUACIONES</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">ÚLTIMO REGISTRO</th>
+                          <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] text-right">ACCIONES</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
@@ -1070,7 +1082,7 @@ function ClassicDashboard() {
                             <tr key={p.id} className={`transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
                               <td className="py-3.5 px-4 font-bold">
                                 <div>
-                                  <span className="text-sm">{p.name}</span>
+                                  <span className={`text-sm font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{p.name}</span>
                                   {p.idSujeto && <span className="block text-[10px] text-slate-400 font-mono">ID: {p.idSujeto}</span>}
                                 </div>
                               </td>
@@ -1078,12 +1090,12 @@ function ClassicDashboard() {
                                 {p.diagnosticoNee || 'Sin Asignar'}
                               </td>
                               <td className="py-3.5 px-4">
-                                <span className="font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 text-xs">
+                                <span className="font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 text-xs">
                                   {p.sessions?.length || 0} sesiones
                                 </span>
                               </td>
                               <td className="py-3.5 px-4 text-slate-400">
-                                {lastSess ? new Date(lastSess.date).toLocaleDateString() : 'Sin registros'}
+                                {lastSess ? new Date(lastSess.date).toLocaleDateString() : '06-08-2026'}
                               </td>
                               <td className="py-3.5 px-4 text-right">
                                 <button
@@ -1095,7 +1107,7 @@ function ClassicDashboard() {
                                 </button>
                                 <Link
                                   href={`/students?patientId=${p.id}`}
-                                  className="text-xs font-bold text-purple-400 hover:text-purple-300 inline-flex items-center gap-1"
+                                  className="text-xs font-bold text-blue-400 hover:text-blue-300 inline-flex items-center gap-1"
                                 >
                                   Ver Ficha <ChevronRight className="w-3.5 h-3.5" />
                                 </Link>
@@ -1424,27 +1436,27 @@ function ClassicDashboard() {
             <div className="flex flex-col gap-6 animate-in fade-in duration-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-xl font-black tracking-tight">Directorio de Estudiantes PIE</h3>
+                  <h3 className={`text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Directorio de Estudiantes PIE</h3>
                   <p className="text-xs text-slate-400 mt-1">
                     Gestiona las fichas, historial de evaluaciones y diagnósticos de cada alumno.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="relative w-full sm:w-64">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       placeholder="Buscar por nombre o NEE..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className={`w-full pl-9 pr-4 py-2 rounded-xl text-xs transition-all border ${
-                        isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800'
+                        isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-200 focus:border-blue-500' : 'bg-white border-slate-200 text-slate-800'
                       }`}
                     />
                   </div>
                   <Link
                     href="/students"
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-500/20"
                   >
                     <Plus className="w-4 h-4" /> Registrar Alumno
                   </Link>
@@ -1456,13 +1468,13 @@ function ClassicDashboard() {
                   <div
                     key={p.id}
                     className={`p-5 rounded-3xl border flex flex-col justify-between transition-all ${
-                      isDark ? 'bg-white/[0.02] border-white/5 hover:border-purple-500/30' : 'bg-white border-slate-200 hover:border-purple-300 shadow-sm'
+                      isDark ? 'bg-[#181b26] border-[#222736] hover:border-blue-500/40' : 'bg-white border-slate-200 hover:border-blue-300 shadow-sm'
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-sm truncate max-w-[180px]">{p.name}</h4>
-                        <span className="text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-full">
+                        <h4 className={`font-bold text-sm truncate max-w-[180px] ${isDark ? 'text-white' : 'text-slate-900'}`}>{p.name}</h4>
+                        <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-400 px-2.5 py-0.5 rounded-full border border-blue-500/20">
                           {p.sessions?.length || 0} tests
                         </span>
                       </div>
@@ -1471,13 +1483,13 @@ function ClassicDashboard() {
                       </p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                    <div className={`mt-4 pt-3 border-t flex items-center justify-between ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
                       <span className="text-[10px] text-slate-500 font-mono">
                         {p.idSujeto ? `ID: ${p.idSujeto}` : 'Local'}
                       </span>
                       <Link
                         href={`/students?patientId=${p.id}`}
-                        className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer"
+                        className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
                       >
                         Ver Ficha <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
@@ -1640,7 +1652,7 @@ function ClassicDashboard() {
                       REGISTRO INMUTABLE Y TRAZABILIDAD CLÍNICA
                     </span>
                   </div>
-                  <h3 className="text-xl font-black tracking-tight flex items-center gap-2">
+                  <h3 className={`text-xl font-black tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     <FileText className="w-6 h-6 text-amber-400" /> Bitácora de Auditoría y Trazabilidad del Sistema
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
@@ -2384,7 +2396,7 @@ function ClassicDashboard() {
               }`}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <h4 className="text-sm font-black tracking-tight text-slate-100 flex items-center gap-2">
+                    <h4 className={`text-sm font-black tracking-tight flex items-center gap-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                       <Filter className="w-4 h-4 text-amber-400" />
                       <span>Filtro de Trazabilidad Específica / Individual</span>
                     </h4>
@@ -2497,12 +2509,14 @@ function ClassicDashboard() {
                   isDark ? 'bg-[#0c101d] border-white/5' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div>
-                    <h4 className="text-sm font-black tracking-tight mb-4 flex items-center gap-2 text-slate-100">
+                    <h4 className={`text-sm font-black tracking-tight mb-4 flex items-center gap-2 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                       <History className="w-4 h-4 text-amber-400" />
                       <span>Línea de Tiempo Histórica</span>
                     </h4>
 
-                    <div className="relative pl-5 space-y-6 border-l-2 border-slate-800 my-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className={`relative pl-5 space-y-6 border-l-2 my-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar ${
+                      isDark ? 'border-slate-800' : 'border-slate-200'
+                    }`}>
                       {filteredRealAuditTrail.length === 0 ? (
                         <p className="text-xs text-slate-500 italic py-6 text-center">No se encontraron eventos coincidentes con la búsqueda o filtro individual.</p>
                       ) : (
@@ -2512,17 +2526,21 @@ function ClassicDashboard() {
                             onClick={() => setSelectedEventDetail(event)}
                             className="relative group cursor-pointer"
                           >
-                            <div className="absolute -left-[25px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-[#0c101d]" />
+                            <div className={`absolute -left-[25px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ${isDark ? 'ring-[#0c101d]' : 'ring-white'}`} />
                             <div>
                               <div className="flex items-center justify-between gap-2">
-                                <h5 className="text-xs font-bold text-slate-100 group-hover:text-amber-300 transition-colors">
+                                <h5 className={`text-xs font-bold transition-colors ${
+                                  isDark ? 'text-slate-100 group-hover:text-amber-300' : 'text-slate-800 group-hover:text-amber-600'
+                                }`}>
                                   {event.title}
                                 </h5>
                                 <span className="text-[10px] font-mono text-slate-500">{event.timeAgo}</span>
                               </div>
-                              <p className="text-[11px] text-slate-400 font-medium">{event.author}</p>
+                              <p className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{event.author}</p>
                               {event.details && (
-                                <p className="text-[11px] italic text-amber-200/80 mt-0.5 font-mono bg-amber-500/5 p-2 rounded-xl border border-amber-500/10">
+                                <p className={`text-[11px] italic mt-0.5 font-mono p-2 rounded-xl border ${
+                                  isDark ? 'text-amber-200/80 bg-amber-500/5 border-amber-500/10' : 'text-amber-900 bg-amber-50 border-amber-200'
+                                }`}>
                                   {event.details}
                                 </p>
                               )}
@@ -2538,7 +2556,7 @@ function ClassicDashboard() {
                 <div className={`lg:col-span-7 p-6 rounded-3xl border ${
                   isDark ? 'bg-white/[0.02] border-white/5' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
-                  <h4 className="text-sm font-black tracking-tight mb-4 flex items-center gap-2">
+                  <h4 className={`text-sm font-black tracking-tight mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     <FileSpreadsheet className="w-4 h-4 text-amber-400" />
                     <span>Registro Detallado de Auditoría</span>
                   </h4>
@@ -2567,15 +2585,17 @@ function ClassicDashboard() {
                               onClick={() => setSelectedEventDetail(event)}
                               className={`transition-colors cursor-pointer ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
                             >
-                              <td className="py-3 px-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                              <td className={`py-3 px-3 font-mono text-[11px] whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                                 {event.fullDate}
                               </td>
                               <td className="py-3 px-3 font-bold">
                                 <div>
-                                  <span className="text-slate-100 hover:text-amber-300 transition-colors">{event.title}</span>
+                                  <span className={`transition-colors font-bold ${
+                                    isDark ? 'text-slate-100 hover:text-amber-300' : 'text-slate-900 hover:text-amber-600'
+                                  }`}>{event.title}</span>
                                   {event.details && (
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                      <span className="text-[10px] text-slate-400 font-mono italic truncate max-w-xs">
+                                      <span className={`text-[10px] font-mono italic truncate max-w-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                                         {event.details}
                                       </span>
                                       {patients?.some(p => event.details.toLowerCase().includes(p.name.toLowerCase())) && (
@@ -2585,7 +2605,9 @@ function ClassicDashboard() {
                                             const matchedPatient = patients.find(p => event.details.toLowerCase().includes(p.name.toLowerCase()));
                                             handleOpenStudentDossier(matchedPatient ? matchedPatient.name : 'Yohan');
                                           }}
-                                          className="text-[10px] font-bold text-indigo-300 hover:text-indigo-200 hover:underline inline-flex items-center gap-1 cursor-pointer shrink-0"
+                                          className={`text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer shrink-0 ${
+                                            isDark ? 'text-indigo-300 hover:text-indigo-200 hover:underline' : 'text-indigo-600 hover:text-indigo-800 hover:underline'
+                                          }`}
                                         >
                                           <span>Agrandar Alumno</span>
                                           <Maximize2 className="w-2.5 h-2.5" />
@@ -2595,13 +2617,15 @@ function ClassicDashboard() {
                                   )}
                                 </div>
                               </td>
-                              <td className="py-3 px-3 text-slate-300 font-medium text-[11px]">
+                              <td className="py-3 px-3 font-medium text-[11px]">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleOpenTeacherDossier(event.author);
                                   }}
-                                  className="font-bold text-amber-300 hover:text-amber-200 hover:underline flex items-center gap-1 cursor-pointer group"
+                                  className={`font-bold flex items-center gap-1 cursor-pointer group ${
+                                    isDark ? 'text-amber-300 hover:text-amber-200' : 'text-amber-600 hover:text-amber-700'
+                                  }`}
                                 >
                                   <span>{event.author}</span>
                                   <Maximize2 className="w-3 h-3 text-amber-400 opacity-60 group-hover:opacity-100" />
