@@ -7,12 +7,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 
-export const Brain3D = () => {
+export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }) => {
   const containerRef = useRef(null);
   const [modelLoaded, setModelLoaded] = useState(false);
 
   // Estados de filtro multiselect + hover
-  const [activeModules, setActiveModules] = useState({ reaction: true, memory: true });
+  const [internalActiveModules, setInternalActiveModules] = useState({ reaction: true, memory: true });
+  const activeModules = externalActiveModules !== undefined ? externalActiveModules : internalActiveModules;
   const [hoveredModule, setHoveredModule] = useState(null);
 
   // Ref para acceder al estado actual dentro del loop central de GSAP (60/120fps)
@@ -23,7 +24,11 @@ export const Brain3D = () => {
   }, [activeModules, hoveredModule]);
 
   const toggleModule = (moduleKey) => {
-    setActiveModules((prev) => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
+    if (onToggleModule) {
+      onToggleModule(moduleKey);
+    } else {
+      setInternalActiveModules((prev) => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
+    }
   };
 
   useGSAP(

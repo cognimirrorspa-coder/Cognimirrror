@@ -1,17 +1,23 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 
 // Colores del Cerebro 3D: Cyan (Reacción #38bdf8) y Púrpura (Memory #a855f7)
 const BRAIN_COLORS = [
-  { hex: '#38bdf8', r: 56, g: 189, b: 248 },  // Cyan (Reacción Mirror)
-  { hex: '#a855f7', r: 168, g: 85, b: 247 },  // Purple (Memory Mirror)
+  { type: 'reaction', hex: '#38bdf8', r: 56, g: 189, b: 248 },  // Cyan (Reacción Mirror)
+  { type: 'memory',   hex: '#a855f7', r: 168, g: 85, b: 247 },  // Purple (Memory Mirror)
 ];
 
-export const NeuralBackground3D = () => {
+export const NeuralBackground3D = ({ activeModules = { reaction: true, memory: true } }) => {
   const canvasRef = useRef(null);
+  const activeModulesRef = useRef(activeModules);
+
+  // Mantener ref siempre actualizada con los cambios de props
+  useEffect(() => {
+    activeModulesRef.current = activeModules;
+  }, [activeModules?.reaction, activeModules?.memory]);
 
   useGSAP(() => {
     const canvas = canvasRef.current;
@@ -63,21 +69,25 @@ export const NeuralBackground3D = () => {
         phase: Math.random() * Math.PI * 2,
         pulseSpeed: 0.012 + Math.random() * 0.015,
         color,
+        type: color.type,
+        visibleAlpha: 1.0,
       };
     });
-
-    const pulses = [];
-    const maxPulses = 10;
 
     // Loop de renderizado sincronizado con GSAP Ticker
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Actualización de Posición de Nodos
+      // 1. Actualización de Posición de Nodos e Interpolación Suave de Visibilidad (Lerp)
       nodes.forEach((n) => {
         n.phase += n.pulseSpeed;
         n.x += n.vx;
         n.y += n.vy;
+
+        // Smooth Lerp de visibilidad según el botón activado/desactivado (ON / OFF)
+        const isTypeActive = Boolean(activeModulesRef.current?.[n.type]);
+        const targetAlpha = isTypeActive ? 1.0 : 0.0;
+        n.visibleAlpha += (targetAlpha - n.visibleAlpha) * 0.15;
 
         if (mouse.active) {
           const dx = mouse.x - n.x;
@@ -102,14 +112,16 @@ export const NeuralBackground3D = () => {
         if (n.y > height) { n.y = height; n.vy *= -1; }
       });
 
-      // 2. Dibujar Conexiones (Lineas levemente visibles de fondo)
+      // 2. Dibujar Conexiones entre Nodos Activos
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
+        if (a.visibleAlpha < 0.05) continue;
         const distMouseA = mouse.active ? Math.hypot(a.x - mouse.x, a.y - mouse.y) : 9999;
         const inMouseZoneA = distMouseA < MOUSE_RADIUS;
 
         for (let j = i + 1; j < nodes.length; j++) {
           const b = nodes[j];
+          if (b.visibleAlpha < 0.05) continue;
           const dx = a.x - b.x;
           const dy = a.y - b.y;
           const dist = Math.hypot(dx, dy);
@@ -122,13 +134,14 @@ export const NeuralBackground3D = () => {
               ? Math.max(0, 1 - Math.min(distMouseA, distMouseB) / MOUSE_RADIUS)
               : 0;
 
-            // Opacidad base constante para que la red sea siempre levemente visible
             const distRatio = 1 - dist / NODE_CONNECT_DIST;
-            const baseAlpha = 0.09 + distRatio * 0.22;
-            const finalAlpha = Math.min(0.65, baseAlpha + mouseFactor * 0.4);
+            const lineActiveFactor = Math.min(a.visibleAlpha, b.visibleAlpha);
+            const baseAlpha = (0.09 + distRatio * 0.22) * lineActiveFactor;
+            const finalAlpha = Math.min(0.65, (baseAlpha + mouseFactor * 0.4) * lineActiveFactor);
+
+            if (finalAlpha < 0.01) continue;
             const lineWidth = 0.8 + mouseFactor * 0.9;
 
-            // Gradiente lineal entre el color del nodo A y del nodo B
             const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
             grad.addColorStop(0, `rgba(${a.color.r}, ${a.color.g}, ${a.color.b}, ${finalAlpha})`);
             grad.addColorStop(1, `rgba(${b.color.r}, ${b.color.g}, ${b.color.b}, ${finalAlpha})`);
@@ -139,14 +152,12 @@ export const NeuralBackground3D = () => {
             ctx.strokeStyle = grad;
             ctx.lineWidth = lineWidth;
             ctx.stroke();
-
-            // Generar impulsos de luz de color cyan/purple sin puntos blancos
           }
         }
 
-        // Conexión directa al puntero
-        if (inMouseZoneA) {
-          const mouseAlpha = (1 - distMouseA / MOUSE_RADIUS) * 0.5;
+        // Conexión directa al puntero si el nodo está activo
+        if (inMouseZoneA && a.visibleAlpha > 0.1) {
+          const mouseAlpha = (1 - distMouseA / MOUSE_RADIUS) * 0.5 * a.visibleAlpha;
           const gradMouse = ctx.createLinearGradient(a.x, a.y, mouse.x, mouse.y);
           gradMouse.addColorStop(0, `rgba(${a.color.r}, ${a.color.g}, ${a.color.b}, ${mouseAlpha})`);
           gradMouse.addColorStop(1, `rgba(56, 189, 248, ${mouseAlpha})`);
@@ -172,13 +183,16 @@ export const NeuralBackground3D = () => {
         ctx.fill();
       }
 
-      // Dibujar Nodos únicamente con los 2 colores del Cerebro 3D (Cyan y Purple, sin puntos blancos)
+      // Dibujar Nodos activos únicamente (Cyan y Purple, con desvanecimiento fluido)
       nodes.forEach((n) => {
+        if (n.visibleAlpha < 0.05) return;
+
         const distMouse = mouse.active ? Math.hypot(n.x - mouse.x, n.y - mouse.y) : 9999;
         const mouseFactor = mouse.active ? Math.max(0, 1 - distMouse / MOUSE_RADIUS) : 0;
 
         const pulse = (Math.sin(n.phase) + 1) / 2;
-        const alpha = Math.min(0.9, n.baseAlpha + mouseFactor * 0.35 + pulse * 0.15);
+        const alpha = Math.min(0.9, (n.baseAlpha + mouseFactor * 0.35 + pulse * 0.15) * n.visibleAlpha);
+        if (alpha < 0.01) return;
         const radius = n.radius + mouseFactor * 1.2;
 
         // Halo resplandeciente exterior
@@ -190,7 +204,7 @@ export const NeuralBackground3D = () => {
         ctx.fillStyle = haloGrad;
         ctx.fill();
 
-        // Núcleo central del nodo (Color puro Cyan o Purple)
+        // Núcleo central del nodo
         ctx.beginPath();
         ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, ${alpha})`;

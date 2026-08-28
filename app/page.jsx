@@ -43,6 +43,13 @@ export default function LandingPage() {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', institution: '', email: '', phone: '', message: '' });
 
+  // Estado unificado para sincronizar Cerebro 3D y Fondo de Redes Neuronales
+  const [activeModules, setActiveModules] = useState({ reaction: true, memory: true });
+
+  const toggleModule = (moduleKey) => {
+    setActiveModules((prev) => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
+  };
+
   const openContactModal = (title) => {
     setModalTitle(title);
     setShowModal(true);
@@ -64,7 +71,7 @@ export default function LandingPage() {
 
       {/* ===== FONDO: RED NEURONAL 3D ===== */}
       <div className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-        <NeuralBackground3D />
+        <NeuralBackground3D activeModules={activeModules} />
       </div>
 
       {/* ===== NAVBAR ===== */}
@@ -92,7 +99,7 @@ export default function LandingPage() {
         <div className="absolute top-0 right-0 w-full lg:w-1/2 h-full opacity-95 pointer-events-auto z-10 hidden md:block">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#0B0F19_20%,_transparent_75%)] z-0 pointer-events-none" />
           <div className="relative z-10 w-full h-full flex items-center justify-center">
-            <Brain3D />
+            <Brain3D activeModules={activeModules} onToggleModule={toggleModule} />
           </div>
         </div>
 
