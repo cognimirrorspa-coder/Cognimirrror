@@ -29,7 +29,7 @@ export async function DELETE(request) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://viqtdxvoryovilzsfhwu.supabase.co';
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -38,18 +38,22 @@ export async function DELETE(request) {
       console.warn(`[API Eliminar] Ejecutando en modo MOCK local para profesional ID: ${specialistId}`);
       
       const supabaseAnon = createClient(supabaseUrl, anonKey);
-      await supabaseAnon
-        .from('perfiles')
-        .delete()
-        .eq('id', specialistId);
+      try {
+        await supabaseAnon
+          .from('perfiles')
+          .delete()
+          .eq('id', specialistId);
+      } catch (e) {}
 
       if (colegioId) {
-        await supabaseAnon.from('logs_auditoria').insert([{
-          colegio_id: colegioId,
-          usuario_nombre: adminName,
-          evento: 'DESACTIVAR_USUARIO',
-          detalles: { accion: 'Desvinculación definitiva de cuenta', usuario_id: specialistId }
-        }]).catch(() => {});
+        try {
+          await supabaseAnon.from('logs_auditoria').insert([{
+            colegio_id: colegioId,
+            usuario_nombre: adminName,
+            evento: 'DESACTIVAR_USUARIO',
+            detalles: { accion: 'Desvinculación definitiva de cuenta', usuario_id: specialistId }
+          }]);
+        } catch (e) {}
       }
 
       return NextResponse.json({
@@ -85,22 +89,26 @@ export async function DELETE(request) {
     }
 
     // 3. Eliminar de Supabase Auth
-    await supabaseAdmin.auth.admin.deleteUser(specialistId).catch(err => {
+    try {
+      await supabaseAdmin.auth.admin.deleteUser(specialistId);
+    } catch (err) {
       console.warn('[API Eliminar] Advertencia al eliminar en Auth:', err.message);
-    });
+    }
 
     // 4. Registrar en Auditoría
     if (targetColegioId) {
-      await supabaseAdmin.from('logs_auditoria').insert([{
-        colegio_id: targetColegioId,
-        usuario_nombre: adminName,
-        evento: 'DESACTIVAR_USUARIO',
-        detalles: {
-          accion: 'Desvinculación y eliminación de profesional del colegio',
-          profesional_nombre: userToDelete?.nombre_completo || specialistId,
-          profesional_email: userToDelete?.email || ''
-        }
-      }]).catch(() => {});
+      try {
+        await supabaseAdmin.from('logs_auditoria').insert([{
+          colegio_id: targetColegioId,
+          usuario_nombre: adminName,
+          evento: 'DESACTIVAR_USUARIO',
+          detalles: {
+            accion: 'Desvinculación y eliminación de profesional del colegio',
+            profesional_nombre: userToDelete?.nombre_completo || specialistId,
+            profesional_email: userToDelete?.email || ''
+          }
+        }]);
+      } catch (e) {}
     }
 
     return NextResponse.json({

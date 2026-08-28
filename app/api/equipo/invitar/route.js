@@ -23,7 +23,7 @@ export async function POST(request) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://viqtdxvoryovilzsfhwu.supabase.co';
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -33,30 +33,35 @@ export async function POST(request) {
       const mockUserId = `mock-user-${Math.random().toString(36).substring(2, 9)}`;
       
       const supabaseAnon = createClient(supabaseUrl, anonKey);
-      await supabaseAnon
-        .from('perfiles')
-        .insert([{
-          id: mockUserId,
-          email: email.trim().toLowerCase(),
-          nombre_completo: nombre.trim(),
-          colegio_id: colegio_id,
-          rol: rol.toLowerCase(),
-          cargo_texto: cargo.trim(),
-          activo: true
-        }]).catch(() => {});
+      try {
+        await supabaseAnon
+          .from('perfiles')
+          .insert([{
+            id: mockUserId,
+            email: email.trim().toLowerCase(),
+            nombre_completo: nombre.trim(),
+            colegio_id: colegio_id,
+            institucion_id: colegio_id,
+            rol: rol.toLowerCase(),
+            cargo_texto: cargo.trim(),
+            activo: true
+          }]);
+      } catch (err) {}
 
       // Registrar auditoría mock
-      await supabaseAnon.from('logs_auditoria').insert([{
-        colegio_id: colegio_id,
-        usuario_nombre: adminName,
-        evento: 'CREAR_USUARIO',
-        detalles: {
-          profesional_nombre: nombre,
-          profesional_email: email,
-          rol: rol,
-          cargo: cargo
-        }
-      }]).catch(() => {});
+      try {
+        await supabaseAnon.from('logs_auditoria').insert([{
+          colegio_id: colegio_id,
+          usuario_nombre: adminName,
+          evento: 'CREAR_USUARIO',
+          detalles: {
+            profesional_nombre: nombre,
+            profesional_email: email,
+            rol: rol,
+            cargo: cargo
+          }
+        }]);
+      } catch (err) {}
 
       return NextResponse.json({
         success: true,
@@ -78,7 +83,6 @@ export async function POST(request) {
 
     console.log(`[API Invitar] Creando/invitando profesional: ${email} (${rol}) para colegio ${colegio_id}`);
 
-    // Si se proporciona una contraseña temporal, lo creamos directamente; de lo contrario, enviamos invitación
     let authUser = null;
     if (tempPassword && tempPassword.length >= 6) {
       const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -120,6 +124,7 @@ export async function POST(request) {
         email: email.trim().toLowerCase(),
         nombre_completo: nombre.trim(),
         colegio_id: colegio_id,
+        institucion_id: colegio_id,
         rol: rol.toLowerCase(),
         cargo_texto: cargo.trim(),
         activo: true
@@ -130,17 +135,19 @@ export async function POST(request) {
     }
 
     // 3. Registrar Evento de Auditoría
-    await supabaseAdmin.from('logs_auditoria').insert([{
-      colegio_id: colegio_id,
-      usuario_nombre: adminName,
-      evento: 'CREAR_USUARIO',
-      detalles: {
-        profesional_nombre: nombre.trim(),
-        profesional_email: email.trim().toLowerCase(),
-        rol: rol,
-        cargo: cargo
-      }
-    }]).catch(e => console.warn('[API Invitar] Error en auditoría:', e.message));
+    try {
+      await supabaseAdmin.from('logs_auditoria').insert([{
+        colegio_id: colegio_id,
+        usuario_nombre: adminName,
+        evento: 'CREAR_USUARIO',
+        detalles: {
+          profesional_nombre: nombre.trim(),
+          profesional_email: email.trim().toLowerCase(),
+          rol: rol,
+          cargo: cargo
+        }
+      }]);
+    } catch (e) {}
 
     return NextResponse.json({
       success: true,

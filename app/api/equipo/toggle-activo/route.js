@@ -15,24 +15,28 @@ export async function POST(request) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://viqtdxvoryovilzsfhwu.supabase.co';
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     // Si es mock
     if (!serviceRoleKey || userId.startsWith('mock-')) {
       const supabaseAnon = createClient(supabaseUrl, anonKey);
-      await supabaseAnon
-        .from('perfiles')
-        .update({ activo })
-        .eq('id', userId);
+      try {
+        await supabaseAnon
+          .from('perfiles')
+          .update({ activo })
+          .eq('id', userId);
+      } catch (e) {}
 
-      await supabaseAnon.from('logs_auditoria').insert([{
-        colegio_id: colegioId,
-        usuario_nombre: adminName,
-        evento: activo ? 'CREAR_USUARIO' : 'DESACTIVAR_USUARIO',
-        detalles: { accion: activo ? 'Cuenta reactivada' : 'Cuenta suspendida/desactivada', usuario_id: userId }
-      }]).catch(() => {});
+      try {
+        await supabaseAnon.from('logs_auditoria').insert([{
+          colegio_id: colegioId,
+          usuario_nombre: adminName,
+          evento: activo ? 'CREAR_USUARIO' : 'DESACTIVAR_USUARIO',
+          detalles: { accion: activo ? 'Cuenta reactivada' : 'Cuenta suspendida/desactivada', usuario_id: userId }
+        }]);
+      } catch (e) {}
 
       return NextResponse.json({ success: true, activo });
     }
@@ -54,16 +58,18 @@ export async function POST(request) {
     }
 
     // 2. Registrar en auditoría
-    await supabaseAdmin.from('logs_auditoria').insert([{
-      colegio_id: colegioId,
-      usuario_nombre: adminName,
-      evento: activo ? 'CREAR_USUARIO' : 'DESACTIVAR_USUARIO',
-      detalles: {
-        accion: activo ? 'Cuenta reactivada por Dirección' : 'Cuenta desactivada/suspendida por Dirección',
-        profesional_nombre: updatedProfile?.nombre_completo,
-        profesional_email: updatedProfile?.email
-      }
-    }]).catch(() => {});
+    try {
+      await supabaseAdmin.from('logs_auditoria').insert([{
+        colegio_id: colegioId,
+        usuario_nombre: adminName,
+        evento: activo ? 'CREAR_USUARIO' : 'DESACTIVAR_USUARIO',
+        detalles: {
+          accion: activo ? 'Cuenta reactivada por Dirección' : 'Cuenta desactivada/suspendida por Dirección',
+          profesional_nombre: updatedProfile?.nombre_completo,
+          profesional_email: updatedProfile?.email
+        }
+      }]);
+    } catch (e) {}
 
     return NextResponse.json({ success: true, activo });
 
