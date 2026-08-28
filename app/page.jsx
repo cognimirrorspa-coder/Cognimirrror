@@ -92,10 +92,10 @@ export default function LandingPage() {
       </nav>
 
       {/* ===== SECCIÓN 1: HERO ===== */}
-      <section className="relative overflow-hidden border-b border-white/5 pt-28 pb-20 px-4">
+      <section className="relative overflow-hidden border-b border-white/5 pt-20 sm:pt-28 pb-12 sm:pb-20 px-4 sm:px-6">
         <div className="electric-glow top-1/2 left-1/4 transform -translate-x-1/2 -translate-y-1/2" />
 
-        {/* Brain3D en el lado derecho con Leyenda Cromática de Módulos */}
+        {/* Brain3D en el lado derecho con Leyenda Cromática de Módulos (Escritorio Original 100% Intacto) */}
         <div className="absolute top-0 right-0 w-full lg:w-1/2 h-full opacity-95 pointer-events-auto z-10 hidden md:block">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#0B0F19_20%,_transparent_75%)] z-0 pointer-events-none" />
           <div className="relative z-10 w-full h-full flex items-center justify-center">
@@ -104,19 +104,19 @@ export default function LandingPage() {
         </div>
 
         <div className="container mx-auto max-w-7xl relative z-10 pointer-events-none">
-          <div className="grid lg:grid-cols-12 gap-12 items-center min-h-[500px] lg:min-h-[650px] lg:pt-8">
-            <div className="lg:col-span-7 space-y-8 text-left lg:pt-4 pointer-events-auto">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.1] tracking-tight drop-shadow-sm">
+          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center min-h-[400px] sm:min-h-[500px] lg:min-h-[650px] lg:pt-8">
+            <div className="lg:col-span-7 space-y-5 sm:space-y-8 text-left lg:pt-4 pointer-events-auto">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.12] sm:leading-[1.1] tracking-tight drop-shadow-sm">
                 Telemetría Phygital que blinda tu Programa PIE.
               </h1>
-              <p className="text-lg md:text-xl text-slate-400 max-w-xl font-light leading-relaxed">
+              <p className="text-sm sm:text-base md:text-xl text-slate-400 max-w-xl font-light leading-relaxed">
                 Deja atrás el &apos;espejismo académico&apos; y las evaluaciones subjetivas. CogniMirror transforma herramientas físicas en métricas clínicas exactas, ahorrando cientos de horas a tu equipo psicosocial.
               </p>
 
-              <div className="flex flex-wrap items-center gap-4 mt-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
                 <button
                   onClick={() => openContactModal('Solicitar Demostración Institucional')}
-                  className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-7 py-3.5 rounded-xl transition-all duration-300 text-sm font-semibold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20"
+                  className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all duration-300 text-xs sm:text-sm font-semibold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20"
                 >
                   <span>Postular al Piloto</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -126,7 +126,7 @@ export default function LandingPage() {
                     e.preventDefault();
                     document.getElementById('experiencia-phygital')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="relative group overflow-hidden bg-slate-900/40 hover:bg-slate-800/60 text-white px-7 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-sm font-semibold border border-white/10 hover:border-white/20 active:scale-[0.98]"
+                  className="relative group overflow-hidden bg-slate-900/40 hover:bg-slate-800/60 text-white px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold border border-white/10 hover:border-white/20 active:scale-[0.98]"
                 >
                   <Play className="w-4 h-4 text-[#3B82F6] fill-[#3B82F6]/10 group-hover:scale-110 transition-transform" />
                   <span>Ver Video</span>
@@ -134,8 +134,8 @@ export default function LandingPage() {
               </div>
 
               {/* CORFO Logo Block */}
-              <div className="pt-8">
-                <img src="/logo-corfo.png" alt="Apoyado por CORFO y Gobierno de Chile" className="h-16 md:h-20 object-contain drop-shadow-md hover:scale-105 transition-transform origin-left" />
+              <div className="pt-4 sm:pt-8">
+                <img src="/logo-corfo.png" alt="Apoyado por CORFO y Gobierno de Chile" className="h-12 sm:h-16 md:h-20 object-contain drop-shadow-md hover:scale-105 transition-transform origin-left" />
               </div>
             </div>
           </div>

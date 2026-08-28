@@ -24,18 +24,36 @@ export const NeuralBackground3D = ({ activeModules = { reaction: true, memory: t
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const NODE_COUNT = 75;             // Cantidad óptima de nodos
     const MOUSE_RADIUS = 160;          // Radio sutil de interacción
-    const NODE_CONNECT_DIST = 145;      // Distancia máxima de conexión
     const ATTRACT_STRENGTH = 0.005;     // Atracción suave
 
     let width = (canvas.width = canvas.offsetWidth);
     let height = (canvas.height = canvas.offsetHeight);
     const mouse = { x: -9999, y: -9999, active: false };
 
+    // Cálculo dinámico de densidad proporcional al tamaño de pantalla para un fondo ultra limpio en móviles
+    const getResponsiveParams = (w) => {
+      if (w < 480) {
+        // Teléfono Angosto (< 480px): Solo 14 nodos sutiles, distancia corta (70px) y máx 2 conexiones por punto
+        return { count: 14, dist: 70, maxConn: 2, speed: 0.22 };
+      } else if (w < 640) {
+        // Teléfono Mediano (480px - 639px): 18 nodos limpios, distancia 80px, máx 2 conexiones
+        return { count: 18, dist: 80, maxConn: 2, speed: 0.25 };
+      } else if (w < 1024) {
+        // Tablet (640px - 1023px): 35 nodos, distancia 110px, máx 3 conexiones
+        return { count: 35, dist: 110, maxConn: 3, speed: 0.30 };
+      } else {
+        // Escritorio (>= 1024px): Exactamente 75 nodos y 145px de distancia (100% Idéntico al Original de Escritorio)
+        return { count: 75, dist: 145, maxConn: 6, speed: 0.35 };
+      }
+    };
+
+    let params = getResponsiveParams(window.innerWidth || width);
+
     const resize = () => {
       width = canvas.width = canvas.offsetWidth;
       height = canvas.height = canvas.offsetHeight;
+      params = getResponsiveParams(window.innerWidth || width);
     };
 
     window.addEventListener('resize', resize);
@@ -56,15 +74,15 @@ export const NeuralBackground3D = ({ activeModules = { reaction: true, memory: t
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseleave', onMouseLeave);
 
-    // Inicializar Nodos asignando equitativamente los 2 colores del cerebro 3D
-    const nodes = Array.from({ length: NODE_COUNT }, (_, idx) => {
+    // Inicializar Pool de 75 Nodos asignando equitativamente los 2 colores del cerebro 3D
+    const nodes = Array.from({ length: 75 }, (_, idx) => {
       const color = BRAIN_COLORS[idx % BRAIN_COLORS.length];
       return {
         x: Math.random() * (width || 800),
         y: Math.random() * (height || 600),
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        radius: 2.0 + Math.random() * 2.2,
+        vx: (Math.random() - 0.5) * params.speed,
+        vy: (Math.random() - 0.5) * params.speed,
+        radius: 1.8 + Math.random() * 2.0,
         baseAlpha: 0.35 + Math.random() * 0.35,
         phase: Math.random() * Math.PI * 2,
         pulseSpeed: 0.012 + Math.random() * 0.015,
@@ -78,8 +96,12 @@ export const NeuralBackground3D = ({ activeModules = { reaction: true, memory: t
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
+      // Limitar cantidad activa de nodos a params.count
+      const activeCount = Math.min(nodes.length, params.count);
+
       // 1. Actualización de Posición de Nodos e Interpolación Suave de Visibilidad (Lerp)
-      nodes.forEach((n) => {
+      for (let i = 0; i < activeCount; i++) {
+        const n = nodes[i];
         n.phase += n.pulseSpeed;
         n.x += n.vx;
         n.y += n.vy;
@@ -110,23 +132,28 @@ export const NeuralBackground3D = ({ activeModules = { reaction: true, memory: t
         if (n.x > width) { n.x = width; n.vx *= -1; }
         if (n.y < 0) { n.y = 0; n.vy *= -1; }
         if (n.y > height) { n.y = height; n.vy *= -1; }
-      });
+      }
 
-      // 2. Dibujar Conexiones entre Nodos Activos
-      for (let i = 0; i < nodes.length; i++) {
+      // 2. Dibujar Conexiones entre Nodos Activos (con límite de conexiones por nodo)
+      const connCounts = new Uint8Array(activeCount);
+
+      for (let i = 0; i < activeCount; i++) {
         const a = nodes[i];
-        if (a.visibleAlpha < 0.05) continue;
+        if (a.visibleAlpha < 0.05 || connCounts[i] >= params.maxConn) continue;
         const distMouseA = mouse.active ? Math.hypot(a.x - mouse.x, a.y - mouse.y) : 9999;
         const inMouseZoneA = distMouseA < MOUSE_RADIUS;
 
-        for (let j = i + 1; j < nodes.length; j++) {
+        for (let j = i + 1; j < activeCount; j++) {
           const b = nodes[j];
-          if (b.visibleAlpha < 0.05) continue;
+          if (b.visibleAlpha < 0.05 || connCounts[j] >= params.maxConn) continue;
           const dx = a.x - b.x;
           const dy = a.y - b.y;
           const dist = Math.hypot(dx, dy);
 
-          if (dist < NODE_CONNECT_DIST) {
+          if (dist < params.dist) {
+            connCounts[i]++;
+            connCounts[j]++;
+
             const distMouseB = mouse.active ? Math.hypot(b.x - mouse.x, b.y - mouse.y) : 9999;
             const inMouseZoneB = distMouseB < MOUSE_RADIUS;
 
@@ -134,7 +161,7 @@ export const NeuralBackground3D = ({ activeModules = { reaction: true, memory: t
               ? Math.max(0, 1 - Math.min(distMouseA, distMouseB) / MOUSE_RADIUS)
               : 0;
 
-            const distRatio = 1 - dist / NODE_CONNECT_DIST;
+            const distRatio = 1 - dist / params.dist;
             const lineActiveFactor = Math.min(a.visibleAlpha, b.visibleAlpha);
             const baseAlpha = (0.09 + distRatio * 0.22) * lineActiveFactor;
             const finalAlpha = Math.min(0.65, (baseAlpha + mouseFactor * 0.4) * lineActiveFactor);
@@ -184,15 +211,16 @@ export const NeuralBackground3D = ({ activeModules = { reaction: true, memory: t
       }
 
       // Dibujar Nodos activos únicamente (Cyan y Purple, con desvanecimiento fluido)
-      nodes.forEach((n) => {
-        if (n.visibleAlpha < 0.05) return;
+      for (let i = 0; i < activeCount; i++) {
+        const n = nodes[i];
+        if (n.visibleAlpha < 0.05) continue;
 
         const distMouse = mouse.active ? Math.hypot(n.x - mouse.x, n.y - mouse.y) : 9999;
         const mouseFactor = mouse.active ? Math.max(0, 1 - distMouse / MOUSE_RADIUS) : 0;
 
         const pulse = (Math.sin(n.phase) + 1) / 2;
         const alpha = Math.min(0.9, (n.baseAlpha + mouseFactor * 0.35 + pulse * 0.15) * n.visibleAlpha);
-        if (alpha < 0.01) return;
+        if (alpha < 0.01) continue;
         const radius = n.radius + mouseFactor * 1.2;
 
         // Halo resplandeciente exterior
@@ -209,7 +237,7 @@ export const NeuralBackground3D = ({ activeModules = { reaction: true, memory: t
         ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${n.color.r}, ${n.color.g}, ${n.color.b}, ${alpha})`;
         ctx.fill();
-      });
+      }
     };
 
     // Agregar callback al ticker de GSAP
