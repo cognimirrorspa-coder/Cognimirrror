@@ -95,24 +95,24 @@ export default function LandingPage() {
       </div>
 
       {/* ===== NAVBAR ===== */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111827]/80 backdrop-blur-md border-b border-white/5">
-        <div className="container mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111827]/85 backdrop-blur-md border-b border-white/5">
+        <div className="container mx-auto max-w-7xl px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="CogniMirror" className="w-8 h-8 object-contain" />
-            <span className="font-bold text-white text-sm">CogniMirror</span>
+            <img src="/logo.png" alt="CogniMirror" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+            <span className="font-bold text-white text-xs sm:text-sm">CogniMirror</span>
           </div>
           <button
             onClick={goToLogin}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 sm:gap-2 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
           >
-            Iniciar Sesión
-            <ArrowRight className="w-4 h-4" />
+            <span>Iniciar Sesión</span>
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </nav>
 
       {/* ===== SECCIÓN 1: HERO ===== */}
-      <section className="relative overflow-hidden border-b border-white/5 pt-14 sm:pt-20 pb-8 sm:pb-14 px-4 sm:px-6">
+      <section className="relative overflow-hidden border-b border-white/5 pt-16 sm:pt-20 pb-6 sm:pb-14 px-4 sm:px-6">
         <div className="electric-glow top-1/2 left-1/4 transform -translate-x-1/2 -translate-y-1/2" />
 
         {/* Brain3D en el lado derecho con Leyenda Cromática de Módulos (Escritorio Original 100% Intacto) */}
@@ -124,19 +124,19 @@ export default function LandingPage() {
         </div>
 
         <div className="container mx-auto max-w-7xl relative z-10 pointer-events-none">
-          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center min-h-[360px] sm:min-h-[460px] lg:min-h-[560px] lg:pt-4">
-            <div className="lg:col-span-7 space-y-4 sm:space-y-6 text-left lg:pt-2 pointer-events-auto">
-              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.18] sm:leading-[1.12] tracking-tight drop-shadow-sm">
+          <div className="grid lg:grid-cols-12 gap-6 lg:gap-12 items-center min-h-0 sm:min-h-[420px] lg:min-h-[520px] lg:pt-4">
+            <div className="lg:col-span-7 space-y-3.5 sm:space-y-6 text-left lg:pt-2 pointer-events-auto">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight drop-shadow-sm">
                 Telemetría Phygital que blinda tu Programa PIE.
               </h1>
               <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-xl font-light leading-relaxed">
                 Deja atrás el "espejismo académico" y las evaluaciones subjetivas. CogniMirror transforma herramientas físicas en métricas clínicas exactas, ahorrando cientos de horas a tu equipo psicosocial.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-4 mt-2 sm:mt-3">
                 <button
                   onClick={() => openContactModal('Solicitar Demostración Institucional')}
-                  className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all duration-300 text-xs sm:text-sm font-semibold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20"
+                  className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl transition-all duration-300 text-xs sm:text-sm font-semibold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20"
                 >
                   <span>Postular al Piloto</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -146,7 +146,7 @@ export default function LandingPage() {
                     e.preventDefault();
                     document.getElementById('experiencia-phygital')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="relative group overflow-hidden bg-slate-900/40 hover:bg-slate-800/60 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold border border-white/10 hover:border-white/20 active:scale-[0.98]"
+                  className="relative group overflow-hidden bg-slate-900/50 hover:bg-slate-800/60 text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold border border-white/10 hover:border-white/20 active:scale-[0.98]"
                 >
                   <Play className="w-4 h-4 text-[#3B82F6] fill-[#3B82F6]/10 group-hover:scale-110 transition-transform" />
                   <span>Ver Video</span>
@@ -154,8 +154,9 @@ export default function LandingPage() {
               </div>
 
               {/* CORFO Logo Block */}
-              <div className="pt-2 sm:pt-4">
-                <img src="/logo-corfo.png" alt="Apoyado por CORFO y Gobierno de Chile" className="h-10 sm:h-12 md:h-14 object-contain drop-shadow-md hover:scale-105 transition-transform origin-left" />
+              <div className="pt-2 sm:pt-4 flex items-center gap-2.5">
+                <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase">Con el apoyo de:</span>
+                <img src="/logo-corfo.png" alt="Apoyado por CORFO y Gobierno de Chile" className="h-7 sm:h-10 md:h-12 object-contain drop-shadow-md hover:scale-105 transition-transform origin-left" />
               </div>
             </div>
           </div>
@@ -163,14 +164,14 @@ export default function LandingPage() {
       </section>
 
       {/* ===== SECCIÓN 1.5: EXPERIENCIA PHYGITAL ===== */}
-      <section id="experiencia-phygital" className="py-12 sm:py-16 relative border-b border-white/5 bg-[#0B0F19]/50">
-        <div className="container mx-auto max-w-7xl px-4">
-          <div className="text-center mb-8 sm:mb-12 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 border border-[#3B82F6]/30 rounded-full bg-[#3B82F6]/10 mb-1">
+      <section id="experiencia-phygital" className="py-8 sm:py-16 relative border-b border-white/5 bg-[#0B0F19]/50">
+        <div className="container mx-auto max-w-7xl px-3 sm:px-4">
+          <div className="text-center mb-6 sm:mb-12 space-y-2 sm:space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 border border-[#3B82F6]/30 rounded-full bg-[#3B82F6]/10 mb-0.5">
               <Sparkles className="w-3.5 h-3.5 text-[#3B82F6]" />
               <span className="text-[10px] sm:text-xs font-mono text-[#3B82F6] tracking-wider uppercase">Experiencia Phygital</span>
             </div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white max-w-4xl mx-auto tracking-tight">
+            <h2 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white max-w-4xl mx-auto tracking-tight">
               Del Juego Físico a la Métrica Clínica en Tiempo Real
             </h2>
             <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-2xl mx-auto font-light">
@@ -178,16 +179,16 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-8 lg:gap-12 items-stretch justify-center max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-6 sm:gap-8 lg:gap-12 items-stretch justify-center max-w-6xl mx-auto">
             {/* Video */}
             <div className="w-full md:w-[45%] flex flex-col relative">
-              <div className="w-full h-full bg-[#0a0d14]/80 backdrop-blur-sm rounded-3xl border border-white/5 shadow-2xl relative pt-12 pb-6 px-6 flex flex-col">
+              <div className="w-full h-full bg-[#0a0d14]/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/5 shadow-2xl relative pt-8 pb-4 px-4 sm:pt-12 sm:pb-6 sm:px-6 flex flex-col">
                 <div className="absolute top-0 inset-x-0 flex justify-center -mt-3">
-                  <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest text-slate-400 font-semibold bg-[#0B0F19] px-4 py-1 rounded">
+                  <span className="text-[9px] sm:text-xs font-mono uppercase tracking-widest text-slate-400 font-semibold bg-[#0B0F19] px-3 sm:px-4 py-0.5 sm:py-1 rounded border border-white/5">
                     LA INTERACCIÓN FÍSICA
                   </span>
                 </div>
-                <div className="relative aspect-[9/16] w-full max-w-[280px] mx-auto overflow-hidden rounded-xl shadow-lg shadow-black/50 mb-8 border border-white/5 flex-grow">
+                <div className="relative aspect-[9/16] w-full max-w-[210px] sm:max-w-[280px] mx-auto overflow-hidden rounded-xl shadow-lg shadow-black/50 mb-4 sm:mb-8 border border-white/5 flex-grow">
                   <iframe
                     src="https://www.youtube.com/embed/Fj5hjHPPdeY?autoplay=1&mute=1&loop=1&playlist=Fj5hjHPPdeY"
                     title="Niño jugando con cubo inteligente"
@@ -196,7 +197,7 @@ export default function LandingPage() {
                     allowFullScreen
                   />
                 </div>
-                <p className="text-sm text-slate-300 font-light text-center leading-relaxed mt-auto">
+                <p className="text-xs sm:text-sm text-slate-300 font-light text-center leading-relaxed mt-auto">
                   El estudiante manipula el cubo inteligente, rastreando sus movimientos en tiempo real.
                 </p>
               </div>
@@ -215,16 +216,16 @@ export default function LandingPage() {
 
             {/* Dashboard */}
             <div className="w-full md:w-[45%] flex flex-col relative">
-              <div className="w-full h-full bg-[#0a0d14]/80 backdrop-blur-sm rounded-3xl border border-white/5 shadow-2xl relative pt-12 pb-6 px-6 flex flex-col">
+              <div className="w-full h-full bg-[#0a0d14]/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/5 shadow-2xl relative pt-8 pb-4 px-4 sm:pt-12 sm:pb-6 sm:px-6 flex flex-col">
                 <div className="absolute top-0 inset-x-0 flex justify-center -mt-3">
-                  <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest text-slate-400 font-semibold bg-[#0B0F19] px-4 py-1 rounded">
+                  <span className="text-[9px] sm:text-xs font-mono uppercase tracking-widest text-slate-400 font-semibold bg-[#0B0F19] px-3 sm:px-4 py-0.5 sm:py-1 rounded border border-white/5">
                     EL DASHBOARD CLÍNICO (TELEMETRÍA EN VIVO)
                   </span>
                 </div>
-                <div className="relative w-full overflow-hidden rounded-xl shadow-lg shadow-black/50 mb-8 flex-grow flex items-center">
+                <div className="relative w-full overflow-hidden rounded-xl shadow-lg shadow-black/50 mb-4 sm:mb-8 flex-grow flex items-center">
                   <SimulatedDashboard />
                 </div>
-                <p className="text-sm text-slate-300 font-light text-center leading-relaxed mt-auto">
+                <p className="text-xs sm:text-sm text-slate-300 font-light text-center leading-relaxed mt-auto">
                   Conversión instantánea de datos en métricas clave: Latencia, Giros y Asimetría en tiempo real.
                 </p>
               </div>
@@ -306,13 +307,13 @@ export default function LandingPage() {
       </section>
 
       {/* ===== SECCIÓN 3: LA SOLUCIÓN ===== */}
-      <section id="what-we-do" className="py-24 px-4 relative">
-        <div className="mb-16 border-l-2 border-[#3B82F6] pl-6 max-w-7xl mx-auto">
+      <section id="what-we-do" className="py-8 sm:py-16 md:py-24 px-4 relative">
+        <div className="mb-8 sm:mb-16 border-l-2 border-[#3B82F6] pl-4 sm:pl-6 max-w-7xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-white max-w-4xl tracking-tight">
             Gimnasia Cerebral Phygital: entrenando mentes, no zombies digitales.
           </h2>
         </div>
-        <div className="container mx-auto max-w-7xl flex flex-col gap-20">
+        <div className="container mx-auto max-w-7xl flex flex-col gap-10 sm:gap-16 lg:gap-20">
 
           {/* Feature 1: Panel de Cumplimiento MINEDUC (Reconstruido a fidelidad total de Imagen 2) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">

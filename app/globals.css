@@ -270,14 +270,20 @@
     scroll-snap-align: none !important;
     scroll-snap-stop: normal !important;
     min-height: auto !important;
-    padding-top: 4rem !important;
-    padding-bottom: 4rem !important;
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
     display: block !important;
+  }
+
+  section:first-of-type,
+  section:first-child {
+    padding-top: 4.5rem !important;
+    padding-bottom: 1rem !important;
   }
 
   section p,
   section li {
-    line-height: 1.6;
+    line-height: 1.5;
     max-width: 100%;
   }
 }
