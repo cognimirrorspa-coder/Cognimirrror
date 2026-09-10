@@ -257,8 +257,8 @@ function StepMenu({
     single_face: {
       code: 'PROTOCOLO 02 // CONTROL INHIBITORIO',
       title: 'Nivel 2: Go / No-Go Unilateral (1 Cara)',
-      desc: 'Evaluación de latencia motriz primaria y control inhibitorio unilateral mediante discriminación Go (Naranja) / No-Go (Azul).',
-      duration: '20 ENSAYOS',
+      desc: 'Evaluación de latencia motriz primaria y control inhibitorio unilateral mediante discriminación Go (Rojo) / No-Go (Naranjo).',
+      duration: '40 ENSAYOS',
       color: 'purple',
       metrics: ['Latencia Motriz (ms)', 'Freno Inhibitorio (Go/No-Go)', 'Error de Comisión']
     },

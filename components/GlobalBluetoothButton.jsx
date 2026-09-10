@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBluetoothCube } from '../contexts/BluetoothContext';
 import { Bluetooth, Battery, BatteryCharging, RotateCcw, X, Check, Activity, Keyboard } from 'lucide-react';
 
@@ -18,6 +18,13 @@ export default function GlobalBluetoothButton() {
   } = useBluetoothCube();
 
   const [isOpenMenu, setIsOpenMenu] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <>

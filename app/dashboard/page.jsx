@@ -1216,7 +1216,7 @@ function ClassicDashboard() {
                       <span className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
                         isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-purple-50 border-purple-200 text-purple-700 font-bold'
                       }`}>
-                        20 ENSAYOS
+                        40 ENSAYOS
                       </span>
                     </div>
 
@@ -1226,7 +1226,7 @@ function ClassicDashboard() {
                       Nivel 2: Go / No-Go Unilateral (1 Cara)
                     </h3>
                     <p className={`mt-1.5 text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Evaluación de latencia motriz primaria y control inhibitorio unilateral mediante discriminación Go (Naranja) / No-Go (Azul).
+                      Evaluación de latencia motriz primaria y control inhibitorio unilateral mediante discriminación Go (Rojo) / No-Go (Naranjo).
                     </p>
 
                     <div className="mt-4 flex flex-wrap gap-1.5">
@@ -1248,7 +1248,7 @@ function ClassicDashboard() {
                       ? 'border-slate-800/80 text-slate-300 group-hover:text-purple-400'
                       : 'border-slate-100 text-purple-700 group-hover:text-purple-600'
                   }`}>
-                    <span className="text-slate-400 font-normal">Evaluación TDAH</span>
+                    <span className="text-slate-400 font-normal">Control Inhibitorio</span>
                     <div className="flex items-center gap-1">
                       <span>Configurar prueba</span>
                       <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />

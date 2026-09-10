@@ -9,11 +9,14 @@ import ServiceWorkerRegister from '../components/ServiceWorkerRegister';
 
 import GlobalBluetoothButton from '../components/GlobalBluetoothButton';
 
+export const viewport = {
+  themeColor: '#0a0c10',
+};
+
 export const metadata = {
   title: 'CogniMirror Cube',
   description: 'Plataforma de evaluación neuropsicológica basada en el Cubo de Rubik inteligente',
   manifest: '/manifest.json',
-  themeColor: '#0a0c10',
   icons: {
     icon: '/icon.svg',
     apple: '/icon.svg',

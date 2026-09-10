@@ -130,7 +130,7 @@ export default function LandingPage() {
                 Telemetría Phygital que blinda tu Programa PIE.
               </h1>
               <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-xl font-light leading-relaxed">
-                Deja atrás el &apos;espejismo académico&apos; y las evaluaciones subjetivas. CogniMirror transforma herramientas físicas en métricas clínicas exactas, ahorrando cientos de horas a tu equipo psicosocial.
+                Deja atrás el "espejismo académico" y las evaluaciones subjetivas. CogniMirror transforma herramientas físicas en métricas clínicas exactas, ahorrando cientos de horas a tu equipo psicosocial.
               </p>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-3">
@@ -258,7 +258,7 @@ export default function LandingPage() {
                 <MorphingCardIcon iconType="smartphone" color="#fdba74" size={20} delay={150} />
               </div>
               <div className="text-3xl sm:text-4xl md:text-5xl font-mono text-indigo-400 font-bold select-none leading-none mb-1">D.170</div>
-              <h3 className="text-base font-bold text-white">El Villano del &apos;Scroll Infinito&apos;</h3>
+              <h3 className="text-base font-bold text-white">El Villano del &ldquo;Scroll Infinito&rdquo;</h3>
               <div className="h-px w-full bg-white/10 my-1" />
               <p className="text-xs sm:text-sm text-slate-400 font-light leading-relaxed">
                 Pérdida de atención y deterioro del desarrollo neuromotor en alumnos por sobreexposición a pantallas pasivas.
@@ -269,7 +269,7 @@ export default function LandingPage() {
                 <MorphingCardIcon iconType="eyeOff" color="#94a3b8" size={20} delay={300} />
               </div>
               <div className="text-3xl sm:text-4xl md:text-5xl font-mono text-slate-500 font-bold select-none leading-none mb-1">1/100</div>
-              <h3 className="text-base font-bold text-white">Evaluaciones a &apos;Ojo Humano&apos;</h3>
+              <h3 className="text-base font-bold text-white">Evaluaciones a &ldquo;Ojo Humano&rdquo;</h3>
               <div className="h-px w-full bg-white/10 my-1" />
               <p className="text-xs sm:text-sm text-slate-400 font-light leading-relaxed">
                 Datos subjetivos del cronómetro que complican la validación de avances cognitivos y bimanuales objetivos.
@@ -547,7 +547,7 @@ export default function LandingPage() {
               </div>
 
               <div className="bg-[#10131a]/80 p-3 rounded-lg border border-white/5 font-mono text-[9px] flex justify-between items-center">
-                <span className="text-slate-400">GAN Smart V3 &amp; V2 • Bluetooth 5.0</span>
+                <span className="text-slate-400">GAN Smart V3 & V2 • Bluetooth 5.0</span>
                 <button
                   onClick={resetCubeState}
                   className="text-slate-400 hover:text-white px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-1 cursor-pointer border border-white/5"
@@ -559,7 +559,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="md:col-span-6 md:col-start-1 md:row-start-1 order-2 md:order-1 text-left space-y-3 sm:space-y-4">
-              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Hardware Agnóstico &amp; Integración Cloud-Native</h3>
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Hardware Agnóstico & Integración Cloud-Native</h3>
               <p className="text-xs sm:text-sm md:text-base text-slate-400 font-light leading-relaxed">
                 No te atamos a un dispositivo exclusivo. Nuestra plataforma es compatible con múltiples versiones de cubos inteligentes Bluetooth disponibles en el mercado y ofrece simulación táctil y digital instantánea.
               </p>
@@ -582,9 +582,9 @@ export default function LandingPage() {
                 <span className="text-[9px] px-2.5 py-1 bg-blue-950 text-blue-400 border border-blue-800/50 rounded-full font-bold">100% ONLINE</span>
               </div>
               <div className="text-left font-mono space-y-1 text-slate-500 text-[10px]">
-                <p>&gt; ping vercel-servers.cognimirror.cl</p>
-                <p className="text-emerald-400">&gt; reply from 76.76.21.21: bytes=32 time=8ms TTL=58</p>
-                <p>&gt; system status: OPTIMAL</p>
+                <p>{'>'} ping vercel-servers.cognimirror.cl</p>
+                <p className="text-emerald-400">{'>'} reply from 76.76.21.21: bytes=32 time=8ms TTL=58</p>
+                <p>{'>'} system status: OPTIMAL</p>
               </div>
             </div>
             <div className="md:col-span-6 text-left space-y-3 sm:space-y-4">
@@ -613,7 +613,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1 text-left font-mono text-[11px]">
                   <span className="text-slate-300 font-bold block">Activación Cortical</span>
-                  <span className="text-[9px] text-blue-400 font-bold">Corteza Parietal &amp; Motora</span>
+                  <span className="text-[9px] text-blue-400 font-bold">Corteza Parietal & Motora</span>
                 </div>
               </div>
               <div className="h-20 w-full flex justify-around items-end bg-[#0b0e15] rounded p-2 border border-white/5">

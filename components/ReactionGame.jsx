@@ -21,10 +21,10 @@ function generateDeck(mode = 'official') {
   ];
 
   // ── Nivel 2: Go/No-Go Unilateral (Cara Roja GO vs Cara Naranja NO-GO) ──────
-  // 20 ensayos: 16 Go (80% Rojo) + 4 No-Go (20% Naranja - Cara contraria)
+  // 40 ensayos: 32 Go (80% Rojo) + 8 No-Go (20% Naranja - Cara contraria)
   if (mode === 'single_face') {
-    const TOTAL = 20;
-    const NOGO_COUNT = 4;
+    const TOTAL = 40;
+    const NOGO_COUNT = 8;
     const GO_COUNT = TOTAL - NOGO_COUNT;
 
     return buildConstrainedDeck(
@@ -32,7 +32,7 @@ function generateDeck(mode = 'official') {
       NOGO_COUNT,
       () => ({ id: 'L', label: 'ROJO', hex: '#FF0000', type: 'GO', expectedFace: 'L' }),
       () => ({ id: 'NONE', label: 'NARANJO', hex: '#FF8C00', type: 'NOGO', expectedFace: null }),
-      3, // primeros 3 siempre Go
+      4, // primeros 4 siempre Go para construir prepotencia motora
       2  // mínimo 2 Go entre cada No-Go
     );
   }
@@ -263,6 +263,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
   const [currentStreak, setCurrentStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [showRachaReset, setShowRachaReset] = useState(false); // Para efecto humo
+  const [lastSpeedRating, setLastSpeedRating] = useState(null); // Feedback de velocidad/inhibición en vivo
 
   useEffect(() => {
     if (onTelemetryUpdate) {
@@ -313,18 +314,28 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         stageRef.current = 'stimulus';
         timerRef.current = performance.now();
 
-        // Si es NOGO, esperamos la ventana de inhibición seleccionada (1200ms por defecto)
+        // Ventana de respuesta dinámica:
+        // En Nivel 2 (single_face): 850ms en GO y 750ms en NOGO para forzar reflejo motor e inhibición real
+        const currentGoLimit = gameMode === 'single_face' ? 850 : omissionTimeoutMs;
+        const currentNogoLimit = gameMode === 'single_face' ? 750 : omissionTimeoutMs;
+
+        // Si es NOGO, esperamos la ventana de inhibición seleccionada
         if (target.type === 'NOGO') {
           nogoTimeoutRef.current = setTimeout(() => {
             const now = new Date();
             // Inhibición Exitosa (No movió)
             setFlash('green');
+            setLastSpeedRating({
+              label: '🛡️ ¡INHIBICIÓN EXITOSA!',
+              color: 'text-emerald-400 border-emerald-500/40 bg-emerald-950/70 shadow-[0_0_20px_rgba(52,211,153,0.4)]',
+              time: currentNogoLimit
+            });
             setResults(prev => [...prev, { 
               round: round + 1, 
               type: 'NOGO', 
               label: target.label, // Nombre del color distractor
               expected: 'NOGO',
-              actualFace: null,
+              actualFace: null, 
               fail: false, 
               time: null,
               status: 'Ok',
@@ -344,18 +355,23 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
             stageRef.current = 'waiting';
             setRound(r => r + 1);
             setTimeout(() => setFlash(null), 150);
-          }, omissionTimeoutMs); 
+          }, currentNogoLimit); 
         } 
-        // Si es GO, le damos el timeout configurable (1200ms por defecto) para responder
+        // Si es GO, le damos el timeout para responder
         else if (target.type === 'GO') {
           
           goTimeoutRef.current = setTimeout(() => {
             const now = new Date();
-            // Límite final excedido (No respondió correctamente a tiempo)
+            // Límite final excedido (No respondió a tiempo)
             setFlash('black'); 
             setShake(s => s + 1);
             setCurrentStreak(0);
             setShowRachaReset(true);
+            setLastSpeedRating({
+              label: '⚠️ TIEMPO AGOTADO (LENTO)',
+              color: 'text-red-400 border-red-500/40 bg-red-950/70 shadow-[0_0_20px_rgba(239,68,68,0.3)]',
+              time: currentGoLimit
+            });
             setTimeout(() => setShowRachaReset(false), 600);
 
             setResults(prev => {
@@ -385,7 +401,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
             stageRef.current = 'waiting';
             setRound(r => r + 1);
             setTimeout(() => setFlash(null), 300);
-          }, omissionTimeoutMs);
+          }, currentGoLimit);
         }
 
       }, waitTime);
@@ -582,6 +598,12 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
       setFlash('black'); // Flash obscuro para fallo grave
       setShake(s => s + 1);
       
+      setLastSpeedRating({
+        label: '❌ FALLO INHIBITORIO',
+        color: 'text-red-400 border-red-500/50 bg-red-950/80 shadow-[0_0_20px_rgba(239,68,68,0.5)]',
+        time: Math.round(rt)
+      });
+
       setResults(prev => [...prev, { 
         round: round + 1, 
         type: 'NOGO', 
@@ -609,6 +631,24 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         // ACIERTO
         clearTimeout(goTimeoutRef.current);
         setFlash('green');
+
+        // Evaluación de velocidad visual en tiempo real
+        let speedLabel = '⚡ ¡REFLEJO PURO!';
+        let speedColor = 'text-emerald-400 border-emerald-500/50 bg-emerald-950/80 shadow-[0_0_20px_rgba(52,211,153,0.5)]';
+        if (rt < 280) {
+          speedLabel = '⚡ ¡REFLEJO PURO!';
+          speedColor = 'text-emerald-400 border-emerald-500/50 bg-emerald-950/80 shadow-[0_0_20px_rgba(52,211,153,0.5)]';
+        } else if (rt < 400) {
+          speedLabel = '🔥 ¡EXCELENTE VELOCIDAD!';
+          speedColor = 'text-blue-400 border-blue-500/50 bg-blue-950/80 shadow-[0_0_20px_rgba(59,130,246,0.5)]';
+        } else if (rt < 550) {
+          speedLabel = '👍 BUEN RITMO';
+          speedColor = 'text-purple-300 border-purple-500/40 bg-purple-950/60';
+        } else {
+          speedLabel = '⚠️ ¡MÁS RÁPIDO!';
+          speedColor = 'text-amber-400 border-amber-500/50 bg-amber-950/80 shadow-[0_0_20px_rgba(245,158,11,0.4)]';
+        }
+        setLastSpeedRating({ label: speedLabel, color: speedColor, time: Math.round(rt) });
 
         // Aumenta la velocidad para el siguiente Hit! (x0.9)
         baseDelayRef.current = Math.max(500, baseDelayRef.current * 0.9); 
@@ -643,6 +683,11 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         // ERROR DE LADO EN GO PROSPECT (Se equivocó de mano)
         setFlash('red');
         setShake(s => s + 1);
+        setLastSpeedRating({
+          label: '⚠️ ERROR DE MANO',
+          color: 'text-orange-400 border-orange-500/50 bg-orange-950/80',
+          time: Math.round(rt)
+        });
 
         setResults(prev => [...prev, { 
           round: round + 1, 
@@ -861,22 +906,58 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
             </motion.div>
 
             {/* Cajas de texto limpias Zero-Scroll */}
-            <div className="h-24 flex items-center justify-center">
+            <div className="h-32 flex flex-col items-center justify-center">
               <AnimatePresence mode="wait">
                 {stage === 'waiting' && round < deck.length && (
-                  <motion.p key="wait" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{ duration: 0.1 }} className="text-white/20 uppercase tracking-[0.5em] font-black cursor-default">
-                    Atento...
-                  </motion.p>
+                  <div className="flex flex-col items-center gap-2 animate-in fade-in duration-150">
+                    {lastSpeedRating ? (
+                      <div className={`px-4 py-1.5 rounded-full border text-xs font-black tracking-wide font-mono flex items-center gap-2 animate-in zoom-in-95 duration-150 ${lastSpeedRating.color}`}>
+                        <span>{lastSpeedRating.label}</span>
+                        <span className="opacity-80">({lastSpeedRating.time} ms)</span>
+                      </div>
+                    ) : null}
+                    <motion.p key="wait" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{ duration: 0.1 }} className="text-white/25 uppercase tracking-[0.5em] font-black cursor-default text-xs">
+                      Atento...
+                    </motion.p>
+                  </div>
                 )}
-                {stage === 'stimulus' && (
-                  <motion.h1 
-                    key="stim" initial={{opacity:0, scale:0.7}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:1.2}}
-                    transition={{ duration: 0.05 }}
-                    className="text-6xl md:text-8xl font-black uppercase tracking-tighter"
-                    style={{ color: activeColor, textShadow: `0 0 50px ${activeColor}` }}
-                  >
-                    {targetRef.current.label}
-                  </motion.h1>
+                {stage === 'stimulus' && targetRef.current && (
+                  <div className="flex flex-col items-center gap-2">
+                    <motion.h1 
+                      key="stim" initial={{opacity:0, scale:0.7}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:1.2}}
+                      transition={{ duration: 0.05 }}
+                      className="text-6xl md:text-8xl font-black uppercase tracking-tighter"
+                      style={{ color: activeColor, textShadow: `0 0 50px ${activeColor}` }}
+                    >
+                      {targetRef.current.label}
+                    </motion.h1>
+
+                    {/* Barra de Urgencia y Freno */}
+                    {targetRef.current.type === 'GO' ? (
+                      <div className="w-64 max-w-xs flex flex-col items-center gap-1 mt-1">
+                        <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden border border-white/15 p-0.5 shadow-inner">
+                          <motion.div
+                            key={`bar-${round}`}
+                            initial={{ width: '100%' }}
+                            animate={{ width: '0%' }}
+                            transition={{ duration: (gameMode === 'single_face' ? 850 : (omissionTimeoutMs || 1200)) / 1000, ease: 'linear' }}
+                            className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-red-500 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
+                          />
+                        </div>
+                        <span className="text-[10px] font-mono font-black tracking-widest text-amber-400 uppercase flex items-center gap-1 animate-pulse">
+                          <span>⚡</span> ¡REACCIONA YA!
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="w-64 max-w-xs flex flex-col items-center gap-1 mt-1 animate-pulse">
+                        <div className="w-full bg-red-950/50 border border-red-500/50 rounded-full py-1 px-3 text-center shadow-[0_0_20px_rgba(239,68,68,0.5)]">
+                          <span className="text-[11px] font-black tracking-wider text-red-300 uppercase font-mono flex items-center justify-center gap-1.5">
+                            <span>✋</span> ¡FRENA EL IMPULSO! NO TOQUES
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </AnimatePresence>
             </div>
