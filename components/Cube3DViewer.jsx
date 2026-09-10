@@ -2,6 +2,81 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useCubeState } from '../contexts/CubeStateContext';
+import { useBluetoothCube } from '../contexts/BluetoothContext';
+
+function determineSwipeMove(cubiePos, normal, isHoriz, delta) {
+  const nx = Math.round(normal.x);
+  const ny = Math.round(normal.y);
+  const nz = Math.round(normal.z);
+
+  // Cara Frontal (Z = 1, Azul)
+  if (nz === 1) {
+    if (isHoriz) {
+      if (cubiePos.y > 0.2) return delta > 0 ? "U'" : "U";
+      if (cubiePos.y < -0.2) return delta > 0 ? "D" : "D'";
+    } else {
+      if (cubiePos.x < -0.2) return delta > 0 ? "L" : "L'";
+      if (cubiePos.x > 0.2) return delta > 0 ? "R'" : "R";
+    }
+  }
+  // Cara Trasera (Z = -1, Verde)
+  else if (nz === -1) {
+    if (isHoriz) {
+      if (cubiePos.y > 0.2) return delta > 0 ? "U" : "U'";
+      if (cubiePos.y < -0.2) return delta > 0 ? "D'" : "D";
+    } else {
+      if (cubiePos.x > 0.2) return delta > 0 ? "R" : "R'";
+      if (cubiePos.x < -0.2) return delta > 0 ? "L'" : "L";
+    }
+  }
+  // Cara Superior (Y = 1, Blanco)
+  else if (ny === 1) {
+    if (isHoriz) {
+      if (cubiePos.z > 0.2) return delta > 0 ? "F" : "F'";
+      if (cubiePos.z < -0.2) return delta > 0 ? "B'" : "B";
+    } else {
+      if (cubiePos.x < -0.2) return delta > 0 ? "L'" : "L";
+      if (cubiePos.x > 0.2) return delta > 0 ? "R" : "R'";
+    }
+  }
+  // Cara Inferior (Y = -1, Amarillo)
+  else if (ny === -1) {
+    if (isHoriz) {
+      if (cubiePos.z > 0.2) return delta > 0 ? "F'" : "F";
+      if (cubiePos.z < -0.2) return delta > 0 ? "B" : "B'";
+    } else {
+      if (cubiePos.x < -0.2) return delta > 0 ? "L" : "L'";
+      if (cubiePos.x > 0.2) return delta > 0 ? "R'" : "R";
+    }
+  }
+  // Cara Derecha (X = 1, Naranja)
+  else if (nx === 1) {
+    if (isHoriz) {
+      if (cubiePos.y > 0.2) return delta > 0 ? "U'" : "U";
+      if (cubiePos.y < -0.2) return delta > 0 ? "D" : "D'";
+    } else {
+      if (cubiePos.z > 0.2) return delta > 0 ? "F" : "F'";
+      if (cubiePos.z < -0.2) return delta > 0 ? "B'" : "B";
+    }
+  }
+  // Cara Izquierda (X = -1, Rojo)
+  else if (nx === -1) {
+    if (isHoriz) {
+      if (cubiePos.y > 0.2) return delta > 0 ? "U'" : "U";
+      if (cubiePos.y < -0.2) return delta > 0 ? "D" : "D'";
+    } else {
+      if (cubiePos.z > 0.2) return delta > 0 ? "F'" : "F";
+      if (cubiePos.z < -0.2) return delta > 0 ? "B" : "B'";
+    }
+  }
+
+  // Fallback intuitivo
+  if (isHoriz) {
+    return cubiePos.y >= 0 ? (delta > 0 ? "U'" : "U") : (delta > 0 ? "D" : "D'");
+  } else {
+    return cubiePos.x <= 0 ? (delta > 0 ? "L" : "L'") : (delta > 0 ? "R'" : "R");
+  }
+}
 
 const COLORS = {
   U: 0xffffff, // Blanco Puro Brillante
@@ -53,11 +128,14 @@ export default function Cube3DViewer({
   targetRotation, status, className,
   isLocked = false, size = 300, ignoreSensor = false,
   demoMoves = null, demoKey = 0, onDemoComplete = null,
-  highlightFace = null, orbitCamera = false
+  highlightFace = null, orbitCamera = false,
+  enableGestureSwipe = true,
+  onMove = null
 }) {
   const containerRef = useRef(null);
   const threeRef = useRef(null);
   const { moveHistory } = useCubeState();
+  const { simulateMove } = useBluetoothCube();
   const highlightFaceRef = useRef(highlightFace);
   const orbitCameraRef = useRef(orbitCamera);
   
@@ -128,35 +206,116 @@ export default function Cube3DViewer({
       }
     }
 
-    // Interaction handlers
+    // Interaction handlers & Gesture Swipe
     if (!isLocked) {
+      renderer.domElement.style.touchAction = 'none';
+      renderer.domElement.style.cursor = 'grab';
+
+      let touchData = null;
+      const raycaster = new THREE.Raycaster();
+      const mouseVec = new THREE.Vector2();
+
+      const getEventPoint = (e) => {
+        if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        if (e.changedTouches && e.changedTouches.length > 0) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
+      };
+
+      const getRaycastHit = (clientX, clientY) => {
+        if (!renderer || !renderer.domElement) return null;
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouseVec.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        mouseVec.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouseVec, camera);
+        const intersects = raycaster.intersectObjects(allCubies, false);
+        return intersects.length > 0 ? intersects[0] : null;
+      };
+
       const onDown = (e) => {
+        const pt = getEventPoint(e);
+        prevMouseRef.current = { x: pt.x, y: pt.y };
         isDraggingRef.current = true;
         userInteractedRef.current = true;
-        const pt = e.touches ? e.touches[0] : e;
-        prevMouseRef.current = { x: pt.clientX, y: pt.clientY };
-      };
-      const onMove = (e) => {
-        if (!isDraggingRef.current) return;
-        const pt = e.touches ? e.touches[0] : e;
-        const dx = (pt.clientX - prevMouseRef.current.x) * 0.006;
-        const dy = (pt.clientY - prevMouseRef.current.y) * 0.005;
-        prevMouseRef.current = { x: pt.clientX, y: pt.clientY };
-        
-        const sph = new THREE.Spherical().setFromVector3(camera.position);
-        sph.theta -= dx;
-        sph.phi = Math.max(0.1, Math.min(Math.PI - 0.1, sph.phi - dy));
-        camera.position.setFromSpherical(sph);
-        camera.lookAt(0, 0, 0);
         lastInteractionRef.current = Date.now();
+        if (renderer?.domElement) renderer.domElement.style.cursor = 'grabbing';
+
+        if (enableGestureSwipe) {
+          const hit = getRaycastHit(pt.x, pt.y);
+          if (hit && hit.face) {
+            const worldNormal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).round();
+            touchData = {
+              mode: 'swipe',
+              startX: pt.x,
+              startY: pt.y,
+              cubie: hit.object,
+              cubiePos: hit.object.position.clone(),
+              normal: worldNormal,
+              hasSwiped: false
+            };
+            return;
+          }
+        }
+
+        touchData = { mode: 'orbit', startX: pt.x, startY: pt.y };
       };
-      const onUp = () => { isDraggingRef.current = false; lastInteractionRef.current = Date.now(); };
+
+      const onMoveHandler = (e) => {
+        if (!isDraggingRef.current || !touchData) return;
+        const pt = getEventPoint(e);
+        const dx = pt.x - prevMouseRef.current.x;
+        const dy = pt.y - prevMouseRef.current.y;
+        prevMouseRef.current = { x: pt.x, y: pt.y };
+
+        const totalDx = pt.x - touchData.startX;
+        const totalDy = pt.y - touchData.startY;
+        const distSq = totalDx * totalDx + totalDy * totalDy;
+
+        if (touchData.mode === 'swipe' && !touchData.hasSwiped) {
+          // Desplazamiento mínimo (16px) para reconocer el swipe directo en la cara
+          if (distSq > 256) {
+            touchData.hasSwiped = true;
+            const isHoriz = Math.abs(totalDx) > Math.abs(totalDy);
+            const move = determineSwipeMove(touchData.cubiePos, touchData.normal, isHoriz, isHoriz ? totalDx : totalDy);
+            if (move) {
+              if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                try { navigator.vibrate(20); } catch (_) {}
+              }
+              if (simulateMove) {
+                simulateMove(move);
+              } else if (threeRef.current) {
+                threeRef.current.rotateFace(move, 6);
+              }
+              if (onMove) {
+                onMove(move);
+              }
+            }
+            return;
+          }
+        }
+
+        if (touchData.mode === 'orbit' || (touchData.mode === 'swipe' && !touchData.hasSwiped && distSq < 100)) {
+          // Rotar órbita de cámara
+          const sph = new THREE.Spherical().setFromVector3(camera.position);
+          sph.theta -= dx * 0.006;
+          sph.phi = Math.max(0.1, Math.min(Math.PI - 0.1, sph.phi - dy * 0.005));
+          camera.position.setFromSpherical(sph);
+          camera.lookAt(0, 0, 0);
+          lastInteractionRef.current = Date.now();
+        }
+      };
+
+      const onUp = () => {
+        isDraggingRef.current = false;
+        touchData = null;
+        lastInteractionRef.current = Date.now();
+        if (renderer?.domElement) renderer.domElement.style.cursor = 'grab';
+      };
 
       renderer.domElement.addEventListener('mousedown', onDown);
-      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mousemove', onMoveHandler);
       window.addEventListener('mouseup', onUp);
       renderer.domElement.addEventListener('touchstart', onDown, { passive: true });
-      renderer.domElement.addEventListener('touchmove', onMove, { passive: true });
+      renderer.domElement.addEventListener('touchmove', onMoveHandler, { passive: true });
       window.addEventListener('touchend', onUp);
     }
     // ═══ MOTOR DE ROTACIÓN ═══

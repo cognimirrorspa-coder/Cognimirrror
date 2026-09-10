@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Brain, Mail, Lock, User, ArrowRight, AlertCircle, CheckCircle2, School, ShieldCheck } from 'lucide-react';
+import { Brain, Mail, Lock, User, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2, School, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const { signIn, signUp, registerInstitution } = useAuth();
@@ -143,6 +144,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#07080f] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans select-none">
+      {/* Botón flotante para regresar a la página de inicio */}
+      <Link
+        href="/"
+        className="absolute top-5 left-5 z-30 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md transition-all active:scale-95 shadow-lg group"
+      >
+        <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform text-purple-400" />
+        <span>Volver al Inicio</span>
+      </Link>
+
       {/* Orbes de fondo difuminados */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none animate-pulse" style={{ animationDuration: '12s' }} />

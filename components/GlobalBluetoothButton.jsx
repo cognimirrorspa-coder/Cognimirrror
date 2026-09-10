@@ -80,13 +80,13 @@ export default function GlobalBluetoothButton() {
               </p>
             )}
 
-            {/* Toggle Modo Teclado (Sin Cubo) */}
+            {/* Toggle Modo Teclado (Sin Cubo) - Solo visible en Desktop / PC */}
             <div className="mt-3 pt-3 border-t border-white/10 flex flex-col gap-2">
               <button
                 onClick={() => {
                   toggleKeyboardMode();
                 }}
-                className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-between border cursor-pointer ${
+                className={`hidden md:flex w-full py-2.5 px-3 rounded-xl text-xs font-bold transition-all items-center justify-between border cursor-pointer ${
                   isKeyboardMode 
                     ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
                     : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300'
@@ -163,20 +163,30 @@ export default function GlobalBluetoothButton() {
           </button>
         ) : isKeyboardMode ? (
           <div className="flex items-center gap-1.5">
+            {/* Solo en Desktop / PC muestra el badge Modo Teclado */}
             <button
               onClick={() => setIsOpenMenu(!isOpenMenu)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#18120a]/95 hover:bg-[#231a0e] border border-amber-500/50 text-amber-300 text-xs font-bold shadow-[0_4px_25px_rgba(245,158,11,0.25)] hover:shadow-[0_4px_30px_rgba(245,158,11,0.4)] backdrop-blur-md transition-all active:scale-95 cursor-pointer group animate-pulse"
+              className="hidden md:flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#18120a]/95 hover:bg-[#231a0e] border border-amber-500/50 text-amber-300 text-xs font-bold shadow-[0_4px_25px_rgba(245,158,11,0.25)] hover:shadow-[0_4px_30px_rgba(245,158,11,0.4)] backdrop-blur-md transition-all active:scale-95 cursor-pointer group animate-pulse"
               title="Modo Teclado (Sin Cubo) Activo - Click para opciones"
             >
               <Keyboard className="w-4 h-4 text-amber-400" />
               <span className="tracking-wide">Modo Teclado (Sin Cubo)</span>
+            </button>
+            {/* En Móvil / Celular muestra el botón estándar de Conectar Cubo */}
+            <button
+              onClick={connectBLE}
+              className="md:hidden flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-600/90 to-indigo-600/90 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:shadow-[0_4px_25px_rgba(59,130,246,0.5)] backdrop-blur-md transition-all active:scale-95 cursor-pointer border border-blue-400/30 group"
+              title="Conectar Cubo Inteligente vía Bluetooth"
+            >
+              <Bluetooth className="w-4 h-4 text-blue-200" />
+              <span className="tracking-wide">Conectar Cubo</span>
             </button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsOpenMenu(!isOpenMenu)}
-              className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+              className="hidden md:flex p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white backdrop-blur-md transition-all active:scale-95 cursor-pointer"
               title="Opciones de Conexión / Modo Teclado"
             >
               <Keyboard className="w-4 h-4 text-amber-400/80" />

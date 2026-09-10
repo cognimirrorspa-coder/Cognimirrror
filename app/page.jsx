@@ -7,8 +7,10 @@ import {
   Trophy, Eye, CheckCircle,
   Mail, Phone, ExternalLink, Play, X, Send, Calendar, ChevronRight,
   EyeOff, Gamepad2, Globe, FileWarning, Landmark, HeartHandshake,
-  ClipboardX, Smartphone
+  ClipboardX, Smartphone, RotateCcw
 } from 'lucide-react';
+import { useBluetoothCube } from '../contexts/BluetoothContext';
+import { useCubeState } from '../contexts/CubeStateContext';
 import dynamic from 'next/dynamic';
 
 // Red neuronal 3D de fondo
@@ -38,6 +40,10 @@ const MorphingCardIcon = dynamic(
 
 export default function LandingPage() {
   const router = useRouter();
+  const { isConnected, isKeyboardMode, simulateMove } = useBluetoothCube();
+  const { resetCubeState } = useCubeState();
+  const [activeValidationTab, setActiveValidationTab] = useState(0);
+
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -45,6 +51,20 @@ export default function LandingPage() {
 
   // Estado unificado para sincronizar Cerebro 3D y Fondo de Redes Neuronales
   const [activeModules, setActiveModules] = useState({ reaction: true, memory: true });
+
+  // Listener de teclado en desktop para interactuar con el gemelo 3D
+  useEffect(() => {
+    const onKey = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) return;
+      const key = e.key.toUpperCase();
+      const validFaces = ['U', 'D', 'R', 'L', 'F', 'B'];
+      if (validFaces.includes(key)) {
+        simulateMove(key);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [simulateMove]);
 
   const toggleModule = (moduleKey) => {
     setActiveModules((prev) => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
@@ -92,7 +112,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ===== SECCIÓN 1: HERO ===== */}
-      <section className="relative overflow-hidden border-b border-white/5 pt-20 sm:pt-28 pb-12 sm:pb-20 px-4 sm:px-6">
+      <section className="relative overflow-hidden border-b border-white/5 pt-14 sm:pt-20 pb-8 sm:pb-14 px-4 sm:px-6">
         <div className="electric-glow top-1/2 left-1/4 transform -translate-x-1/2 -translate-y-1/2" />
 
         {/* Brain3D en el lado derecho con Leyenda Cromática de Módulos (Escritorio Original 100% Intacto) */}
@@ -104,19 +124,19 @@ export default function LandingPage() {
         </div>
 
         <div className="container mx-auto max-w-7xl relative z-10 pointer-events-none">
-          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center min-h-[400px] sm:min-h-[500px] lg:min-h-[650px] lg:pt-8">
-            <div className="lg:col-span-7 space-y-5 sm:space-y-8 text-left lg:pt-4 pointer-events-auto">
-              <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.12] sm:leading-[1.1] tracking-tight drop-shadow-sm">
+          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center min-h-[360px] sm:min-h-[460px] lg:min-h-[560px] lg:pt-4">
+            <div className="lg:col-span-7 space-y-4 sm:space-y-6 text-left lg:pt-2 pointer-events-auto">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.18] sm:leading-[1.12] tracking-tight drop-shadow-sm">
                 Telemetría Phygital que blinda tu Programa PIE.
               </h1>
-              <p className="text-sm sm:text-base md:text-xl text-slate-400 max-w-xl font-light leading-relaxed">
+              <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-xl font-light leading-relaxed">
                 Deja atrás el &apos;espejismo académico&apos; y las evaluaciones subjetivas. CogniMirror transforma herramientas físicas en métricas clínicas exactas, ahorrando cientos de horas a tu equipo psicosocial.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-3">
                 <button
                   onClick={() => openContactModal('Solicitar Demostración Institucional')}
-                  className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all duration-300 text-xs sm:text-sm font-semibold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20"
+                  className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all duration-300 text-xs sm:text-sm font-semibold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20"
                 >
                   <span>Postular al Piloto</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -126,7 +146,7 @@ export default function LandingPage() {
                     e.preventDefault();
                     document.getElementById('experiencia-phygital')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="relative group overflow-hidden bg-slate-900/40 hover:bg-slate-800/60 text-white px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold border border-white/10 hover:border-white/20 active:scale-[0.98]"
+                  className="relative group overflow-hidden bg-slate-900/40 hover:bg-slate-800/60 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold border border-white/10 hover:border-white/20 active:scale-[0.98]"
                 >
                   <Play className="w-4 h-4 text-[#3B82F6] fill-[#3B82F6]/10 group-hover:scale-110 transition-transform" />
                   <span>Ver Video</span>
@@ -134,8 +154,8 @@ export default function LandingPage() {
               </div>
 
               {/* CORFO Logo Block */}
-              <div className="pt-4 sm:pt-8">
-                <img src="/logo-corfo.png" alt="Apoyado por CORFO y Gobierno de Chile" className="h-12 sm:h-16 md:h-20 object-contain drop-shadow-md hover:scale-105 transition-transform origin-left" />
+              <div className="pt-2 sm:pt-4">
+                <img src="/logo-corfo.png" alt="Apoyado por CORFO y Gobierno de Chile" className="h-10 sm:h-12 md:h-14 object-contain drop-shadow-md hover:scale-105 transition-transform origin-left" />
               </div>
             </div>
           </div>
@@ -143,17 +163,17 @@ export default function LandingPage() {
       </section>
 
       {/* ===== SECCIÓN 1.5: EXPERIENCIA PHYGITAL ===== */}
-      <section id="experiencia-phygital" className="py-24 relative border-b border-white/5 bg-[#0B0F19]/50">
+      <section id="experiencia-phygital" className="py-12 sm:py-16 relative border-b border-white/5 bg-[#0B0F19]/50">
         <div className="container mx-auto max-w-7xl px-4">
-          <div className="text-center mb-16 space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 border border-[#3B82F6]/30 rounded-full bg-[#3B82F6]/10 mb-2">
-              <Sparkles className="w-4 h-4 text-[#3B82F6]" />
-              <span className="text-xs font-mono text-[#3B82F6] tracking-wider uppercase">Experiencia Phygital</span>
+          <div className="text-center mb-8 sm:mb-12 space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 border border-[#3B82F6]/30 rounded-full bg-[#3B82F6]/10 mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-[#3B82F6]" />
+              <span className="text-[10px] sm:text-xs font-mono text-[#3B82F6] tracking-wider uppercase">Experiencia Phygital</span>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white max-w-4xl mx-auto tracking-tight">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white max-w-4xl mx-auto tracking-tight">
               Del Juego Físico a la Métrica Clínica en Tiempo Real
             </h2>
-            <p className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto font-light">
+            <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-2xl mx-auto font-light">
               Observa cómo la interacción del estudiante con el cubo inteligente se traduce instantáneamente en datos precisos.
             </p>
           </div>
@@ -214,44 +234,44 @@ export default function LandingPage() {
       </section>
 
       {/* ===== SECCIÓN 2: EL DOLOR ===== */}
-      <section className="py-24 relative border-b border-white/5">
+      <section className="py-12 sm:py-16 relative border-b border-white/5">
         <div className="container mx-auto max-w-7xl px-4">
-          <div className="text-center mb-16 space-y-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-white max-w-3xl mx-auto tracking-tight">
+          <div className="text-center mb-8 sm:mb-12 space-y-2">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white max-w-3xl mx-auto tracking-tight">
               El modelo actual está agotando a tus profesionales.
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="glass-panel p-6 rounded-lg flex flex-col gap-4 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
-              <div className="w-12 h-12 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-2">
-                <MorphingCardIcon iconType="clipboardX" color="#f87171" size={24} delay={0} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+            <div className="glass-panel p-5 sm:p-6 rounded-lg flex flex-col gap-3 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
+              <div className="w-10 h-10 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-1">
+                <MorphingCardIcon iconType="clipboardX" color="#f87171" size={20} delay={0} />
               </div>
-              <div className="text-5xl md:text-7xl font-mono text-[#3B82F6] font-bold select-none leading-none mb-2">40%</div>
-              <h3 className="text-lg font-bold text-white">El Colapso Administrativo</h3>
-              <div className="h-px w-full bg-white/10 my-2" />
-              <p className="text-sm text-slate-400 font-light leading-relaxed">
+              <div className="text-3xl sm:text-4xl md:text-5xl font-mono text-[#3B82F6] font-bold select-none leading-none mb-1">40%</div>
+              <h3 className="text-base font-bold text-white">El Colapso Administrativo</h3>
+              <div className="h-px w-full bg-white/10 my-1" />
+              <p className="text-xs sm:text-sm text-slate-400 font-light leading-relaxed">
                 Los psicólogos gastan hasta un <strong className="text-white font-semibold">40%</strong> de sus horas en papeleo manual para justificar los <strong className="text-white font-semibold">Informes PIE</strong>.
               </p>
             </div>
-            <div className="glass-panel p-6 rounded-lg flex flex-col gap-4 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
-              <div className="w-12 h-12 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-2">
-                <MorphingCardIcon iconType="smartphone" color="#fdba74" size={24} delay={150} />
+            <div className="glass-panel p-5 sm:p-6 rounded-lg flex flex-col gap-3 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
+              <div className="w-10 h-10 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-1">
+                <MorphingCardIcon iconType="smartphone" color="#fdba74" size={20} delay={150} />
               </div>
-              <div className="text-5xl md:text-7xl font-mono text-indigo-400 font-bold select-none leading-none mb-2">D.170</div>
-              <h3 className="text-lg font-bold text-white">El Villano del &apos;Scroll Infinito&apos;</h3>
-              <div className="h-px w-full bg-white/10 my-2" />
-              <p className="text-sm text-slate-400 font-light leading-relaxed">
+              <div className="text-3xl sm:text-4xl md:text-5xl font-mono text-indigo-400 font-bold select-none leading-none mb-1">D.170</div>
+              <h3 className="text-base font-bold text-white">El Villano del &apos;Scroll Infinito&apos;</h3>
+              <div className="h-px w-full bg-white/10 my-1" />
+              <p className="text-xs sm:text-sm text-slate-400 font-light leading-relaxed">
                 Pérdida de atención y deterioro del desarrollo neuromotor en alumnos por sobreexposición a pantallas pasivas.
               </p>
             </div>
-            <div className="glass-panel p-6 rounded-lg flex flex-col gap-4 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
-              <div className="w-12 h-12 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-2">
-                <MorphingCardIcon iconType="eyeOff" color="#94a3b8" size={24} delay={300} />
+            <div className="glass-panel p-5 sm:p-6 rounded-lg flex flex-col gap-3 relative overflow-hidden group hover:border-[#3B82F6]/50 transition-all duration-300">
+              <div className="w-10 h-10 rounded bg-[#10131a] border border-white/10 flex items-center justify-center mb-1">
+                <MorphingCardIcon iconType="eyeOff" color="#94a3b8" size={20} delay={300} />
               </div>
-              <div className="text-5xl md:text-7xl font-mono text-slate-500 font-bold select-none leading-none mb-2">1/100</div>
-              <h3 className="text-lg font-bold text-white">Evaluaciones a &apos;Ojo Humano&apos;</h3>
-              <div className="h-px w-full bg-white/10 my-2" />
-              <p className="text-sm text-slate-400 font-light leading-relaxed">
+              <div className="text-3xl sm:text-4xl md:text-5xl font-mono text-slate-500 font-bold select-none leading-none mb-1">1/100</div>
+              <h3 className="text-base font-bold text-white">Evaluaciones a &apos;Ojo Humano&apos;</h3>
+              <div className="h-px w-full bg-white/10 my-1" />
+              <p className="text-xs sm:text-sm text-slate-400 font-light leading-relaxed">
                 Datos subjetivos del cronómetro que complican la validación de avances cognitivos y bimanuales objetivos.
               </p>
             </div>
@@ -260,9 +280,9 @@ export default function LandingPage() {
       </section>
 
       {/* ===== ESTUDIO CLÍNICO BANNER ===== */}
-      <section className="py-20 px-4 relative border-b border-white/5">
+      <section className="py-10 sm:py-14 px-4 relative border-b border-white/5">
         <div className="absolute inset-0 bg-gradient-to-b from-[#3B82F6]/5 to-transparent pointer-events-none" />
-        <div className="container mx-auto max-w-4xl relative z-10 text-center space-y-6">
+        <div className="container mx-auto max-w-4xl relative z-10 text-center space-y-4 sm:space-y-5">
           <div className="inline-flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-3.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider">
             <Trophy className="w-3.5 h-3.5 text-yellow-500" />
             <span>Participación Abierta 2026</span>
@@ -493,36 +513,68 @@ export default function LandingPage() {
           </div>
 
           {/* Feature 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-8">
-            <div className="md:col-span-6 md:col-start-7 glass-panel rounded-lg p-8 h-[400px] w-full flex flex-col justify-between relative overflow-hidden order-1 md:order-2 border border-white/10">
-              <div className="flex justify-between items-start font-mono text-xs text-slate-400">
-                <span className="tracking-wider">SYSTEM.COMPATIBILITY</span>
-                <Gamepad2 className="w-5 h-5 text-[#3B82F6]" />
+          <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-6 sm:gap-8">
+            <div className="md:col-span-6 md:col-start-7 glass-panel rounded-2xl p-6 sm:p-8 min-h-[380px] w-full flex flex-col justify-between relative overflow-hidden order-1 md:order-2 border border-white/10">
+              <div className="flex justify-between items-center font-mono text-xs text-slate-400">
+                <span className="tracking-wider flex items-center gap-2">
+                  <Gamepad2 className="w-4 h-4 text-[#3B82F6]" />
+                  <span>GEMELO.DIGITAL.3D</span>
+                </span>
+                {isConnected ? (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1.5 font-mono">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Cubo Conectado
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold font-mono">
+                    Interactivo 3D
+                  </span>
+                )}
               </div>
-              <div className="w-full flex items-center justify-center z-10 my-auto">
-                <Cube3DViewer size={200} isLocked={true} />
+
+              {/* Visor 3D Interactivo con Swipe Gestual Directo */}
+              <div className="w-full flex flex-col items-center justify-center z-10 my-auto py-2">
+                <div className="touch-none select-none cursor-grab active:cursor-grabbing">
+                  <Cube3DViewer size={200} isLocked={false} enableGestureSwipe={true} />
+                </div>
+                {/* Micro-pista interactiva gestual */}
+                <p className="text-[11px] text-blue-400/90 font-mono font-medium mt-2 text-center flex items-center justify-center gap-1">
+                  <span>👆 Desliza el dedo sobre cualquier cara para girarla</span>
+                </p>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5 text-center hidden md:block">
+                  Arrastra fuera del cubo para rotar la cámara • Teclas: [U, D, R, L, F, B]
+                </p>
               </div>
-              <div className="bg-[#10131a]/60 p-3 rounded-lg border border-white/5 font-mono text-[9px] flex justify-between">
-                <span className="text-slate-400">GAN Smart V3 &amp; V2</span>
-                <span className="text-emerald-400 font-bold">✓ COMPATIBLE</span>
+
+              <div className="bg-[#10131a]/80 p-3 rounded-lg border border-white/5 font-mono text-[9px] flex justify-between items-center">
+                <span className="text-slate-400">GAN Smart V3 &amp; V2 • Bluetooth 5.0</span>
+                <button
+                  onClick={resetCubeState}
+                  className="text-slate-400 hover:text-white px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-1 cursor-pointer border border-white/5"
+                  title="Reiniciar cubo al estado armado"
+                >
+                  <RotateCcw className="w-3 h-3 text-purple-400" />
+                  <span>Reiniciar Cubo</span>
+                </button>
               </div>
             </div>
-            <div className="md:col-span-6 md:col-start-1 md:row-start-1 order-2 md:order-1 text-left space-y-4">
-              <h3 className="text-2xl md:text-3xl font-bold text-white">Hardware Agnóstico &amp; Integración Cloud-Native</h3>
-              <p className="text-base text-slate-400 font-light leading-relaxed">
-                No te atamos a un dispositivo exclusivo. Nuestra plataforma es compatible con múltiples versiones de cubos inteligentes Bluetooth disponibles en el mercado.
+            <div className="md:col-span-6 md:col-start-1 md:row-start-1 order-2 md:order-1 text-left space-y-3 sm:space-y-4">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Hardware Agnóstico &amp; Integración Cloud-Native</h3>
+              <p className="text-xs sm:text-sm md:text-base text-slate-400 font-light leading-relaxed">
+                No te atamos a un dispositivo exclusivo. Nuestra plataforma es compatible con múltiples versiones de cubos inteligentes Bluetooth disponibles en el mercado y ofrece simulación táctil y digital instantánea.
               </p>
             </div>
           </div>
 
           {/* Feature 3 */}
-          <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-8">
-            <div className="md:col-span-6 glass-panel rounded-lg p-8 h-[400px] w-full flex flex-col justify-between thin-stroke-grid border border-white/10">
+          {/* Feature 3 */}
+          <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-6 sm:gap-8">
+            <div className="md:col-span-6 glass-panel rounded-2xl p-6 sm:p-8 min-h-[320px] md:h-[350px] w-full flex flex-col justify-between thin-stroke-grid border border-white/10">
               <div className="flex justify-between items-start font-mono text-xs text-slate-400">
                 <span className="tracking-wider">SERVERS.STATUS</span>
                 <Globe className="w-5 h-5 text-slate-400" />
               </div>
-              <div className="bg-[#10131a]/80 p-4 border border-white/5 rounded-lg w-full flex items-center justify-between text-xs font-mono">
+              <div className="bg-[#10131a]/80 p-3.5 border border-white/5 rounded-lg w-full flex items-center justify-between text-xs font-mono">
                 <div className="text-left">
                   <span className="text-[8px] text-slate-500 block font-bold">ESTADO CLOUD</span>
                   <span className="text-slate-300 font-bold">Servidores Nube Estables</span>
@@ -535,12 +587,12 @@ export default function LandingPage() {
                 <p>&gt; system status: OPTIMAL</p>
               </div>
             </div>
-            <div className="md:col-span-6 text-left space-y-4">
-              <h3 className="text-2xl md:text-3xl font-bold text-white">Cobertura sin Fronteras</h3>
-              <p className="text-base text-slate-400 font-light leading-relaxed">
+            <div className="md:col-span-6 text-left space-y-3 sm:space-y-4">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Cobertura sin Fronteras</h3>
+              <p className="text-xs sm:text-sm md:text-base text-slate-400 font-light leading-relaxed">
                 Una solución SaaS Cloud-Native diseñada para funcionar sin latencia desde centros urbanos hasta zonas extremas como <strong className="text-white font-semibold"> Palena </strong> o el archipiélago de <strong className="text-white font-semibold"> Chiloé</strong>.
               </p>
-              <div className="pt-2 flex flex-wrap gap-2">
+              <div className="pt-1 flex flex-wrap gap-2">
                 <span className="inline-block bg-blue-950/80 border border-blue-900 text-blue-400 text-[10px] px-3 py-1 rounded font-mono font-bold uppercase tracking-wider">Palena</span>
                 <span className="inline-block bg-blue-950/80 border border-blue-900 text-blue-400 text-[10px] px-3 py-1 rounded font-mono font-bold uppercase tracking-wider">Chiloé</span>
                 <span className="inline-block bg-slate-900 border border-slate-800 text-slate-400 text-[10px] px-3 py-1 rounded font-mono font-bold uppercase tracking-wider">Cloud Synchronized</span>
@@ -549,30 +601,30 @@ export default function LandingPage() {
           </div>
 
           {/* Feature 4 */}
-          <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-8">
-            <div className="md:col-span-6 md:col-start-7 glass-panel rounded-lg p-8 h-[400px] w-full flex flex-col justify-between relative overflow-hidden order-1 md:order-2 border border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-6 sm:gap-8">
+            <div className="md:col-span-6 md:col-start-7 glass-panel rounded-2xl p-6 sm:p-8 min-h-[320px] md:h-[350px] w-full flex flex-col justify-between relative overflow-hidden order-1 md:order-2 border border-white/10">
               <div className="flex justify-between items-start font-mono text-xs text-slate-400">
                 <span className="tracking-wider">BRAIN.ACTIVATION.INDEX</span>
                 <Brain className="w-5 h-5 text-[#3B82F6]" />
               </div>
-              <div className="bg-[#10131a]/80 p-4 border border-white/5 rounded-lg w-full flex items-center gap-3">
-                <div className="w-9 h-9 bg-blue-500/10 rounded flex items-center justify-center text-[#3B82F6] border border-blue-500/20">
-                  <Brain className="w-5 h-5" />
+              <div className="bg-[#10131a]/80 p-3.5 border border-white/5 rounded-lg w-full flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-500/10 rounded flex items-center justify-center text-[#3B82F6] border border-blue-500/20">
+                  <Brain className="w-4 h-4" />
                 </div>
                 <div className="flex-1 text-left font-mono text-[11px]">
                   <span className="text-slate-300 font-bold block">Activación Cortical</span>
                   <span className="text-[9px] text-blue-400 font-bold">Corteza Parietal &amp; Motora</span>
                 </div>
               </div>
-              <div className="h-24 w-full flex justify-around items-end bg-[#0b0e15] rounded p-2 border border-white/5">
+              <div className="h-20 w-full flex justify-around items-end bg-[#0b0e15] rounded p-2 border border-white/5">
                 {[45, 67, 89, 72, 95, 60].map((val, idx) => (
-                  <div key={idx} style={{ height: `${val}%` }} className="w-4 bg-indigo-500/50 rounded-t shadow-[0_0_10px_rgba(99,102,241,0.2)]" />
+                  <div key={idx} style={{ height: `${val}%` }} className="w-3.5 bg-indigo-500/50 rounded-t shadow-[0_0_10px_rgba(99,102,241,0.2)]" />
                 ))}
               </div>
             </div>
-            <div className="md:col-span-6 md:col-start-1 md:row-start-1 order-2 md:order-1 text-left space-y-4">
-              <h3 className="text-2xl md:text-3xl font-bold text-white">Inmersión Bimanual y Rotación 3D</h3>
-              <p className="text-base text-slate-400 font-light leading-relaxed">
+            <div className="md:col-span-6 md:col-start-1 md:row-start-1 order-2 md:order-1 text-left space-y-3 sm:space-y-4">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Inmersión Bimanual y Rotación 3D</h3>
+              <p className="text-xs sm:text-sm md:text-base text-slate-400 font-light leading-relaxed">
                 Obligamos al cerebro a salir del letargo. Al exigir el uso de ambas manos activamos la corteza motora y parietal del estudiante en un entorno de alta demanda cognitiva, gamificado y libre de estrés.
               </p>
             </div>
@@ -581,25 +633,24 @@ export default function LandingPage() {
         </div>
       </section>
 
-
       {/* ===== SECCIÓN 4: RESPALDO INSTITUCIONAL ===== */}
-      <section className="py-20 px-4 relative flex flex-col items-center justify-center">
-        <div className="w-full max-w-4xl mx-auto flex flex-col items-center text-center space-y-8">
+      <section className="py-10 sm:py-14 px-4 relative flex flex-col items-center justify-center">
+        <div className="w-full max-w-4xl mx-auto flex flex-col items-center text-center space-y-5 sm:space-y-6">
           {/* Línea Divisora Superior */}
-          <div className="w-full h-px bg-white/15" />
+          <div className="w-full h-px bg-white/10" />
 
           {/* Encabezado Institucional */}
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl md:text-4xl font-bold tracking-[0.18em] text-slate-100 uppercase">
+          <div className="text-center space-y-1.5">
+            <h2 className="text-lg md:text-2xl font-bold tracking-[0.18em] text-slate-100 uppercase">
               RESPALDO INSTITUCIONAL
             </h2>
-            <p className="text-xs md:text-sm font-mono tracking-[0.3em] text-slate-400 uppercase">
+            <p className="text-[10px] md:text-xs font-mono tracking-[0.3em] text-slate-400 uppercase">
               CON EL APOYO DE
             </p>
           </div>
 
-          {/* Tarjeta Oscura Institucional con Logo Grande y Centrado */}
-          <div className="w-full bg-[#0c1424]/90 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-10 shadow-2xl flex items-center justify-center min-h-[180px] md:min-h-[240px]">
+          {/* Tarjeta Oscura Institucional con Logo Centrado */}
+          <div className="w-full bg-[#0c1424]/90 backdrop-blur-md border border-white/10 rounded-2xl p-5 md:p-8 shadow-xl flex items-center justify-center min-h-[130px] md:min-h-[160px]">
             <a
               href="https://www.corfo.cl/"
               target="_blank"
@@ -609,100 +660,194 @@ export default function LandingPage() {
               <img
                 src="/logo-corfo.png"
                 alt="CORFO y Gobierno de Chile"
-                className="h-20 md:h-28 max-h-[140px] md:max-h-[180px] w-auto object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] group-hover:scale-[1.03] transition-transform duration-300 mx-auto"
+                className="h-14 md:h-18 max-h-[90px] md:max-h-[120px] w-auto object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] group-hover:scale-[1.03] transition-transform duration-300 mx-auto"
               />
             </a>
           </div>
 
           {/* Texto Inferior */}
-          <p className="text-center text-xl md:text-3xl font-semibold text-slate-100 tracking-wide pt-2">
+          <p className="text-center text-base md:text-xl font-semibold text-slate-100 tracking-wide">
             Cofinanciados por el Estado de Chile
           </p>
 
           {/* Línea Divisora Inferior */}
-          <div className="w-full h-px bg-white/15" />
+          <div className="w-full h-px bg-white/10" />
         </div>
       </section>
 
-      {/* ===== SECCIÓN 4.5: VALIDACIÓN ===== */}
-      <section id="about" className="py-24 border-t border-b border-white/5 text-center px-4">
+      {/* ===== SECCIÓN 4.5: VALIDACIÓN POR EL ECOSISTEMA ===== */}
+      <section id="about" className="py-10 sm:py-14 border-t border-b border-white/5 text-center px-4">
         <div className="container mx-auto max-w-5xl">
-          <h2 className="text-sm font-mono text-slate-500 uppercase tracking-widest mb-12">
+          <h2 className="text-xs sm:text-sm font-mono text-slate-400 uppercase tracking-widest mb-6 sm:mb-8">
             Tecnología validada por el ecosistema de innovación
           </h2>
-          {/* 3 tarjetas centradas */}
-          <div className="flex flex-wrap justify-center gap-6 lg:gap-8">
+
+          {/* Selector de pestañas para móvil (Muestra las 3 en el mismo espacio sin tener que bajar) */}
+          <div className="flex md:hidden justify-center items-center gap-1.5 mb-4">
+            {['CITT Duoc UC', 'Cooimpacta 2025', 'All In Chile'].map((tabName, idx) => (
+              <button
+                key={tabName}
+                onClick={() => setActiveValidationTab(idx)}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-bold font-mono transition-all ${
+                  activeValidationTab === idx
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+              >
+                {tabName}
+              </button>
+            ))}
+          </div>
+
+          {/* En Desktop: Grid de 3 Columnas en una sola fila */}
+          <div className="hidden md:grid md:grid-cols-3 gap-4 lg:gap-6 text-left">
             {/* CITT Duoc UC */}
-            <div className="glass-panel rounded-xl p-8 flex flex-col justify-between hover:border-[#3B82F6]/50 transition-all shadow-lg w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-22px)] max-w-xs">
-              <div className="space-y-4 text-left">
-                <div className="w-14 h-14 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 p-2 flex items-center justify-center text-[#3B82F6]">
-                  <Landmark className="w-6 h-6" />
+            <div className="glass-panel rounded-xl p-5 lg:p-6 flex flex-col justify-between hover:border-[#3B82F6]/50 transition-all shadow-lg border border-white/10">
+              <div className="space-y-3 text-left">
+                <div className="w-11 h-11 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 p-2 flex items-center justify-center text-[#3B82F6]">
+                  <Landmark className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white">CITT Duoc UC</h3>
+                <h3 className="text-sm font-bold text-white">CITT Duoc UC</h3>
                 <p className="text-slate-400 text-xs leading-relaxed font-light">Aliado estratégico que respaldó nuestra primera validación tecnológica en entornos escolares.</p>
               </div>
-              <div className="mt-6 border-t border-white/5 pt-3">
+              <div className="mt-4 border-t border-white/5 pt-3">
                 <a href="https://www.instagram.com/citt_puertomontt/" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 font-medium">
                   Saber más <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </div>
+
             {/* Cooimpacta */}
-            <div className="glass-panel rounded-xl p-8 flex flex-col justify-between hover:border-emerald-500/50 transition-all shadow-lg w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-22px)] max-w-xs border border-emerald-500/20">
-              <div className="space-y-4 text-left">
-                <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 p-2 flex items-center justify-center text-emerald-400">
-                  <HeartHandshake className="w-6 h-6" />
+            <div className="glass-panel rounded-xl p-5 lg:p-6 flex flex-col justify-between hover:border-emerald-500/50 transition-all shadow-lg border border-emerald-500/20">
+              <div className="space-y-3 text-left">
+                <div className="w-11 h-11 rounded-full bg-emerald-500/10 border border-emerald-500/20 p-2 flex items-center justify-center text-emerald-400">
+                  <HeartHandshake className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white">Cooimpacta 2025</h3>
-                <p className="text-slate-400 text-xs leading-relaxed font-light">Finalistas nacionales en Santiago: entre los <strong className="text-emerald-400 font-semibold">20 seleccionados de 179 postulaciones</strong> de la Fundación Coopeuch y Duoc UC, validando nuestro modelo de triple impacto en el aula.</p>
+                <h3 className="text-sm font-bold text-white">Cooimpacta 2025</h3>
+                <p className="text-slate-400 text-xs leading-relaxed font-light">Finalistas nacionales: entre los <strong className="text-emerald-400 font-semibold">20 seleccionados de 179 postulaciones</strong> de Fundación Coopeuch y Duoc UC, validando el impacto en aula.</p>
               </div>
-              <div className="mt-6 border-t border-white/5 pt-3">
+              <div className="mt-4 border-t border-white/5 pt-3">
                 <a href="https://www.duoc.cl/cooimpacta/" target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 font-medium">
                   Saber más <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </div>
+
             {/* All In Chile */}
-            <div className="glass-panel rounded-xl p-8 flex flex-col justify-between hover:border-amber-500/50 transition-all shadow-lg w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-22px)] max-w-xs">
-              <div className="space-y-4 text-left">
-                <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/20 p-2 flex items-center justify-center text-amber-400">
-                  <Award className="w-6 h-6" />
+            <div className="glass-panel rounded-xl p-5 lg:p-6 flex flex-col justify-between hover:border-amber-500/50 transition-all shadow-lg border border-white/10">
+              <div className="space-y-3 text-left">
+                <div className="w-11 h-11 rounded-full bg-amber-500/10 border border-amber-500/20 p-2 flex items-center justify-center text-amber-400">
+                  <Award className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white">All In Chile 2025</h3>
+                <h3 className="text-sm font-bold text-white">All In Chile 2025</h3>
                 <p className="text-slate-400 text-xs leading-relaxed font-light">Destacados como uno de los 100 mejores proyectos de innovación profunda del país por Ruta IE y Santander X.</p>
               </div>
-              <div className="mt-6 border-t border-white/5 pt-3">
+              <div className="mt-4 border-t border-white/5 pt-3">
                 <a href="https://www.duoc.cl/allinchile/" target="_blank" rel="noopener noreferrer" className="text-xs text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1 font-medium">
                   Saber más <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </div>
           </div>
+
+          {/* En Móvil: Ocupa exactamente el mismo espacio vertical (~190px) con tabs y puntos */}
+          <div className="md:hidden w-full max-w-sm mx-auto">
+            {activeValidationTab === 0 && (
+              <div className="glass-panel rounded-xl p-5 flex flex-col justify-between shadow-lg text-left min-h-[190px] border border-blue-500/30 animate-in fade-in duration-200">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 flex items-center justify-center text-[#3B82F6]">
+                      <Landmark className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-bold text-white">CITT Duoc UC</h3>
+                  </div>
+                  <p className="text-slate-400 text-xs leading-relaxed font-light">Aliado estratégico que respaldó nuestra primera validación tecnológica en entornos escolares.</p>
+                </div>
+                <div className="mt-3 border-t border-white/5 pt-2 flex justify-between items-center">
+                  <a href="https://www.instagram.com/citt_puertomontt/" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-medium">
+                    Saber más <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <span className="text-[10px] font-mono text-slate-500">1 de 3</span>
+                </div>
+              </div>
+            )}
+
+            {activeValidationTab === 1 && (
+              <div className="glass-panel rounded-xl p-5 flex flex-col justify-between shadow-lg text-left min-h-[190px] border border-emerald-500/30 animate-in fade-in duration-200">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                      <HeartHandshake className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-bold text-white">Cooimpacta 2025</h3>
+                  </div>
+                  <p className="text-slate-400 text-xs leading-relaxed font-light">Finalistas nacionales: entre los <strong className="text-emerald-400 font-semibold">20 seleccionados de 179 postulaciones</strong> de Fundación Coopeuch y Duoc UC, validando el impacto en aula.</p>
+                </div>
+                <div className="mt-3 border-t border-white/5 pt-2 flex justify-between items-center">
+                  <a href="https://www.duoc.cl/cooimpacta/" target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium">
+                    Saber más <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <span className="text-[10px] font-mono text-slate-500">2 de 3</span>
+                </div>
+              </div>
+            )}
+
+            {activeValidationTab === 2 && (
+              <div className="glass-panel rounded-xl p-5 flex flex-col justify-between shadow-lg text-left min-h-[190px] border border-amber-500/30 animate-in fade-in duration-200">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-bold text-white">All In Chile 2025</h3>
+                  </div>
+                  <p className="text-slate-400 text-xs leading-relaxed font-light">Destacados como uno de los 100 mejores proyectos de innovación profunda del país por Ruta IE y Santander X.</p>
+                </div>
+                <div className="mt-3 border-t border-white/5 pt-2 flex justify-between items-center">
+                  <a href="https://www.duoc.cl/allinchile/" target="_blank" rel="noopener noreferrer" className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium">
+                    Saber más <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <span className="text-[10px] font-mono text-slate-500">3 de 3</span>
+                </div>
+              </div>
+            )}
+
+            {/* Puntos indicadores interactivos */}
+            <div className="flex justify-center gap-2 mt-3">
+              {[0, 1, 2].map(idx => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveValidationTab(idx)}
+                  className={`h-2 rounded-full transition-all cursor-pointer ${activeValidationTab === idx ? 'bg-blue-500 w-5' : 'bg-white/20 w-2'}`}
+                  title={`Ver validación ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-
       {/* ===== SECCIÓN 5: CTA FINAL ===== */}
-      <section className="py-24 flex flex-col items-center text-center relative overflow-hidden px-4">
+      <section className="py-12 sm:py-16 flex flex-col items-center text-center relative overflow-hidden px-4">
         <div className="absolute inset-0 bg-gradient-to-t from-[#3B82F6]/10 to-transparent pointer-events-none" />
-        <div className="container mx-auto max-w-4xl text-center relative z-10 space-y-6">
-          <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">
+        <div className="container mx-auto max-w-4xl text-center relative z-10 space-y-4 sm:space-y-5">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">
             Lidera la innovación en educación especial.
           </h2>
-          <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto font-light">
+          <p className="text-xs sm:text-sm md:text-base text-slate-300 max-w-2xl mx-auto font-light">
             Asegura la trazabilidad de tu Programa PIE con la única plataforma de telemetría neuromotora y gimnasia bimanual activa del país.
           </p>
-          <div className="pt-4 flex flex-wrap gap-4 justify-center">
+          <div className="pt-2 flex flex-wrap gap-3 justify-center">
             <button
               onClick={() => openContactModal('Postular para el Piloto 2026')}
-              className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-8 py-4 rounded-xl transition-all duration-300 text-sm font-semibold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_35px_rgba(59,130,246,0.5)] hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20"
+              className="relative group overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl transition-all duration-300 text-xs sm:text-sm font-semibold shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_35px_rgba(59,130,246,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20"
             >
               <span>Solicitar Demostración Institucional</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
               onClick={goToLogin}
-              className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-4 rounded-xl text-sm font-semibold transition-all border border-white/10 flex items-center gap-2"
+              className="bg-slate-800 hover:bg-slate-700 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border border-white/10 flex items-center gap-2"
             >
               Iniciar Sesión
               <ArrowRight className="w-4 h-4" />
