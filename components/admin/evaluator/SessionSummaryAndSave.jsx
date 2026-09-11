@@ -305,6 +305,35 @@ export default function SessionSummaryAndSave({
 
     // 2. Transacción e Inserciones en Supabase
     try {
+      // 0. Resolver o crear el paciente en tabla 'pacientes' para cumplir FK
+      let pacienteId = null;
+      try {
+        const { data: pExist } = await supabase
+          .from('pacientes')
+          .select('id')
+          .eq('id_sujeto', participantData.codigoParticipante)
+          .maybeSingle();
+
+        if (pExist?.id) {
+          pacienteId = pExist.id;
+        } else {
+          const { data: newP } = await supabase
+            .from('pacientes')
+            .insert([{
+              nombre: participantData.codigoParticipante,
+              apellido: '[Validación n=10]',
+              id_sujeto: participantData.codigoParticipante,
+              grupo_id: 'validacion_n10',
+              diagnostico_nee: 'Protocolo Validación',
+              psicologo_id: user?.id || null,
+              colegio_id: profile?.colegio_id || null
+            }])
+            .select('id')
+            .maybeSingle();
+          if (newP?.id) pacienteId = newP.id;
+        }
+      } catch (_) {}
+
       // Inserción en tabla 'sessions'
       const { error: sessErr } = await supabase
         .from('sessions')
@@ -337,24 +366,26 @@ export default function SessionSummaryAndSave({
       }
 
       // Respaldo en la tabla histórica oficial 'sesiones_clinicas'
-      await supabase
-        .from('sesiones_clinicas')
-        .insert([{
-          id_paciente: null,
-          tipo_test: 'validacion_n10_completa',
-          intento_numero: 1,
-          etiqueta_clinica: 'Protocolo Validación n=10 (Oficial)',
-          etiqueta_estudio: 'validacion_n10',
-          id_sujeto: participantData.codigoParticipante,
-          estadisticas_json: {
-            session: sessionMasterPayload,
-            context: sessionContextPayload,
-            trials_count: rawTrialsRows.length,
-            metrics
-          },
-          intento_valido: true
-        }])
-        .then(() => {});
+      if (pacienteId) {
+        await supabase
+          .from('sesiones_clinicas')
+          .insert([{
+            id_paciente: pacienteId,
+            tipo_test: 'validacion_n10_completa',
+            intento_numero: 1,
+            etiqueta_clinica: 'Protocolo Validación n=10 (Oficial)',
+            etiqueta_estudio: 'validacion_n10',
+            id_sujeto: participantData.codigoParticipante,
+            estadisticas_json: {
+              session: sessionMasterPayload,
+              context: sessionContextPayload,
+              trials_count: rawTrialsRows.length,
+              metrics
+            },
+            intento_valido: true
+          }])
+          .then(() => {});
+      }
 
       setSavedSuccess(true);
       if (onSaveSuccess) onSaveSuccess(sessionMasterPayload);
