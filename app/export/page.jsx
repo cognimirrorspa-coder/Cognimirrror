@@ -15,14 +15,38 @@ import Cube3DViewer from '../../components/Cube3DViewer';
 import { CubeStateProvider } from '../../contexts/CubeStateContext';
 
 export default function ExportCenter() {
-  const { 
-    patients, 
-    fetchRemoteEvaluations, 
-    createRemoteEvaluation, 
-    invalidateRemoteEvaluation 
-  } = usePatientsDB();
+  const { patients } = usePatientsDB();
   const { user, profile, signOut } = useAuth();
   const [savedSessionId, setSavedSessionId] = useState(null);
+
+  // Funciones de Evaluación Remota (directo con Supabase)
+  const fetchRemoteEvaluations = async () => {
+    const { data, error } = await supabase
+      .from('remote_evaluations')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) { console.error('Error fetching remote evals:', error); return []; }
+    return data || [];
+  };
+
+  const createRemoteEvaluation = async (evalData) => {
+    const { data, error } = await supabase
+      .from('remote_evaluations')
+      .insert([evalData])
+      .select()
+      .single();
+    if (error) { console.error('Error creating remote eval:', error); return null; }
+    return data;
+  };
+
+  const invalidateRemoteEvaluation = async (id) => {
+    const { error } = await supabase
+      .from('remote_evaluations')
+      .update({ status: 'invalidated' })
+      .eq('id', id);
+    if (error) { console.error('Error invalidating remote eval:', error); return false; }
+    return true;
+  };
 
   // Tab State
   const [activeTab, setActiveTab] = useState('exports');

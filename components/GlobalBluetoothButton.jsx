@@ -176,11 +176,11 @@ export default function GlobalBluetoothButton() {
             {/* En Móvil / Celular muestra el botón estándar de Conectar Cubo compacto */}
             <button
               onClick={connectBLE}
-              className="md:hidden flex items-center justify-center p-3 sm:px-4 sm:py-2.5 rounded-full bg-gradient-to-r from-blue-600/95 to-indigo-600/95 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:shadow-[0_4px_25px_rgba(59,130,246,0.5)] backdrop-blur-md transition-all active:scale-95 cursor-pointer border border-blue-400/30 group"
+              className="md:hidden flex items-center justify-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full bg-gradient-to-r from-blue-600/95 to-indigo-600/95 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:shadow-[0_4px_25px_rgba(59,130,246,0.5)] backdrop-blur-md transition-all active:scale-95 cursor-pointer border border-blue-400/30 group"
               title="Conectar Cubo Inteligente vía Bluetooth"
             >
               <Bluetooth className="w-4 h-4 text-blue-200" />
-              <span className="tracking-wide hidden sm:inline">Conectar Cubo</span>
+              <span className="tracking-wide text-xs">Conectar Cubo</span>
             </button>
           </div>
         ) : (
@@ -194,11 +194,11 @@ export default function GlobalBluetoothButton() {
             </button>
             <button
               onClick={connectBLE}
-              className="flex items-center justify-center p-3 sm:px-4 sm:py-2.5 rounded-full bg-gradient-to-r from-blue-600/95 to-indigo-600/95 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:shadow-[0_4px_25px_rgba(59,130,246,0.5)] backdrop-blur-md transition-all active:scale-95 cursor-pointer border border-blue-400/30 group"
+              className="flex items-center justify-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full bg-gradient-to-r from-blue-600/95 to-indigo-600/95 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:shadow-[0_4px_25px_rgba(59,130,246,0.5)] backdrop-blur-md transition-all active:scale-95 cursor-pointer border border-blue-400/30 group"
               title="Conectar Cubo Inteligente vía Bluetooth"
             >
               <Bluetooth className="w-4 h-4 text-blue-200 group-hover:rotate-12 transition-transform" />
-              <span className="tracking-wide hidden sm:inline">Conectar Cubo</span>
+              <span className="tracking-wide text-xs">Conectar Cubo</span>
             </button>
           </div>
         )}

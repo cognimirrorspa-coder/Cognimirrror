@@ -7,7 +7,7 @@ import { usePatientsDB } from '../../hooks/usePatientsDB';
 import { useBluetoothCube } from '../../contexts/BluetoothContext';
 import ReactionGame from '../../components/ReactionGame';
 import SimonGame from '../../components/SimonGame';
-import { Link2, AlertTriangle, ShieldCheck, Bluetooth, Activity, Wifi, Zap } from 'lucide-react';
+import { Link2, AlertTriangle, ShieldCheck, Bluetooth, Activity, Wifi, Zap, ArrowLeft } from 'lucide-react';
 
 function RemoteEvalContent() {
   const router = useRouter();
@@ -268,12 +268,26 @@ function RemoteEvalContent() {
 
   if (!isValid) {
     return (
-      <div className="min-h-screen bg-[#07080f] flex items-center justify-center font-sans px-6">
+      <div className="min-h-screen bg-[#07080f] flex items-center justify-center font-sans px-6 relative">
+        <button
+          onClick={() => router.back()}
+          className="fixed top-4 left-4 z-50 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all cursor-pointer backdrop-blur-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Volver</span>
+        </button>
+
         <div className="relative w-full max-w-md bg-[#13161e] border border-white/5 p-8 rounded-3xl text-center shadow-2xl overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-red-500" />
           <AlertTriangle className="mx-auto text-red-500 mb-6" size={48} />
           <h2 className="text-2xl font-black text-white tracking-tight uppercase mb-4">Acceso Denegado</h2>
           <p className="text-slate-400 text-sm leading-relaxed mb-6">{errorMsg}</p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="w-full py-3 mb-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold uppercase tracking-wider transition-all"
+          >
+            Ir al Dashboard
+          </button>
           <div className="text-[10px] text-white/20 font-mono tracking-wider uppercase">
             CogniMirror Secure Link System
           </div>
@@ -293,10 +307,35 @@ function RemoteEvalContent() {
       {/* Background radial glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#1d4ed8/10_0%,transparent_70%)] pointer-events-none" />
 
+      {/* Botón Flotante Volver al Dashboard (Visible en todas las fases excepto jugando) */}
+      {step !== 'playing' && (
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="fixed top-4 left-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#13161e]/90 hover:bg-[#1c2230] border border-white/15 text-slate-200 hover:text-white text-xs font-bold transition-all cursor-pointer backdrop-blur-md shadow-xl group"
+        >
+          <ArrowLeft className="w-4 h-4 text-cyan-400 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Volver al Dashboard</span>
+        </button>
+      )}
+
       {/* STEP 1: WELCOME SCREEN */}
       {step === 'welcome' && (
         <div className="my-auto mx-auto w-full max-w-xl p-4 sm:p-8 relative z-10">
           <div className="bg-[#13161e] border border-white/5 p-5 sm:p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center">
+            
+            {/* Barra superior dentro de la tarjeta */}
+            <div className="w-full flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Volver al Dashboard</span>
+              </button>
+              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                {patientData.id_sujeto || 'PIE'}
+              </span>
+            </div>
             
             {/* Tag */}
             <span className="px-3 py-1 bg-cyan-950/40 text-cyan-400 border border-cyan-800/30 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
@@ -348,6 +387,15 @@ function RemoteEvalContent() {
             >
               Comenzar Evaluación
             </button>
+
+            {/* Enlace secundario para volver */}
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="mt-4 text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors cursor-pointer flex items-center justify-center gap-1.5 py-1.5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Volver al Dashboard Clínico</span>
+            </button>
           </div>
         </div>
       )}
@@ -356,6 +404,21 @@ function RemoteEvalContent() {
       {step === 'instructions' && (
         <div className="my-auto mx-auto w-full max-w-xl p-4 sm:p-8 relative z-10">
           <div className="bg-[#13161e] border border-white/5 p-5 sm:p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center">
+            
+            {/* Barra superior de instrucciones */}
+            <div className="w-full flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+              <button
+                onClick={() => setStep('welcome')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Volver a la Bienvenida</span>
+              </button>
+              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                Instrucciones
+              </span>
+            </div>
+
             <h2 className="text-2xl font-black text-white tracking-tight uppercase mb-6">Reglas Generales</h2>
             
             <div className="w-full flex flex-col gap-4 text-left text-sm text-slate-400 leading-relaxed mb-8">
@@ -377,11 +440,9 @@ function RemoteEvalContent() {
               ) : (
                 <>
                   <div className="flex gap-4 items-start p-3 bg-black/30 rounded-xl border border-white/5">
-                    
                     <p className="text-xs">Observa atentamente el gemelo digital en pantalla para memorizar la secuencia que se enciende.</p>
                   </div>
                   <div className="flex gap-4 items-start p-3 bg-black/30 rounded-xl border border-white/5">
-                    
                     <p className="text-xs">Replica el patrón exacto en el mismo orden usando las caras correspondientes del cubo inteligente o tu teclado.</p>
                   </div>
                 </>
@@ -393,7 +454,7 @@ function RemoteEvalContent() {
                 setSessionStartTime(Date.now());
                 setStep('playing');
               }}
-              className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-110 shadow-lg"
+              className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-black text-xs uppercase tracking-widest rounded-xl hover:brightness-110 shadow-lg cursor-pointer"
             >
               Iniciar Prueba Real
             </button>
@@ -470,10 +531,16 @@ function RemoteEvalContent() {
             <div className="absolute top-0 left-0 w-full h-[2px] bg-green-500" />
             <ShieldCheck className="mx-auto text-green-400 mb-6" size={54} />
             <h2 className="text-2xl font-black text-white tracking-tight uppercase mb-4">Evaluación Enviada</h2>
-            <p className="text-slate-400 text-sm leading-relaxed mb-8">
+            <p className="text-slate-400 text-sm leading-relaxed mb-6">
               ¡Muchas gracias, <strong className="text-white">{patientData.nombre}</strong>! Los resultados cuantitativos y de telemetría de tu cubo se han transmitido de manera exitosa y segura a la base de datos de tu especialista.
             </p>
-            <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl text-xs text-slate-500 mb-6">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full py-3.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-blue-500/20 cursor-pointer mb-6"
+            >
+              Ir al Dashboard Clínico
+            </button>
+            <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl text-xs text-slate-500 mb-4">
               El enlace temporal ha sido revocado y no se puede reutilizar para resguardar la validez científica del test.
             </div>
             <p className="text-[10px] text-white/20 font-mono tracking-widest uppercase mb-2">
