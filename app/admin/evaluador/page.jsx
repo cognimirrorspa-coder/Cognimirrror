@@ -11,6 +11,7 @@ import BleVerificationCard from '../../../components/admin/evaluator/BleVerifica
 import ClinicalTeleprompter from '../../../components/admin/evaluator/ClinicalTeleprompter';
 import BatteriesLauncher from '../../../components/admin/evaluator/BatteriesLauncher';
 import BatteryOrchestrator from '../../../components/admin/evaluator/BatteryOrchestrator';
+import SessionSummaryAndSave from '../../../components/admin/evaluator/SessionSummaryAndSave';
 import ExitSurveyCard from '../../../components/admin/evaluator/ExitSurveyCard';
 
 import { 
@@ -459,20 +460,20 @@ export default function EvaluadorAdminPage() {
           </div>
         )}
 
-        {/* PASO 4: ENCUESTA DE SALIDA Y CIERRE */}
+        {/* PASO 4: ENCUESTA DE SALIDA, MÉTRICAS Y GUARDADO */}
         {currentStep === 'ENCUESTA_SALIDA' && (
-          <ExitSurveyCard
+          <SessionSummaryAndSave
             participantData={participantData}
-            surveyData={surveyData}
-            onChange={handleSurveyChange}
-            onSaveSession={handleSaveSession}
+            collectedTrials={collectedTrials}
+            onSaveSuccess={(savedPayload) => {
+              setSaveSuccess(true);
+              setSessionCountToday(prev => prev + 1);
+            }}
             onResetForNextParticipant={handleResetForNextParticipant}
             onBack={() => {
               setCurrentStep('BATERIAS_EVALUACION');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            isSaving={isSaving}
-            saveSuccess={saveSuccess}
           />
         )}
       </main>
