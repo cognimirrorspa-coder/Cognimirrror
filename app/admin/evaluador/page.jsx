@@ -10,6 +10,7 @@ import ParticipantForm from '../../../components/admin/evaluator/ParticipantForm
 import BleVerificationCard from '../../../components/admin/evaluator/BleVerificationCard';
 import ClinicalTeleprompter from '../../../components/admin/evaluator/ClinicalTeleprompter';
 import BatteriesLauncher from '../../../components/admin/evaluator/BatteriesLauncher';
+import BatteryOrchestrator from '../../../components/admin/evaluator/BatteryOrchestrator';
 import ExitSurveyCard from '../../../components/admin/evaluator/ExitSurveyCard';
 
 import { 
@@ -65,6 +66,10 @@ export default function EvaluadorAdminPage() {
     bat3_bimanual: false,
     bat4_official: false
   });
+
+  // Modo de orquestación y datos trial-by-trial
+  const [orchestratorMode, setOrchestratorMode] = useState('automated'); // 'automated' | 'manual'
+  const [collectedTrials, setCollectedTrials] = useState([]);
 
   // Estado de la Encuesta de Salida (Paso 4)
   const [surveyData, setSurveyData] = useState({
@@ -132,6 +137,7 @@ export default function EvaluadorAdminPage() {
         isKeyboardMode: Boolean(isKeyboardMode)
       },
       bateriasCompletadas: completedBatteries,
+      telemetria_ensayos: collectedTrials,
       encuestaSalida: surveyData
     };
 
@@ -384,19 +390,73 @@ export default function EvaluadorAdminPage() {
 
         {/* PASO 3: BATERÍAS DE EVALUACIÓN */}
         {currentStep === 'BATERIAS_EVALUACION' && (
-          <BatteriesLauncher
-            participantData={participantData}
-            completedBatteries={completedBatteries}
-            onToggleBatteryStatus={handleToggleBatteryStatus}
-            onBack={() => {
-              setCurrentStep('VERIFICACION_BLE');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onNext={() => {
-              setCurrentStep('ENCUESTA_SALIDA');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
+          <div className="space-y-6">
+            {/* Selector de Modo de Ejecución */}
+            <div className="bg-[#0c101a]/80 border border-white/10 rounded-2xl p-2.5 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-300 pl-3">
+                Modalidad de Aplicación:
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setOrchestratorMode('automated')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    orchestratorMode === 'automated'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                  }`}
+                >
+                  ⚡ Secuencia Automatizada (n=10)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrchestratorMode('manual')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    orchestratorMode === 'manual'
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                  }`}
+                >
+                  📋 Lanzador Manual Individual
+                </button>
+              </div>
+            </div>
+
+            {orchestratorMode === 'automated' ? (
+              <BatteryOrchestrator
+                participantData={participantData}
+                onBatteriesComplete={(trials) => {
+                  setCollectedTrials(trials);
+                  setCompletedBatteries({
+                    bat1_warmup: true,
+                    bat2_inhibitory: true,
+                    bat3_bimanual: true,
+                    bat4_official: true
+                  });
+                  setCurrentStep('ENCUESTA_SALIDA');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onAbort={() => {
+                  setCurrentStep('VERIFICACION_BLE');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            ) : (
+              <BatteriesLauncher
+                participantData={participantData}
+                completedBatteries={completedBatteries}
+                onToggleBatteryStatus={handleToggleBatteryStatus}
+                onBack={() => {
+                  setCurrentStep('VERIFICACION_BLE');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onNext={() => {
+                  setCurrentStep('ENCUESTA_SALIDA');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
+          </div>
         )}
 
         {/* PASO 4: ENCUESTA DE SALIDA Y CIERRE */}
