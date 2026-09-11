@@ -28,6 +28,7 @@ import {
   Wifi,
   WifiOff,
   Shield,
+  ShieldCheck,
   Layers,
   ChevronRight,
   History,
@@ -701,6 +702,22 @@ function ClassicDashboard() {
             >
               <FileSpreadsheet className="w-4 h-4 text-amber-500" />
               <span>Informes</span>
+            </Link>
+
+            {/* Módulo Privado del Evaluador (Founders & Validación n=10) */}
+            <Link
+              href="/admin/evaluador"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold my-0.5 ${
+                isDark 
+                  ? 'text-purple-300 hover:text-white bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]' 
+                  : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-purple-400 flex-shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold truncate">Módulo Evaluador</span>
+                <span className="text-[9px] text-purple-400/80 font-mono tracking-wider truncate">Protocolo n=10 (Founders)</span>
+              </div>
             </Link>
 
             {/* Botón Auditoría y Trazabilidad Fusionado con Sub-apartados y las 3 Últimas Acciones en el Sidebar */}
