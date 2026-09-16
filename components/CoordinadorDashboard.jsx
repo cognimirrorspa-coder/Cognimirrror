@@ -5,7 +5,7 @@ import { usePatientsDB } from '../hooks/usePatientsDB';
 import { useAuth } from '../contexts/AuthContext';
 import GestorEquipo from './GestorEquipo';
 import { 
-  Users, Brain, Zap, Clock, Shield, Activity, BarChart2, 
+  Users, UserPlus, Brain, Zap, Clock, Shield, Activity, BarChart2, 
   Plus, ArrowRight, Settings, CheckCircle2, AlertTriangle, 
   FileText, Download, Lock, RefreshCw, Filter, Search, UserCheck, School, ExternalLink
 } from 'lucide-react';
@@ -185,6 +185,12 @@ export default function CoordinadorDashboard() {
 
           {/* Acciones Rápidas */}
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setActiveTab('equipo')}
+              className="px-5 py-3 bg-purple-600/25 hover:bg-purple-600/40 border border-purple-500/40 text-purple-200 font-black text-xs tracking-wider uppercase rounded-xl transition-all shadow-lg hover:scale-105 flex items-center gap-2 cursor-pointer"
+            >
+              <UserPlus size={14} /> Agregar Usuarios
+            </button>
             <button
               onClick={() => router.push('/students')}
               className="px-5 py-3 bg-white hover:bg-slate-200 text-black font-black text-xs tracking-widest uppercase rounded-xl transition-all shadow-lg hover:scale-105 flex items-center gap-2 cursor-pointer"

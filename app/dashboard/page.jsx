@@ -10,8 +10,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePatientsDB } from '../../hooks/usePatientsDB';
 import Cube3DViewer from '../../components/Cube3DViewer';
 import CoordinadorDashboard from '../../components/CoordinadorDashboard';
+import ModalGestionUsuarios from '../../components/ModalGestionUsuarios';
 import {
   Users,
+  UserPlus,
   Brain,
   Zap,
   Compass,
@@ -99,6 +101,8 @@ function ClassicDashboard() {
   useEffect(() => {
     if (tabParam === 'niveles' || tabParam === 'batteries' || tabParam === 'baterias') {
       setActiveTab('niveles');
+    } else if (tabParam === 'usuarios' || tabParam === 'users') {
+      setActiveTab('usuarios');
     }
   }, [tabParam]);
 
@@ -127,6 +131,24 @@ function ClassicDashboard() {
   // Estados de Expediente Auditado de Docente y Estudiante
   const [selectedTeacherModal, setSelectedTeacherModal] = useState(null);
   const [selectedStudentModal, setSelectedStudentModal] = useState(null);
+
+  // Estado Modal Gestión de Usuarios por Jerarquía (Referencia C:\Users\josue\Desktop\dashboard)
+  const [isUserManagementModalOpen, setIsUserManagementModalOpen] = useState(false);
+
+  const handleUserAuditAction = (accion, detalle) => {
+    const newLogEvent = {
+      id: `aud-${Date.now()}`,
+      title: accion === 'CREAR_USUARIO' ? 'Nuevo Profesional Registrado' :
+             accion === 'EDITAR_USUARIO' ? 'Credenciales / Rol Modificado' :
+             accion === 'ELIMINAR_USUARIO' ? 'Baja de Usuario Institucional' : 'Gestión de Acceso',
+      author: specialistName,
+      details: detalle,
+      timeAgo: 'Justo ahora',
+      fullDate: 'Hoy, ' + new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
+      category: 'Sistema'
+    };
+    setAuditLog(prev => [newLogEvent, ...prev]);
+  };
 
   const handleOpenTeacherDossier = (teacherName) => {
     const cleanName = teacherName ? teacherName.split('/')[0].trim() : 'Ps. Brayan Castro';
@@ -713,6 +735,19 @@ function ClassicDashboard() {
           <Download className="w-5 h-5" />
         </Link>
 
+        {/* Gestión de Usuarios */}
+        <button
+          onClick={() => setActiveTab('usuarios')}
+          title="Gestión de Usuarios"
+          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+            activeTab === 'usuarios'
+              ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+              : 'text-emerald-400 hover:bg-emerald-500/10'
+          }`}
+        >
+          <UserPlus className="w-5 h-5" />
+        </button>
+
         {/* Auditoría / Bitácora */}
         <button
           onClick={() => { setActiveTab('auditoria'); setAuditSubTab('historica'); }}
@@ -843,6 +878,19 @@ function ClassicDashboard() {
                 <span className="text-[9px] text-purple-400/80 font-mono tracking-wider truncate">Protocolo n=10 (Founders)</span>
               </div>
             </Link>
+
+            {/* Apartado: Creación y Administración de Usuarios por Jerarquía */}
+            <button
+              onClick={() => setActiveTab('usuarios')}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
+                activeTab === 'usuarios'
+                  ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                  : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <UserPlus className={`w-4 h-4 ${activeTab === 'usuarios' ? 'text-white' : 'text-emerald-400'}`} />
+              <span>Gestión de Usuarios</span>
+            </button>
 
             {/* Botón Auditoría y Trazabilidad Fusionado con Sub-apartados y las 3 Últimas Acciones en el Sidebar */}
             <div className="mt-1 flex flex-col gap-1">
@@ -994,6 +1042,22 @@ function ClassicDashboard() {
         {/* CONTENIDO PRINCIPAL */}
         <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl w-full mx-auto flex flex-col gap-5 md:gap-6">
           
+          {/* TAB: CREACIÓN Y ADMINISTRACIÓN DE USUARIOS POR JERARQUÍA */}
+          {activeTab === 'usuarios' && (
+            <div className="flex flex-col gap-5 md:gap-6 animate-in fade-in duration-200">
+              <ModalGestionUsuarios
+                isOpen={true}
+                embedded={true}
+                onClose={() => setActiveTab('resumen')}
+                isDark={isDark}
+                currentUser={user}
+                currentProfile={profile}
+                schoolName={schoolName}
+                onUserAction={handleUserAuditAction}
+              />
+            </div>
+          )}
+
           {/* TAB 1: DASHBOARD GENERAL INSTITUCIONAL Y PROGRESO DEL COLEGIO */}
           {activeTab === 'resumen' && (
             <div className="flex flex-col gap-5 md:gap-6 animate-in fade-in duration-200">
@@ -3296,6 +3360,17 @@ function ClassicDashboard() {
           </div>
         </div>
       )}
+
+      {/* MODAL GESTIÓN DE USUARIOS POR JERARQUÍA (REFERENCIA C:\Users\josue\Desktop\dashboard) */}
+      <ModalGestionUsuarios
+        isOpen={isUserManagementModalOpen}
+        onClose={() => setIsUserManagementModalOpen(false)}
+        isDark={isDark}
+        currentUser={user}
+        currentProfile={profile}
+        schoolName={schoolName}
+        onUserAction={handleUserAuditAction}
+      />
     </div>
   );
 };
