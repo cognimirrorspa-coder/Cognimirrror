@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Brain, Users, Award, ArrowRight, Activity, Sparkles,
   Trophy, Eye, CheckCircle,
-  Mail, Phone, ExternalLink, Play, X, Send, Calendar, ChevronRight,
+  Mail, Phone, ExternalLink, Play, X, Send, Calendar,
   EyeOff, Gamepad2, Globe, FileWarning, Landmark, HeartHandshake,
   ClipboardX, Smartphone, RotateCcw
 } from 'lucide-react';
@@ -19,6 +19,7 @@ const NeuralBackground3D = dynamic(
   { ssr: false }
 );
 import { SimulatedDashboard } from '../components/animations/SimulatedDashboard';
+import PhygitalPingStream from '../components/animations/PhygitalPingStream';
 
 // Brain3D se carga dinámicamente (solo cliente, sin SSR)
 const Brain3D = dynamic(
@@ -179,9 +180,9 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-6 sm:gap-8 lg:gap-12 items-stretch justify-center max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-6 sm:gap-8 lg:gap-4 items-stretch justify-center max-w-6xl mx-auto items-center">
             {/* Video */}
-            <div className="w-full md:w-[45%] flex flex-col relative">
+            <div className="w-full md:w-[43%] flex flex-col relative">
               <div className="w-full h-full bg-[#0a0d14]/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/5 shadow-2xl relative pt-8 pb-4 px-4 sm:pt-12 sm:pb-6 sm:px-6 flex flex-col">
                 <div className="absolute top-0 inset-x-0 flex justify-center -mt-3">
                   <span className="text-[9px] sm:text-xs font-mono uppercase tracking-widest text-slate-400 font-semibold bg-[#0B0F19] px-3 sm:px-4 py-0.5 sm:py-1 rounded border border-white/5">
@@ -203,19 +204,11 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Separador */}
-            <div className="hidden md:flex flex-col items-center justify-center gap-10 text-slate-600/40">
-              <div className="flex -space-x-3">
-                <ChevronRight className="w-8 h-8" />
-                <ChevronRight className="w-8 h-8" />
-                <ChevronRight className="w-8 h-8" />
-              </div>
-              <ArrowRight className="w-5 h-5" />
-              <ArrowRight className="w-5 h-5" />
-            </div>
+            {/* Haz de Líneas de Telemetría y Variación Dinámica de Ping */}
+            <PhygitalPingStream />
 
             {/* Dashboard */}
-            <div className="w-full md:w-[45%] flex flex-col relative">
+            <div className="w-full md:w-[43%] flex flex-col relative">
               <div className="w-full h-full bg-[#0a0d14]/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/5 shadow-2xl relative pt-8 pb-4 px-4 sm:pt-12 sm:pb-6 sm:px-6 flex flex-col">
                 <div className="absolute top-0 inset-x-0 flex justify-center -mt-3">
                   <span className="text-[9px] sm:text-xs font-mono uppercase tracking-widest text-slate-400 font-semibold bg-[#0B0F19] px-3 sm:px-4 py-0.5 sm:py-1 rounded border border-white/5">
