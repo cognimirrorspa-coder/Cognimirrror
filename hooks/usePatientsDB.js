@@ -41,6 +41,7 @@ export function usePatientsDB() {
           const partes = p.name.trim().split(' ');
           const nombre = partes[0];
           const apellido = partes.length > 1 ? partes.slice(1).join(' ') : '';
+          const institucionId = profile?.institucion_id || profile?.colegio_id || 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08';
           
           const { data: newP, error: pErr } = await supabase
             .from('pacientes')
@@ -48,12 +49,11 @@ export function usePatientsDB() {
               nombre, 
               apellido, 
               id_sujeto: p.idSujeto || null, 
-              grupo_id: 'grupo_brayan',
-              psicologo_id: psicologoId,
-              colegio_id: profile?.colegio_id || null,
+              institucion_id: institucionId,
               fecha_nacimiento: p.fechaNacimiento || null,
-              diagnostico_nee: p.diagnosticoNee || null,
-              historial_clinico: p.historialClinico || []
+              diagnostico_principal: p.diagnosticoNee || p.diagnosticoPrincipal || null,
+              historial_clinico: p.historialClinico || [],
+              activo: true
             }])
             .select()
             .single();
@@ -61,8 +61,7 @@ export function usePatientsDB() {
           if (!pErr && newP) {
             patientIdMap[p.id] = newP.id;
             p.id = newP.id;
-            p.psicologo_id = psicologoId;
-            p.colegio_id = profile?.colegio_id || null;
+            p.institucion_id = institucionId;
             hasChanges = true;
           }
         }
@@ -83,16 +82,12 @@ export function usePatientsDB() {
                 .insert([{
                   id_paciente: resolvedPatientId,
                   tipo_test: s.testType,
-                  intento_numero: s.attemptNumber,
-                  etiqueta_clinica: s.clinicalLabel,
-                  estadisticas_json: s.stats,
+                  intento_numero: s.attemptNumber || 1,
+                  etiqueta_clinica: s.clinicalLabel || 'Evaluación Oficial',
+                  estadisticas_json: s.stats || {},
                   etiqueta_estudio: s.etiquetaEstudio || null,
                   id_sujeto: s.idSujeto || null,
-                  intento_valido: s.intentoValido !== false,
-                  grupo_id: 'grupo_brayan',
-                  psicologo_id: psicologoId,
-                  colegio_id: profile?.colegio_id || null,
-                  especialista_id: psicologoId
+                  intento_valido: s.intentoValido !== false
                 }])
                 .select()
                 .single();
@@ -174,9 +169,9 @@ export function usePatientsDB() {
         name: `${p.nombre || ''} ${p.apellido || ''}`.trim() || 'Estudiante Sin Nombre',
         idSujeto: p.id_sujeto,
         createdAt: p.creado_en,
-        colegioId: p.colegio_id,
+        colegioId: p.colegio_id || p.institucion_id,
         fechaNacimiento: p.fecha_nacimiento,
-        diagnosticoNee: p.diagnostico_nee,
+        diagnosticoNee: p.diagnostico_nee || p.diagnostico_principal || 'Evaluación General',
         historialClinico: p.historial_clinico || [],
         sessions: deduplicateSessions(
           validSesiones
@@ -398,17 +393,18 @@ export function usePatientsDB() {
         const nombre = partes[0] || 'Estudiante';
         const apellido = partes.length > 1 ? partes.slice(1).join(' ') : '';
 
+        const institucionId = profile?.institucion_id || profile?.colegio_id || 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08';
+
         const { data, error } = await supabase
           .from('pacientes')
           .insert([{
             nombre,
             apellido,
             id_sujeto: patientData.idSujeto || null,
-            grupo_id: 'grupo_brayan',
-            psicologo_id: user.id,
-            colegio_id: profile?.colegio_id || null,
-            diagnostico_nee: patientData.diagnosticoNee || null,
-            fecha_nacimiento: patientData.fechaNacimiento || null
+            institucion_id: institucionId,
+            diagnostico_principal: patientData.diagnosticoNee || patientData.diagnosticoPrincipal || null,
+            fecha_nacimiento: patientData.fechaNacimiento || null,
+            activo: true
           }])
           .select()
           .single();
@@ -496,11 +492,7 @@ export function usePatientsDB() {
             estadisticas_json: sessionData.metrics || sessionData.stats || {},
             etiqueta_estudio: sessionData.etiquetaEstudio || null,
             id_sujeto: sessionData.idSujeto || null,
-            intento_valido: sessionData.intentoValido !== false,
-            grupo_id: 'grupo_brayan',
-            psicologo_id: user.id,
-            colegio_id: profile?.colegio_id || null,
-            especialista_id: user.id
+            intento_valido: sessionData.intentoValido !== false
           }])
           .select()
           .single();

@@ -36,3 +36,7 @@ CogniMirror_Cubo/
 dist/
 scratch/
 
+# Agent IDE files
+.agents/
+skills-lock.json
+

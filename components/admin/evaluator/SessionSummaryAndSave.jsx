@@ -307,6 +307,9 @@ export default function SessionSummaryAndSave({
     try {
       // 0. Resolver o crear el paciente en tabla 'pacientes' para cumplir FK
       let pacienteId = null;
+      const defaultInstitucionId = profile?.institucion_id || profile?.colegio_id || 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08';
+      const defaultProfesionalId = (user?.id && !user.id.startsWith('e000')) ? user.id : '00000000-0000-0000-0000-000000000000';
+
       try {
         const { data: pExist } = await supabase
           .from('pacientes')
@@ -323,51 +326,21 @@ export default function SessionSummaryAndSave({
               nombre: participantData.codigoParticipante,
               apellido: '[Validación n=10]',
               id_sujeto: participantData.codigoParticipante,
-              grupo_id: 'validacion_n10',
-              diagnostico_nee: 'Protocolo Validación',
-              psicologo_id: user?.id || null,
-              colegio_id: profile?.colegio_id || null
+              institucion_id: defaultInstitucionId,
+              diagnostico_principal: 'Protocolo Validación n=10',
+              activo: true
             }])
             .select('id')
             .maybeSingle();
           if (newP?.id) pacienteId = newP.id;
         }
-      } catch (_) {}
-
-      // Inserción en tabla 'sessions'
-      const { error: sessErr } = await supabase
-        .from('sessions')
-        .insert([{
-          id: sessionId,
-          subject_code: participantData.codigoParticipante,
-          evaluator_id: user?.id || null,
-          created_at: timestampIso,
-          metrics_json: metrics,
-          summary_json: sessionMasterPayload.resumen_ejecutivo
-        }]);
-
-      if (sessErr) {
-        console.warn('[SessionSummary] Tabla sessions no disponible, usando fallback sesiones_clinicas:', sessErr.message);
+      } catch (errP) {
+        console.warn('[SessionSummary] Error al resolver paciente:', errP);
       }
 
-      // Inserción en tabla 'session_context'
-      await supabase
-        .from('session_context')
-        .insert([sessionContextPayload])
-        .then(() => {});
-
-      // Inserción masiva en 'raw_trial_telemetry' (en lotes de 100 para estabilidad)
-      if (rawTrialsRows.length > 0) {
-        const batchSize = 100;
-        for (let i = 0; i < rawTrialsRows.length; i += batchSize) {
-          const batch = rawTrialsRows.slice(i, i + batchSize);
-          await supabase.from('raw_trial_telemetry').insert(batch).then(() => {});
-        }
-      }
-
-      // Respaldo en la tabla histórica oficial 'sesiones_clinicas'
+      // Inserción en la tabla oficial 'sesiones_clinicas'
       if (pacienteId) {
-        await supabase
+        const { error: sessErr } = await supabase
           .from('sesiones_clinicas')
           .insert([{
             id_paciente: pacienteId,
@@ -383,8 +356,56 @@ export default function SessionSummaryAndSave({
               metrics
             },
             intento_valido: true
-          }])
-          .then(() => {});
+          }]);
+
+        if (sessErr) {
+          console.warn('[SessionSummary] Error al guardar en sesiones_clinicas:', sessErr.message);
+        }
+      }
+
+      // Inserción en 'sesiones_evaluacion' y 'telemetria_ensayos' (Esquema Event Sourcing Normalizado)
+      if (pacienteId) {
+        try {
+          const { data: newEval, error: evalErr } = await supabase
+            .from('sesiones_evaluacion')
+            .insert([{
+              paciente_id: pacienteId,
+              institucion_id: defaultInstitucionId,
+              profesional_id: defaultProfesionalId,
+              protocolo_nivel: 4,
+              protocolo_nombre: 'Protocolo Validación n=10 (Batería Completa)',
+              duracion_total_segundos: metrics?.hitRtMean ? Math.round((collectedTrials.length * metrics.hitRtMean) / 1000) : 180,
+              estado: 'completado',
+              ble_conectado: true,
+              observaciones_clinicas: sessionContextPayload.observaciones_evaluador || null
+            }])
+            .select('id')
+            .maybeSingle();
+
+          if (!evalErr && newEval?.id && rawTrialsRows.length > 0) {
+            const telemetryBatch = rawTrialsRows.map((t, idx) => ({
+              sesion_id: newEval.id,
+              ensayo_num: idx + 1,
+              fase_o_bloque: t.battery_type === 'CORSI_3D' ? 3 : (t.battery_type === 'MIXED' ? 2 : 1),
+              tipo_estimulo: t.battery_type || 'GO_NOGO',
+              color_estimulo: t.stimulus_color || null,
+              cara_esperada: t.face_turned || null,
+              timestamp_estimulo_ms: t.stimulus_time_ms || Date.now(),
+              timestamp_respuesta_ms: t.response_time_ms || null,
+              latencia_ms: t.reaction_time_ms || 0,
+              cara_presionada: t.face_turned || null,
+              es_acierto: Boolean(t.is_correct),
+              tipo_error: t.is_commission_error ? 'COMISION' : (t.is_omission_error ? 'OMISION' : null)
+            }));
+
+            // Inserción en lotes de 50
+            for (let i = 0; i < telemetryBatch.length; i += 50) {
+              await supabase.from('telemetria_ensayos').insert(telemetryBatch.slice(i, i + 50));
+            }
+          }
+        } catch (evEx) {
+          console.warn('[SessionSummary] Error al guardar en sesiones_evaluacion:', evEx);
+        }
       }
 
       setSavedSuccess(true);

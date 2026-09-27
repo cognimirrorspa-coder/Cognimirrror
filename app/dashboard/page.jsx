@@ -53,7 +53,8 @@ import {
   Maximize2,
   UserCheck,
   ChevronDown,
-  Info
+  Info,
+  Menu
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -97,6 +98,7 @@ function ClassicDashboard() {
   const [theme, setTheme] = useState('dark');
   const [searchQuery, setSearchQuery] = useState('');
   const [isOfflineNetwork, setIsOfflineNetwork] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (tabParam === 'niveles' || tabParam === 'batteries' || tabParam === 'baterias') {
@@ -643,137 +645,212 @@ function ClassicDashboard() {
       isDark ? 'bg-[#121622] text-[#e2e8f0]' : 'bg-slate-50 text-slate-800'
     }`}>
 
-      {/* ── RAIL VERTICAL DE ICONOS (SÓLO MÓVIL) ── */}
-      <aside className={`md:hidden fixed top-0 left-0 bottom-0 w-14 z-40 flex flex-col items-center py-3 gap-1 border-r transition-colors ${
-        isDark ? 'bg-[#0e111a] border-[#1b202e]' : 'bg-white border-slate-200 shadow-lg'
+      {/* ── MENÚ MÓVIL HAMBURGUESA (DRAWER) ── */}
+      {/* Overlay oscuro */}
+      {isMobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Drawer lateral */}
+      <aside className={`md:hidden fixed top-0 left-0 bottom-0 w-72 z-50 flex flex-col border-r transition-transform duration-300 ease-in-out ${
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${
+        isDark ? 'bg-[#0e111a] border-[#1b202e]' : 'bg-white border-slate-200 shadow-2xl'
       }`}>
 
-        {/* Logo mini */}
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md mb-2 shrink-0">
-          <Brain className="w-4 h-4 text-white" />
+        {/* Header del drawer */}
+        <div className="flex items-center justify-between p-4 border-b border-[#1b202e]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
+              <Brain className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className={`text-sm font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>CogniMirror</h1>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-blue-500">PANEL CLÍNICO</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+              isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Separador */}
-        <div className={`w-8 h-px mb-1 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
+        {/* Navegación */}
+        <nav className="flex-1 overflow-y-auto p-3 flex flex-col gap-1 text-sm font-medium">
 
-        {/* Dashboard */}
-        <button
-          onClick={() => setActiveTab('resumen')}
-          title="Dashboard Institucional"
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-            activeTab === 'resumen'
-              ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-              : isDark ? 'text-slate-500 hover:text-slate-200 hover:bg-white/8' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-          }`}
-        >
-          <School className="w-5 h-5" />
-        </button>
+          <button
+            onClick={() => { setActiveTab('resumen'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
+              activeTab === 'resumen'
+                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <School className="w-5 h-5" />
+            <span>Dashboard Institucional</span>
+          </button>
 
-        {/* Batería */}
-        <button
-          onClick={() => setActiveTab('niveles')}
-          title="Batería de 5 Niveles"
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-            activeTab === 'niveles'
-              ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-              : 'text-green-400 hover:bg-green-500/10'
-          }`}
-        >
-          <Layers className="w-5 h-5" />
-        </button>
+          <button
+            onClick={() => { setActiveTab('niveles'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
+              activeTab === 'niveles'
+                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Layers className="w-5 h-5 text-purple-400" />
+            <span>Batería de 5 Niveles</span>
+          </button>
 
-        {/* Directorio */}
-        <button
-          onClick={() => setActiveTab('alumnos')}
-          title="Directorio Alumnos PIE"
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-            activeTab === 'alumnos'
-              ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-              : 'text-cyan-400 hover:bg-cyan-500/10'
-          }`}
-        >
-          <Users className="w-5 h-5" />
-        </button>
+          <button
+            onClick={() => { setActiveTab('alumnos'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
+              activeTab === 'alumnos'
+                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Users className="w-5 h-5 text-blue-400" />
+            <span>Directorio Alumnos PIE</span>
+          </button>
 
-        {/* Gemelo Digital */}
-        <button
-          onClick={() => setActiveTab('gemelo')}
-          title="Gemelo Digital"
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-            activeTab === 'gemelo'
-              ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-              : 'text-cyan-400 hover:bg-cyan-500/10'
-          }`}
-        >
-          <Box className="w-5 h-5" />
-        </button>
+          <button
+            onClick={() => { setActiveTab('gemelo'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
+              activeTab === 'gemelo'
+                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Box className="w-5 h-5 text-cyan-400" />
+            <span>Gemelo Digital</span>
+          </button>
 
-        {/* Evaluación Remota */}
-        <Link
-          href="/remote-eval?token=demo-token"
-          title="Evaluación Remota"
-          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer text-cyan-400 hover:bg-cyan-500/10"
-        >
-          <Wifi className="w-5 h-5 animate-pulse" />
-        </Link>
+          <Link
+            href="/remote-eval?token=demo-token"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
+              isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Wifi className="w-5 h-5 text-emerald-400 animate-pulse" />
+            <span>Evaluación Remota</span>
+          </Link>
 
-        {/* Módulo Evaluador */}
-        <Link
-          href="/admin/evaluador"
-          title="Módulo Evaluador (Founders)"
-          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer border border-purple-500/40 bg-purple-600/10 text-purple-400 hover:bg-purple-600/20"
-        >
-          <ShieldCheck className="w-5 h-5" />
-        </Link>
+          <Link
+            href="/admin/evaluador"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold my-0.5 ${
+              isDark
+                ? 'text-purple-300 hover:text-white bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200'
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5 text-purple-400" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold truncate">Módulo Evaluador</span>
+              <span className="text-[9px] text-purple-400/80 font-mono tracking-wider truncate">Protocolo n=10 (Founders)</span>
+            </div>
+          </Link>
 
-        {/* Informes / Centro de Exportación */}
-        <Link
-          href="/export"
-          title="Centro de Exportación"
-          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer text-orange-400 hover:bg-orange-500/10"
-        >
-          <Download className="w-5 h-5" />
-        </Link>
+          <Link
+            href="/export"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
+              isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Download className="w-5 h-5 text-orange-400" />
+            <span>Centro de Exportación</span>
+          </Link>
 
-        {/* Gestión de Usuarios */}
-        <button
-          onClick={() => setActiveTab('usuarios')}
-          title="Gestión de Usuarios"
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-            activeTab === 'usuarios'
-              ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-              : 'text-emerald-400 hover:bg-emerald-500/10'
-          }`}
-        >
-          <UserPlus className="w-5 h-5" />
-        </button>
+          <button
+            onClick={() => { setActiveTab('usuarios'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
+              activeTab === 'usuarios'
+                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <UserPlus className="w-5 h-5 text-emerald-400" />
+            <span>Gestión de Usuarios</span>
+          </button>
 
-        {/* Auditoría / Bitácora */}
-        <button
-          onClick={() => { setActiveTab('auditoria'); setAuditSubTab('historica'); }}
-          title="Auditoría y Trazabilidad"
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-            activeTab === 'auditoria'
-              ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-              : 'text-yellow-400 hover:bg-yellow-500/10'
-          }`}
-        >
-          <FileSpreadsheet className="w-5 h-5" />
-        </button>
+          {/* Auditoría con sub-items */}
+          <button
+            onClick={() => { setActiveTab('auditoria'); setAuditSubTab('historica'); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
+              activeTab === 'auditoria' && auditSubTab === 'historica'
+                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <FileText className="w-5 h-5 text-amber-400" />
+            <span>Auditoría y Trazabilidad</span>
+          </button>
 
-        {/* Espaciador */}
-        <div className="flex-1" />
+          <div className="pl-6 flex flex-col gap-1">
+            <button
+              onClick={() => { setActiveTab('auditoria'); setAuditSubTab('docente'); setIsMobileMenuOpen(false); }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all text-left cursor-pointer ${
+                activeTab === 'auditoria' && auditSubTab === 'docente'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  : isDark ? 'text-[#8a99ad] hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <UserCheck className="w-4 h-4 text-amber-400" />
+              <span>Auditoría Docentes</span>
+            </button>
 
-        {/* Toggle Tema */}
-        <button
-          onClick={toggleTheme}
-          title={isDark ? 'Modo Claro' : 'Modo Oscuro'}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-            isDark ? 'text-amber-400 hover:bg-white/8' : 'text-slate-500 hover:bg-slate-100'
-          }`}
-        >
-          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </button>
+            <button
+              onClick={() => { setActiveTab('auditoria'); setAuditSubTab('alumno'); setIsMobileMenuOpen(false); }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all text-left cursor-pointer ${
+                activeTab === 'auditoria' && auditSubTab === 'alumno'
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                  : isDark ? 'text-[#8a99ad] hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4 text-indigo-400" />
+              <span>Auditoría Alumnos</span>
+            </button>
+          </div>
+
+        </nav>
+
+        {/* Footer del drawer */}
+        <div className={`p-3 border-t ${
+          isDark ? 'border-[#1b202e]' : 'border-slate-200'
+        }`}>
+          <button
+            onClick={toggleTheme}
+            className={`w-full p-2.5 rounded-xl flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
+              isDark ? 'bg-[#181b26] hover:bg-[#222736] text-slate-300 border border-[#222736]' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+              <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
+            </div>
+            <span className="text-[10px] uppercase opacity-75 font-mono">{theme}</span>
+          </button>
+
+          <button
+            onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
+            className={`w-full mt-2 p-2.5 rounded-xl flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+              isDark ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-red-50 hover:bg-red-100 text-red-600'
+            }`}
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
 
       </aside>
       
@@ -987,13 +1064,22 @@ function ClassicDashboard() {
       </aside>
 
       {/* ── ÁREA PRINCIPAL (HEADER + CONTENIDO) ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto ml-14 md:ml-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         
         {/* HEADER SUPERIOR */}
         {/* HEADER SUPERIOR */}
         <header className={`sticky top-0 z-30 px-4 sm:px-6 md:px-10 py-3 md:py-4 border-b flex items-center justify-between gap-4 backdrop-blur-md transition-colors ${
           isDark ? 'bg-[#121622]/90 border-[#1b202e]' : 'bg-white/80 border-slate-200'
         }`}>
+          {/* Botón hamburguesa móvil */}
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className={`md:hidden w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+              isDark ? 'text-slate-300 hover:text-white hover:bg-white/10' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Menu className="w-6 h-6" />
+          </button>
           {/* Logo y Especialista (idéntico a la imagen de referencia) */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
