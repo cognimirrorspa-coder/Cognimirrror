@@ -9,10 +9,9 @@ import { useBluetoothCube } from '../../../contexts/BluetoothContext';
 import ParticipantForm from '../../../components/admin/evaluator/ParticipantForm';
 import BleVerificationCard from '../../../components/admin/evaluator/BleVerificationCard';
 import ClinicalTeleprompter from '../../../components/admin/evaluator/ClinicalTeleprompter';
-import BatteriesLauncher from '../../../components/admin/evaluator/BatteriesLauncher';
-import BatteryOrchestrator from '../../../components/admin/evaluator/BatteryOrchestrator';
+import EvaluatorOfficialBatteriesManager from '../../../components/admin/evaluator/EvaluatorOfficialBatteriesManager';
 import SessionSummaryAndSave from '../../../components/admin/evaluator/SessionSummaryAndSave';
-import ExitSurveyCard from '../../../components/admin/evaluator/ExitSurveyCard';
+import EvaluatedDirectoryAndReports from '../../../components/admin/evaluator/EvaluatedDirectoryAndReports';
 
 import { 
   User, 
@@ -28,13 +27,14 @@ import {
   Award,
   Layers,
   HelpCircle,
-  Users
+  Users,
+  FolderOpen
 } from 'lucide-react';
 
 const STEPS = [
   { id: 'FICHA_PARTICIPANTE', label: '1. Ficha y Contexto', icon: User, desc: 'Identificación y check-in' },
   { id: 'VERIFICACION_BLE', label: '2. Enlace BLE & Guion', icon: Bluetooth, desc: 'Hardware y teleprompter' },
-  { id: 'BATERIAS_EVALUACION', label: '3. Baterías Clínicas', icon: Play, desc: 'Lanzador de 4 pruebas' },
+  { id: 'BATERIAS_EVALUACION', label: '3. Baterías Clínicas', icon: Play, desc: '4 Baterías Reales (Demo/Práctica/Oficial)' },
   { id: 'ENCUESTA_SALIDA', label: '4. Encuesta y Cierre', icon: CheckCircle2, desc: 'Feedback y guardado' }
 ];
 
@@ -43,7 +43,10 @@ export default function EvaluadorAdminPage() {
   const { user, profile } = useAuth();
   const { isConnected, device, latencyOffset, isKeyboardMode } = useBluetoothCube();
 
-  // Máquina de estados secuencial
+  // Selector de vista principal: Protocolo en Vivo vs Directorio de Evaluados
+  const [mainView, setMainView] = useState('live_protocol'); // 'live_protocol' | 'evaluated_directory'
+
+  // Máquina de estados secuencial del protocolo en vivo
   const [currentStep, setCurrentStep] = useState('FICHA_PARTICIPANTE');
 
   // Estado del Formulario de Participante (Paso 1)
@@ -68,8 +71,18 @@ export default function EvaluadorAdminPage() {
     bat4_official: false
   });
 
-  // Modo de orquestación y datos trial-by-trial
-  const [orchestratorMode, setOrchestratorMode] = useState('automated'); // 'automated' | 'manual'
+  // Sesiones individuales registradas para cada batería
+  const [batterySessions, setBatterySessions] = useState({});
+
+  // Auditoría de fases previas (Demostración examinador / Práctica evaluado)
+  const [auditFases, setAuditFases] = useState({
+    bat1_warmup: { demo: null, practice: null },
+    bat2_inhibitory: { demo: null, practice: null },
+    bat3_bimanual: { demo: null, practice: null },
+    bat4_official: { demo: null, practice: null }
+  });
+
+  // Telemetría acumulada ensayo a ensayo
   const [collectedTrials, setCollectedTrials] = useState([]);
 
   // Estado de la Encuesta de Salida (Paso 4)
@@ -113,11 +126,79 @@ export default function EvaluadorAdminPage() {
     setSurveyData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleToggleBatteryStatus = (batteryId) => {
+  // Callback cuando una batería oficial es completada
+  const handleBatteryCompleted = (batteryId, sessionResult, auditData) => {
     setCompletedBatteries(prev => ({
       ...prev,
-      [batteryId]: !prev[batteryId]
+      [batteryId]: true
     }));
+
+    setBatterySessions(prev => ({
+      ...prev,
+      [batteryId]: {
+        ...sessionResult,
+        audit: auditData
+      }
+    }));
+
+    if (auditData) {
+      setAuditFases(prev => ({
+        ...prev,
+        [batteryId]: {
+          demo: auditData.demo,
+          practice: auditData.practice
+        }
+      }));
+    }
+
+    // Acumular telemetría trial-by-trial
+    if (sessionResult?.rawTurnsData && Array.isArray(sessionResult.rawTurnsData)) {
+      const mappedTrials = sessionResult.rawTurnsData.map((t, idx) => ({
+        battery_type: batteryId,
+        trial_number: idx + 1,
+        stimulus_color: t.label || t.expected || 'DESCONOCIDO',
+        stimulus_time_ms: t.time || 0,
+        response_time_ms: t.time || 0,
+        reaction_time_ms: t.time || 0,
+        is_correct: t.status === 'Ok' || (t.type === 'NOGO' && !t.fail),
+        is_commission_error: Boolean(t.fail || (t.type === 'NOGO' && t.actualFace)),
+        is_omission_error: Boolean(t.timeout),
+        face_turned: t.actualFace || null,
+        type: t.type
+      }));
+      setCollectedTrials(prev => [...prev, ...mappedTrials]);
+    }
+  };
+
+  // Handler para actualizar estado de omisión / realización de demo o práctica
+  const handleAuditFaseUpdate = (batteryId, phase, status) => {
+    setAuditFases(prev => ({
+      ...prev,
+      [batteryId]: {
+        ...(prev[batteryId] || {}),
+        [phase]: status
+      }
+    }));
+  };
+
+  // Reanudar evaluación desde el Directorio
+  const handleResumeEvaluation = (session) => {
+    if (session?.participante) {
+      setParticipantData(session.participante);
+    }
+    if (session?.bateriasCompletadas) {
+      setCompletedBatteries(session.bateriasCompletadas);
+    }
+    if (session?.bateriasDetalle) {
+      setBatterySessions(session.bateriasDetalle);
+    }
+    if (session?.telemetria_ensayos) {
+      setCollectedTrials(session.telemetria_ensayos);
+    }
+
+    setMainView('live_protocol');
+    setCurrentStep('BATERIAS_EVALUACION');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Función de Guardado Maestro (Supabase + Respaldo Offline LocalStorage)
@@ -138,24 +219,33 @@ export default function EvaluadorAdminPage() {
         isKeyboardMode: Boolean(isKeyboardMode)
       },
       bateriasCompletadas: completedBatteries,
+      bateriasDetalle: batterySessions,
+      auditFases: auditFases,
       telemetria_ensayos: collectedTrials,
       encuestaSalida: surveyData
     };
 
     try {
-      // 1. Respaldo Local Inmediato (Garantiza cero pérdida de datos)
+      // 1. Respaldo Local Inmediato
       let currentLocal = [];
       try {
         const stored = localStorage.getItem('cognimirror_validation_n10_sessions');
         if (stored) currentLocal = JSON.parse(stored);
       } catch (_) {}
-      currentLocal.push(sessionPayload);
+      
+      // Reemplazar si ya existía el mismo código o agregar
+      const existingIdx = currentLocal.findIndex(s => s.participante?.codigoParticipante === participantData.codigoParticipante);
+      if (existingIdx >= 0) {
+        currentLocal[existingIdx] = sessionPayload;
+      } else {
+        currentLocal.push(sessionPayload);
+      }
+
       localStorage.setItem('cognimirror_validation_n10_sessions', JSON.stringify(currentLocal));
       setSessionCountToday(currentLocal.length);
 
-      // 2. Intentar inserción en Supabase (tabla pacientes y sesiones_clinicas)
+      // 2. Inserción en Supabase (tabla pacientes y sesiones_clinicas)
       try {
-        // Buscar o crear paciente
         const { data: pacienteExistente } = await supabase
           .from('pacientes')
           .select('id')
@@ -182,7 +272,6 @@ export default function EvaluadorAdminPage() {
           if (nuevoP) pacienteId = nuevoP.id;
         }
 
-        // Registrar sesión clínica oficial
         if (pacienteId) {
           await supabase
             .from('sesiones_clinicas')
@@ -217,7 +306,6 @@ export default function EvaluadorAdminPage() {
     const currentCode = participantData.codigoParticipante;
     let nextCode = 'P02';
     
-    // Auto-incrementar código si tiene formato P01, P02...
     const match = currentCode.match(/^P(\d+)$/i);
     if (match) {
       const nextNum = parseInt(match[1], 10) + 1;
@@ -243,6 +331,15 @@ export default function EvaluadorAdminPage() {
       bat3_bimanual: false,
       bat4_official: false
     });
+
+    setBatterySessions({});
+    setAuditFases({
+      bat1_warmup: { demo: null, practice: null },
+      bat2_inhibitory: { demo: null, practice: null },
+      bat3_bimanual: { demo: null, practice: null },
+      bat4_official: { demo: null, practice: null }
+    });
+    setCollectedTrials([]);
 
     setSurveyData({
       fatigaPercibida: 2,
@@ -284,9 +381,38 @@ export default function EvaluadorAdminPage() {
           </div>
         </div>
 
-        {/* Métricas y Estado de Hardware en Header */}
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+        {/* Selector de Vista Principal: Protocolo en Vivo vs Directorio & Informes */}
+        <div className="flex items-center gap-2">
+          <div className="bg-[#0a0d18] border border-white/10 p-1 rounded-xl flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setMainView('live_protocol')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                mainView === 'live_protocol'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span>Protocolo en Vivo</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMainView('evaluated_directory')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                mainView === 'evaluated_directory'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              <span>Fichas & 4 Informes</span>
+            </button>
+          </div>
+
+          {/* Métricas y Estado de Hardware */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
             <Users className="w-3.5 h-3.5 text-purple-400" />
             <span className="text-slate-400">Evaluados Hoy:</span>
             <span className="font-mono font-bold text-white">{sessionCountToday} / 10</span>
@@ -301,182 +427,140 @@ export default function EvaluadorAdminPage() {
         </div>
       </header>
 
-      {/* ── STEPPER BAR (BARRA DE 4 PASOS) ── */}
-      <div className="border-b border-white/5 bg-[#0a0d18]/60 px-4 sm:px-8 py-3">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2">
-          {STEPS.map((step, idx) => {
-            const Icon = step.icon;
-            const isActive = currentStep === step.id;
-            const isDone = 
-              (step.id === 'FICHA_PARTICIPANTE' && currentStep !== 'FICHA_PARTICIPANTE') ||
-              (step.id === 'VERIFICACION_BLE' && (currentStep === 'BATERIAS_EVALUACION' || currentStep === 'ENCUESTA_SALIDA')) ||
-              (step.id === 'BATERIAS_EVALUACION' && currentStep === 'ENCUESTA_SALIDA') ||
-              (step.id === 'ENCUESTA_SALIDA' && saveSuccess);
+      {/* ── MODO 1: PROTOCOLO EN VIVO ── */}
+      {mainView === 'live_protocol' && (
+        <>
+          {/* STEPPER BAR (BARRA DE 4 PASOS) */}
+          <div className="border-b border-white/5 bg-[#0a0d18]/60 px-4 sm:px-8 py-3">
+            <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2">
+              {STEPS.map((step) => {
+                const Icon = step.icon;
+                const isActive = currentStep === step.id;
+                const isDone = 
+                  (step.id === 'FICHA_PARTICIPANTE' && currentStep !== 'FICHA_PARTICIPANTE') ||
+                  (step.id === 'VERIFICACION_BLE' && (currentStep === 'BATERIAS_EVALUACION' || currentStep === 'ENCUESTA_SALIDA')) ||
+                  (step.id === 'BATERIAS_EVALUACION' && currentStep === 'ENCUESTA_SALIDA') ||
+                  (step.id === 'ENCUESTA_SALIDA' && saveSuccess);
 
-            return (
-              <button
-                key={step.id}
-                type="button"
-                onClick={() => {
-                  // Permite volver a pasos previos o avanzar si ya está desbloqueado
-                  setCurrentStep(step.id);
-                }}
-                className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
-                  isActive
-                    ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.25)]'
-                    : isDone
-                      ? 'bg-white/5 border-emerald-500/30 text-emerald-300 hover:bg-white/10'
-                      : 'bg-white/[0.02] border-white/5 text-slate-400 hover:border-white/10 hover:text-slate-300'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-xs flex-shrink-0 transition-all ${
-                  isActive
-                    ? 'bg-purple-600 text-white shadow-md'
-                    : isDone
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      : 'bg-white/5 text-slate-500 border border-white/10'
-                }`}>
-                  {isDone ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
-                </div>
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => setCurrentStep(step.id)}
+                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
+                      isActive
+                        ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.25)]'
+                        : isDone
+                          ? 'bg-white/5 border-emerald-500/30 text-emerald-300 hover:bg-white/10'
+                          : 'bg-white/[0.02] border-white/5 text-slate-400 hover:border-white/10 hover:text-slate-300'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-xs flex-shrink-0 transition-all ${
+                      isActive
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : isDone
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-white/5 text-slate-500 border border-white/10'
+                    }`}>
+                      {isDone ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                    </div>
 
-                <div className="truncate">
-                  <span className="block text-xs font-bold truncate">
-                    {step.label}
-                  </span>
-                  <span className="block text-[10px] text-slate-400 truncate">
-                    {step.desc}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── CONTENEDOR PRINCIPAL DEL PASO ACTIVO ── */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8">
-        {/* PASO 1: FICHA Y CONTEXTO */}
-        {currentStep === 'FICHA_PARTICIPANTE' && (
-          <ParticipantForm
-            formData={participantData}
-            onChange={handleParticipantChange}
-            onNext={() => {
-              setCurrentStep('VERIFICACION_BLE');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        )}
-
-        {/* PASO 2: VERIFICACIÓN BLE & GUION */}
-        {currentStep === 'VERIFICACION_BLE' && (
-          <div className="space-y-6">
-            <BleVerificationCard
-              participantCode={participantData.codigoParticipante}
-              onBack={() => {
-                setCurrentStep('FICHA_PARTICIPANTE');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              onNext={() => {
-                setCurrentStep('BATERIAS_EVALUACION');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-            />
-
-            {/* Teleprompter Clínico Estandarizado */}
-            <ClinicalTeleprompter
-              participantCode={participantData.codigoParticipante}
-            />
-          </div>
-        )}
-
-        {/* PASO 3: BATERÍAS DE EVALUACIÓN */}
-        {currentStep === 'BATERIAS_EVALUACION' && (
-          <div className="space-y-6">
-            {/* Selector de Modo de Ejecución */}
-            <div className="bg-[#0c101a]/80 border border-white/10 rounded-2xl p-2.5 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300 pl-3">
-                Modalidad de Aplicación:
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setOrchestratorMode('automated')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    orchestratorMode === 'automated'
-                      ? 'bg-purple-600 text-white shadow-md'
-                      : 'bg-white/5 text-slate-400 hover:bg-white/10'
-                  }`}
-                >
-                  ⚡ Secuencia Automatizada (n=10)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrchestratorMode('manual')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    orchestratorMode === 'manual'
-                      ? 'bg-purple-600 text-white shadow-md'
-                      : 'bg-white/5 text-slate-400 hover:bg-white/10'
-                  }`}
-                >
-                  📋 Lanzador Manual Individual
-                </button>
-              </div>
+                    <div className="truncate">
+                      <span className="block text-xs font-bold truncate">
+                        {step.label}
+                      </span>
+                      <span className="block text-[10px] text-slate-400 truncate">
+                        {step.desc}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
-            {orchestratorMode === 'automated' ? (
-              <BatteryOrchestrator
-                participantData={participantData}
-                onBatteriesComplete={(trials) => {
-                  setCollectedTrials(trials);
-                  setCompletedBatteries({
-                    bat1_warmup: true,
-                    bat2_inhibitory: true,
-                    bat3_bimanual: true,
-                    bat4_official: true
-                  });
-                  setCurrentStep('ENCUESTA_SALIDA');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                onAbort={() => {
-                  setCurrentStep('VERIFICACION_BLE');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              />
-            ) : (
-              <BatteriesLauncher
-                participantData={participantData}
-                completedBatteries={completedBatteries}
-                onToggleBatteryStatus={handleToggleBatteryStatus}
-                onBack={() => {
-                  setCurrentStep('VERIFICACION_BLE');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
+          {/* CONTENEDOR PRINCIPAL DEL PASO ACTIVO */}
+          <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8">
+            {/* PASO 1: FICHA Y CONTEXTO */}
+            {currentStep === 'FICHA_PARTICIPANTE' && (
+              <ParticipantForm
+                formData={participantData}
+                onChange={handleParticipantChange}
                 onNext={() => {
-                  setCurrentStep('ENCUESTA_SALIDA');
+                  setCurrentStep('VERIFICACION_BLE');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
             )}
-          </div>
-        )}
 
-        {/* PASO 4: ENCUESTA DE SALIDA, MÉTRICAS Y GUARDADO */}
-        {currentStep === 'ENCUESTA_SALIDA' && (
-          <SessionSummaryAndSave
-            participantData={participantData}
-            collectedTrials={collectedTrials}
-            onSaveSuccess={(savedPayload) => {
-              setSaveSuccess(true);
-              setSessionCountToday(prev => prev + 1);
-            }}
-            onResetForNextParticipant={handleResetForNextParticipant}
-            onBack={() => {
-              setCurrentStep('BATERIAS_EVALUACION');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            {/* PASO 2: VERIFICACIÓN BLE & GUION */}
+            {currentStep === 'VERIFICACION_BLE' && (
+              <div className="space-y-6">
+                <BleVerificationCard
+                  participantCode={participantData.codigoParticipante}
+                  onBack={() => {
+                    setCurrentStep('FICHA_PARTICIPANTE');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  onNext={() => {
+                    setCurrentStep('BATERIAS_EVALUACION');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
+
+                <ClinicalTeleprompter
+                  participantCode={participantData.codigoParticipante}
+                />
+              </div>
+            )}
+
+            {/* PASO 3: LAS 4 BATERÍAS CLÍNICAS OFICIALES EN TAMAÑO COMPLETO */}
+            {currentStep === 'BATERIAS_EVALUACION' && (
+              <EvaluatorOfficialBatteriesManager
+                participantData={participantData}
+                completedBatteries={completedBatteries}
+                batterySessions={batterySessions}
+                auditFases={auditFases}
+                onBatteryCompleted={handleBatteryCompleted}
+                onAuditFaseUpdate={handleAuditFaseUpdate}
+                onNext={() => {
+                  setCurrentStep('ENCUESTA_SALIDA');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onBack={() => {
+                  setCurrentStep('VERIFICACION_BLE');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
+
+            {/* PASO 4: ENCUESTA DE SALIDA, MÉTRICAS Y GUARDADO */}
+            {currentStep === 'ENCUESTA_SALIDA' && (
+              <SessionSummaryAndSave
+                participantData={participantData}
+                collectedTrials={collectedTrials}
+                onSaveSuccess={() => {
+                  handleSaveSession();
+                }}
+                onResetForNextParticipant={handleResetForNextParticipant}
+                onBack={() => {
+                  setCurrentStep('BATERIAS_EVALUACION');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
+          </main>
+        </>
+      )}
+
+      {/* ── MODO 2: DIRECTORIO DE EVALUADOS & LOS 4 INFORMES ── */}
+      {mainView === 'evaluated_directory' && (
+        <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8">
+          <EvaluatedDirectoryAndReports
+            onResumeEvaluation={handleResumeEvaluation}
           />
-        )}
-      </main>
+        </main>
+      )}
 
       {/* ── FOOTER DISCRETO ── */}
       <footer className="border-t border-white/5 py-4 px-6 text-center text-xs text-slate-500 font-mono">

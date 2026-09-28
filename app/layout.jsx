@@ -10,16 +10,33 @@ import ServiceWorkerRegister from '../components/ServiceWorkerRegister';
 import GlobalBluetoothButton from '../components/GlobalBluetoothButton';
 
 export const viewport = {
-  themeColor: '#0a0c10',
+  themeColor: '#2563eb',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export const metadata = {
   title: 'CogniMirror Cube',
   description: 'Plataforma de evaluación neuropsicológica basada en el Cubo de Rubik inteligente',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'CogniMirror',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
-    icon: '/icon.svg',
-    apple: '/icon.svg',
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon.svg', type: 'image/svg+xml' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ],
   },
 };
 

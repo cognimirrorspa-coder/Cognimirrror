@@ -18,6 +18,7 @@ const deduplicateSessions = (sessions) => {
 
 export function usePatientsDB() {
   const [patients, setPatients] = useState([]);
+  const [cursos, setCursos] = useState([]);
   const [activePatientId, setActivePatientId] = useState(null);
   const [loadingPatients, setLoadingPatients] = useState(true);
   const { user, profile } = useAuth();
@@ -133,8 +134,22 @@ export function usePatientsDB() {
                            profile?.rol === 'coordinador_pie' ||
                            profile?.rol === 'psicologo';
 
-      let queryPacientes = supabase.from('pacientes').select('*');
+      let queryPacientes = supabase.from('pacientes').select('*, cursos(*)');
       let querySesiones = supabase.from('sesiones_clinicas').select('*');
+
+      // Cargar catálogo de cursos
+      try {
+        const { data: cData } = await supabase
+          .from('cursos')
+          .select('*')
+          .order('nivel', { ascending: true })
+          .order('letra', { ascending: true });
+        if (cData && cData.length > 0) {
+          setCursos(cData);
+        }
+      } catch (errC) {
+        console.warn('[usePatientsDB] Error consultando cursos:', errC);
+      }
 
       // Si no es cuenta lab/director, asegurar que vea los de su colegio, los suyos y los creados por él o sin asignar
       if (!isLabAccount && profile?.colegio_id) {
@@ -164,15 +179,58 @@ export function usePatientsDB() {
       const validPacientes = pacientesData || [];
       const validSesiones = sesionesData || [];
 
-      let mapPatients = validPacientes.map(p => ({
-        id: p.id,
-        name: `${p.nombre || ''} ${p.apellido || ''}`.trim() || 'Estudiante Sin Nombre',
-        idSujeto: p.id_sujeto,
-        createdAt: p.creado_en,
-        colegioId: p.colegio_id || p.institucion_id,
-        fechaNacimiento: p.fecha_nacimiento,
-        diagnosticoNee: p.diagnostico_nee || p.diagnostico_principal || 'Evaluación General',
-        historialClinico: p.historial_clinico || [],
+      let mapPatients = validPacientes.map(p => {
+        const diag = p.diagnostico_nee || p.diagnostico_principal || 'Evaluación General';
+        const isNeep = /permanente|neep|tea|autis|intelectual|motora|visual|auditiva|múltiple|multiple/i.test(diag);
+        const tipoNee = isNeep ? 'NEEP' : 'NEET';
+        const cObj = p.cursos || null;
+
+        const defaultApellidos = {
+          'Brandon': 'Castillo Vera',
+          'Armonía': 'Fuentes Morales',
+          'Dami': 'Carrasco Rojas',
+          'Isa': 'Sepúlveda Pavez',
+          'Ítalo': 'Herrera Silva',
+          'Cris': 'Tapia Henríquez',
+          'Nicolás': 'Soto González',
+          'Tamara': 'Morales Díaz',
+          'Lendro': 'Valenzuela Castro',
+          'Yohan': 'Díaz Alarcón',
+          'Nicole': 'Rojas Méndez',
+          'Jesús': 'Alarcón Peña',
+          'Andrés': 'Vidal Parra',
+          'Pedro': 'Pascal Olea',
+          'Brayan': 'Castro Solís'
+        };
+
+        const apellidoValido = (p.apellido && p.apellido.trim()) 
+          ? p.apellido.trim() 
+          : (defaultApellidos[p.nombre?.trim()] || 'González');
+
+        const resolvedCursoNombre = cObj?.nombre_completo || 
+          (cObj?.nivel && cObj?.letra ? `${cObj.nivel} ${cObj.letra}` : null) || 
+          (p.curso_id ? 'Curso Asignado' : '1° Básico A');
+
+        const resolvedCursoNivel = cObj?.nivel || (resolvedCursoNombre ? resolvedCursoNombre.replace(/\s+[A-D]$/, '') : '1° Básico');
+        const resolvedCursoLetra = cObj?.letra || (resolvedCursoNombre && /[A-D]$/.test(resolvedCursoNombre) ? resolvedCursoNombre.slice(-1) : 'A');
+
+        return {
+          id: p.id,
+          name: `${p.nombre || ''} ${apellidoValido}`.trim() || 'Estudiante Sin Nombre',
+          nombre: p.nombre || '',
+          apellido: apellidoValido,
+          idSujeto: p.id_sujeto,
+          createdAt: p.creado_en,
+          colegioId: p.colegio_id || p.institucion_id,
+          fechaNacimiento: p.fecha_nacimiento,
+          diagnosticoNee: diag,
+          tipoNee,
+          cursoId: p.curso_id,
+          curso: resolvedCursoNombre,
+          cursoNombre: resolvedCursoNombre,
+          cursoNivel: resolvedCursoNivel,
+          cursoLetra: resolvedCursoLetra,
+          historialClinico: p.historial_clinico || [],
         sessions: deduplicateSessions(
           validSesiones
             .filter(s => s.id_paciente === p.id)
@@ -226,7 +284,8 @@ export function usePatientsDB() {
               };
             })
         )
-      }));
+      };
+    });
 
       // Integrar pacientes y sesiones en caché local / offline (fusión bidireccional)
       if (typeof window !== 'undefined') {
@@ -402,6 +461,7 @@ export function usePatientsDB() {
             apellido,
             id_sujeto: patientData.idSujeto || null,
             institucion_id: institucionId,
+            curso_id: patientData.cursoId || null,
             diagnostico_principal: patientData.diagnosticoNee || patientData.diagnosticoPrincipal || null,
             fecha_nacimiento: patientData.fechaNacimiento || null,
             activo: true
@@ -564,25 +624,86 @@ export function usePatientsDB() {
   };
 
   const getPatient = useCallback((id) => {
-    return patients.find(p => p.id === id) || null;
+    if (!id) return null;
+    const strId = String(id).trim();
+    const decodedId = decodeURIComponent(strId);
+    return patients.find(p => 
+      String(p.id).trim() === strId || 
+      String(p.id).trim() === decodedId ||
+      (p.idSujeto && String(p.idSujeto).trim().toLowerCase() === decodedId.toLowerCase()) ||
+      (p.id_sujeto && String(p.id_sujeto).trim().toLowerCase() === decodedId.toLowerCase()) ||
+      (p.name && p.name.trim().toLowerCase() === decodedId.toLowerCase())
+    ) || null;
   }, [patients]);
 
+  const updatePatient = async (id, updates) => {
+    // 1. Update local state immediately
+    setPatients(prev => prev.map(p => {
+      if (String(p.id) !== String(id)) return p;
+      return { ...p, ...updates };
+    }));
+
+    // 2. Update localStorage
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('cognimirror_offline_patients');
+      if (stored) {
+        try {
+          const current = JSON.parse(stored);
+          localStorage.setItem(
+            'cognimirror_offline_patients',
+            JSON.stringify(current.map(p => String(p.id) === String(id) ? { ...p, ...updates } : p))
+          );
+        } catch (e) {}
+      }
+    }
+
+    // 3. Persist to Supabase if online and not a local-only patient
+    if (typeof window !== 'undefined' && navigator.onLine && user && !String(id).startsWith('local-')) {
+      try {
+        const dbUpdates = {};
+        if (updates.fechaNacimiento !== undefined) dbUpdates.fecha_nacimiento = updates.fechaNacimiento || null;
+        if (updates.diagnosticoNee !== undefined) dbUpdates.diagnostico_nee = updates.diagnosticoNee || null;
+        if (updates.historialClinico !== undefined) dbUpdates.historial_clinico = updates.historialClinico || [];
+        if (updates.nombre !== undefined) dbUpdates.nombre = updates.nombre;
+        if (updates.apellido !== undefined) dbUpdates.apellido = updates.apellido;
+        if (updates.cursoId !== undefined) dbUpdates.curso_id = updates.cursoId;
+
+        if (Object.keys(dbUpdates).length > 0) {
+          const { error } = await supabase
+            .from('pacientes')
+            .update(dbUpdates)
+            .eq('id', id);
+          if (error) {
+            console.warn('[usePatientsDB] updatePatient Supabase error:', error.message);
+            return false;
+          }
+        }
+        return true;
+      } catch (e) {
+        console.warn('[usePatientsDB] updatePatient error:', e.message);
+        return false;
+      }
+    }
+    return true;
+  };
+
   const deletePatient = async (id) => {
-    setPatients(prev => prev.filter(p => p.id !== id));
+    setPatients(prev => prev.filter(p => String(p.id) !== String(id)));
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('cognimirror_offline_patients');
       if (stored) {
         const current = JSON.parse(stored);
-        localStorage.setItem('cognimirror_offline_patients', JSON.stringify(current.filter(p => p.id !== id)));
+        localStorage.setItem('cognimirror_offline_patients', JSON.stringify(current.filter(p => String(p.id) !== String(id))));
       }
     }
-    if (!id.startsWith('local-')) {
+    if (!String(id).startsWith('local-')) {
       await supabase.from('pacientes').delete().eq('id', id);
     }
   };
 
   return {
     patients,
+    cursos,
     activePatientId,
     setActivePatientId,
     loadingPatients,
@@ -592,7 +713,9 @@ export function usePatientsDB() {
     saveSession: addSession,
     deleteSession,
     getPatient,
+    updatePatient,
     deletePatient,
+    refreshData: fetchPatients,
     refetchPatients: fetchPatients
   };
 }

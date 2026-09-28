@@ -194,7 +194,24 @@ function buildConstrainedDeck(goCount, nogoCount, goFactory, nogoFactory, initia
 }
 
 
-export default function ReactionGame({ onExit, activePatientId, addSession, getPatient, sessionMeta, sessionStartTime, isWarmup = false, isDemoMode = false, gameMode = 'official', etiquetaEstudio = null, idSujeto = null, onTelemetryUpdate, omissionTimeoutMs = 1200 }) {
+export default function ReactionGame({ 
+  onExit, 
+  activePatientId, 
+  addSession, 
+  getPatient, 
+  sessionMeta, 
+  sessionStartTime, 
+  isWarmup = false, 
+  isDemoMode = false, 
+  gameMode = 'official', 
+  etiquetaEstudio = null, 
+  idSujeto = null, 
+  onTelemetryUpdate, 
+  omissionTimeoutMs = 1200,
+  maxRounds = null,
+  isPracticeMode = false,
+  modeBanner = null
+}) {
   const { subscribeToMoves, isConnected, openScanner, isKeyboardMode, setKeyboardMode } = useBluetoothCube();
   const { deactivate: deactivateJoicube } = useJoicube();
 
@@ -248,11 +265,14 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
   // Mazo generado según el modo de juego
   const deck = useMemo(() => {
     const fullDeck = generateDeck(isWarmup ? 'warmup' : gameMode);
+    if (maxRounds && maxRounds > 0) {
+      return fullDeck.slice(0, maxRounds);
+    }
     if (isWarmup || isDemoMode) {
       return fullDeck.slice(0, 5);
     }
     return fullDeck;
-  }, [isWarmup, isDemoMode, gameMode]);
+  }, [isWarmup, isDemoMode, gameMode, maxRounds]);
 
   const [stage, setStage] = useState('waiting'); // waiting | stimulus | finished
   const [round, setRound] = useState(0); 
@@ -536,7 +556,7 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
       };
 
       let savedSession = null;
-      if (!isWarmup) {
+      if (!isWarmup && !isPracticeMode) {
         if (typeof addSession === 'function') {
           savedSession = await addSession(activePatientId, sessionData);
         } else {
@@ -549,10 +569,10 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         }
       } else {
         savedSession = {
-          sessionId: 'warmup-' + Date.now(),
+          sessionId: (isPracticeMode ? 'practice-' : 'warmup-') + Date.now(),
           testType: 'reaction',
           attemptNumber: 0,
-          clinicalLabel: 'Calentamiento (Práctica)',
+          clinicalLabel: isPracticeMode ? (modeBanner || 'Práctica Calibratoria') : 'Calentamiento (Práctica)',
           date: new Date().toISOString(),
           stats: sessionData.metrics,
           rawTurnsData: sessionData.rawTurnsData
@@ -826,6 +846,20 @@ export default function ReactionGame({ onExit, activePatientId, addSession, getP
         <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 px-5 py-2.5 bg-orange-500/10 border border-orange-500/25 rounded-full flex items-center gap-3 text-[10px] font-black text-orange-400 uppercase tracking-widest backdrop-blur-md shadow-lg shadow-orange-500/5 select-none">
           <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping shrink-0" />
           Modo Calentamiento (Tiempo: {warmupTimeLeft}s)
+        </div>
+      )}
+
+      {modeBanner && (
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-[#120f24]/90 border border-purple-500/40 rounded-full flex items-center gap-3 text-xs font-black text-purple-300 uppercase tracking-widest backdrop-blur-md shadow-[0_0_25px_rgba(168,85,247,0.3)] select-none">
+          <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse shrink-0" />
+          <span>{modeBanner}</span>
+          <button
+            type="button"
+            onClick={() => onExit(null)}
+            className="ml-2 px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] tracking-normal font-mono cursor-pointer transition-colors"
+          >
+            Salir
+          </button>
         </div>
       )}
       

@@ -145,6 +145,8 @@ function RemoteEvalContent() {
         setGameKey(k => k + 1);
       } else if (payload.type === 'CANCEL') {
         setStep('welcome');
+      } else if (payload.type === 'FINISH') {
+        setStep('completed');
       }
     });
 

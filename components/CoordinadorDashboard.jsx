@@ -592,7 +592,7 @@ export default function CoordinadorDashboard() {
                           <td className="py-4 px-4 text-center font-mono font-bold text-white">{e.sessions?.length || 0}</td>
                           <td className="py-4 px-4 text-right">
                             <button
-                              onClick={() => router.push(`/students/${e.id}`)}
+                              onClick={() => router.push(`/dashboard?tab=alumnos&student=${e.id}`)}
                               className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600 border border-blue-500/30 text-blue-300 hover:text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer"
                             >
                               Ver Ficha

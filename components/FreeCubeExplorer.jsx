@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useBluetoothCube } from '../contexts/BluetoothContext';
 import { useCubeState } from '../contexts/CubeStateContext';
 import Cube3DViewer from './Cube3DViewer';
-import { Compass, RotateCcw, Sparkles, Volume2, VolumeX, ArrowRight, ShieldCheck, Zap, Hand } from 'lucide-react';
+import TutorialPhase from './TutorialPhase';
+import { Compass, RotateCcw, Sparkles, Volume2, VolumeX, ArrowRight, ShieldCheck, Zap, Hand, BookOpen } from 'lucide-react';
 
 const FACE_INFO = {
   L: { name: 'ROJO', face: 'Izquierda (L)', hand: 'Mano Izquierda', bg: 'bg-red-500', text: 'text-red-400', border: 'border-red-500/40', glow: 'shadow-red-500/30' },
@@ -57,6 +58,7 @@ export default function FreeCubeExplorer({ onBack, onSelectLevel }) {
   const [recentMoves, setRecentMoves] = useState([]);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [highlightFace, setHighlightFace] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToMoves((movimiento) => {
@@ -105,6 +107,20 @@ export default function FreeCubeExplorer({ onBack, onSelectLevel }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [audioEnabled]);
 
+  if (showTutorial) {
+    return (
+      <div className="relative min-h-screen bg-[#08090c] text-white">
+        <button
+          onClick={() => setShowTutorial(false)}
+          className="absolute top-4 left-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-lg"
+        >
+          ← Volver a Exploración
+        </button>
+        <TutorialPhase onCompleteTutorial={() => setShowTutorial(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#07080f] text-white flex flex-col items-center justify-start p-4 sm:p-8 relative overflow-hidden">
       {/* Luces de fondo dinámicas */}
@@ -120,6 +136,14 @@ export default function FreeCubeExplorer({ onBack, onSelectLevel }) {
         </button>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600/30 to-indigo-600/30 hover:from-blue-600/50 hover:to-indigo-600/50 border border-blue-500/40 text-blue-200 hover:text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+          >
+            <BookOpen size={14} className="text-blue-400" />
+            <span>Ver Tutorial y Calibración</span>
+          </button>
+
           <button
             onClick={() => setAudioEnabled(!audioEnabled)}
             className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/70 hover:text-white transition-all cursor-pointer"
@@ -197,6 +221,24 @@ export default function FreeCubeExplorer({ onBack, onSelectLevel }) {
         {/* Columna Derecha: Guía de Caras y Acceso a los siguientes niveles */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           
+          {/* Tarjeta de Acceso al Tutorial y Calibración Guiada */}
+          <div className="bg-gradient-to-br from-blue-950/40 via-indigo-950/20 to-slate-900/60 border border-blue-500/30 rounded-3xl p-5 shadow-xl flex items-center justify-between gap-4">
+            <div className="flex flex-col text-left">
+              <span className="text-xs font-black uppercase tracking-wider text-blue-300 flex items-center gap-1.5">
+                <Compass size={16} className="text-blue-400" /> Tutorial y Calibración Guiada
+              </span>
+              <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                Aprende la orientación física recomendada (Amarillo abajo), giros hápticos y control inhibitorio.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowTutorial(true)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-600/30 shrink-0 cursor-pointer transition-all hover:scale-105 active:scale-95"
+            >
+              Ver Tutorial
+            </button>
+          </div>
+
           {/* Mapa de Caras y Manos */}
           <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
             <h3 className="text-xs font-black uppercase tracking-widest text-purple-300 mb-4 flex items-center gap-2">

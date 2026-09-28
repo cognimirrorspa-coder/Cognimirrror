@@ -119,6 +119,8 @@ export default function ReactionDashboard({
   latencyOffset, 
   onRestart, 
   onExit, 
+  onNextStudent = null,
+  nextStudent = null,
   recordId,
   attemptNumber,
   clinicalLabel,
@@ -438,6 +440,15 @@ export default function ReactionDashboard({
           )}
         </div>
         <div className="flex gap-2 flex-wrap md:flex-nowrap flex-shrink-0 no-print">
+          {nextStudent && onNextStudent && (
+            <button
+              onClick={() => onNextStudent(nextStudent)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold shadow-md shadow-blue-500/25 transition-all text-sm flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <span>Evaluar Siguiente: {nextStudent.name}</span>
+              <span className="text-xs">➔</span>
+            </button>
+          )}
           <button onClick={onRestart} className="px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-600 hover:bg-slate-50 shadow-sm transition-all text-sm">
             Rehacer
           </button>

@@ -20,203 +20,55 @@ import StudentEvolutionDashboard from './StudentEvolutionDashboard';
 import { Zap, Sparkles, Compass, Hand, Activity, ArrowRight, Play, ShieldCheck, CheckCircle2, History, Keyboard } from 'lucide-react';
 
 function CountdownPhase({ onComplete, gameMode = 'official' }) {
-  const [phase, setPhase] = useState('waiting');
   const [count, setCount] = useState(3);
-  const { subscribeToMoves, isKeyboardMode } = useBluetoothCube();
-  const moveHistory = useRef([]);
+  const { isKeyboardMode } = useBluetoothCube();
 
   useEffect(() => {
-    if (phase !== 'counting') return;
     if (count === 0) {
       const timer = setTimeout(() => onComplete(), 600);
       return () => clearTimeout(timer);
     }
     const timer = setTimeout(() => setCount(c => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [count, phase, onComplete]);
-
-  useEffect(() => {
-    if (phase === 'counting') return;
-    const unsub = subscribeToMoves((movimiento) => {
-      const now = Date.now();
-      moveHistory.current.push({ m: movimiento, t: now });
-      moveHistory.current = moveHistory.current.filter(x => now - x.t < 3500);
-
-      const lTotal = moveHistory.current.filter(x => x.m === 'L' || x.m === "L'").length;
-      if (lTotal >= 2) {
-        setPhase('counting');
-      }
-    });
-    return unsub;
-  }, [subscribeToMoves, phase]);
+  }, [count, onComplete]);
 
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Enter' || (isKeyboardMode && (e.key === ' ' || e.key === 'Spacebar'))) {
-        setPhase('counting');
+        onComplete();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isKeyboardMode]);
-
-  const isLevel2 = gameMode === 'single_face';
-  const isLevel3 = gameMode === 'bilateral_pure';
-  const isLevel4 = gameMode === 'official';
+  }, [isKeyboardMode, onComplete]);
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-[100dvh] py-12 overflow-y-auto overflow-x-hidden bg-[#07080f]/95 text-white absolute inset-0 z-50">
+    <div className="flex flex-col items-center justify-center min-h-[100dvh] py-12 bg-[#07080f]/95 text-white absolute inset-0 z-50">
       <div className="text-center flex flex-col items-center my-auto">
-        {phase === 'waiting' ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center w-full max-w-2xl px-4"
+        <AnimatePresence mode="wait">
+          <motion.h1 
+            key={count}
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.5, opacity: 0 }}
+            className={`text-[12rem] font-black leading-none drop-shadow-[0_0_40px_rgba(168,85,247,0.5)] ${count === 0 ? 'text-green-400 drop-shadow-[0_0_40px_rgba(74,222,128,0.5)]' : 'text-purple-500'}`}
           >
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-[0.1em] mb-3 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-              REGLAS DEL TEST
-            </h1>
-            <p className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-widest mb-8">
-              {isLevel2 && 'NIVEL 2 // TIEMPO DE REACCIÓN SIMPLE (1 CARA)'}
-              {isLevel3 && 'NIVEL 3 // VELOCIDAD Y COORDINACIÓN BIMANUAL (2 CARAS)'}
-              {isLevel4 && 'NIVEL 4 // REACTION MIRROR CLÍNICO (GO / NO-GO)'}
-            </p>
-
-            <div className="w-full flex flex-col gap-4 mb-10">
-              {/* Regla Rojo (Mano Izquierda) - Presente en todos los niveles */}
-              <div className="flex items-center gap-6 bg-[#111218] border border-white/5 rounded-2xl p-5 shadow-lg">
-                <div className="w-14 h-14 rounded-xl bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.4)] flex-shrink-0 flex items-center justify-center text-white font-black text-lg">
-                  {isKeyboardMode ? (isLevel2 ? 'ESP' : 'A') : ''}
-                </div>
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-red-500 font-black tracking-widest uppercase mb-1">
-                    SI ES ROJO {isKeyboardMode && (isLevel2 ? '→ BARRA ESPACIADORA O TECLA A' : '→ TECLA A')}
-                  </span>
-                  <span className="text-white/80 text-sm font-medium">
-                    {isKeyboardMode 
-                      ? (isLevel2 ? 'Presiona la BARRA ESPACIADORA o tecla A (o clic en pantalla) lo más rápido posible.' : 'Presiona la tecla A (Mano Izquierda) o botón Rojo en pantalla lo más rápido posible.')
-                      : 'Gira la cara ROJA (Mano Izquierda) lo más rápido posible.'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Regla Naranjo (Mano Derecha) - Presente en Nivel 3 y 4 */}
-              {(isLevel3 || isLevel4) && (
-                <div className="flex items-center gap-6 bg-[#111218] border border-white/5 rounded-2xl p-5 shadow-lg">
-                  <div className="w-14 h-14 rounded-xl bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.4)] flex-shrink-0 flex items-center justify-center text-white font-black text-lg">
-                    {isKeyboardMode ? 'L' : ''}
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-orange-500 font-black tracking-widest uppercase mb-1">
-                      SI ES NARANJO {isKeyboardMode && '→ TECLA L'}
-                    </span>
-                    <span className="text-white/80 text-sm font-medium">
-                      {isKeyboardMode
-                        ? 'Presiona la tecla L (Mano Derecha) o botón Naranja en pantalla lo más rápido posible.'
-                        : 'Gira la cara NARANJA (Mano Derecha) lo más rápido posible.'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Regla No-Go Naranjo (Cara contraria) - ÚNICAMENTE para Nivel 2 */}
-              {isLevel2 && (
-                <div className="flex items-center gap-6 bg-[#111218] border border-white/5 rounded-2xl p-5 shadow-lg">
-                  <div className="w-14 h-14 rounded-xl bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.4)] flex-shrink-0 flex items-center justify-center text-black font-black text-xl">
-                    ✋
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-orange-400 font-black tracking-widest uppercase mb-1">SI ES NARANJO (CARA CONTRARIA)</span>
-                    <span className="text-red-400 font-black text-sm uppercase">
-                      {isKeyboardMode 
-                        ? '¡NO PRESIONES NINGUNA TECLA! INHIBE TU RESPUESTA (NO-GO).'
-                        : '¡NO MUEVAS NADA! INHIBE TU RESPUESTA (NO-GO).'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Regla No-Go (Azul/Verde) - ÚNICAMENTE presente en Nivel 4 */}
-              {isLevel4 && (
-                <div className="flex items-center gap-6 bg-[#111218] border border-white/5 rounded-2xl p-5 shadow-lg">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-b from-blue-400 to-emerald-400 shadow-[0_0_20px_rgba(147,197,253,0.3)] flex-shrink-0 flex items-center justify-center text-black font-black text-xl">
-                    ✋
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-blue-400 font-black tracking-widest uppercase mb-1">SI ES OTRO COLOR (AZUL / VERDE)</span>
-                    <span className="text-red-400 font-black text-sm uppercase">
-                      {isKeyboardMode
-                        ? '¡NO PRESIONES NINGUNA TECLA! INHIBE TU RESPUESTA MOTOR.'
-                        : '¡NO MUEVAS NADA! INHIBE TU RESPUESTA MOTOR.'}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Confirmación */}
-            {isKeyboardMode ? (
-              <div className="w-full bg-[#181309] border border-amber-500/40 rounded-2xl p-6 flex flex-col items-center shadow-lg">
-                <span className="text-amber-400 font-black tracking-[0.2em] text-[10px] uppercase mb-1 flex items-center gap-1.5">
-                  <Keyboard className="w-3.5 h-3.5" />
-                  Modo Teclado (Sin Cubo) Activo
-                </span>
-                <span className="text-white font-black text-lg md:text-xl uppercase tracking-wide text-center">
-                  PRESIONA ENTER O ESPACIO PARA COMENZAR
-                </span>
-                <span className="text-[11px] text-amber-300/70 font-mono mt-1">
-                  ⚠️ Esta evaluación se guardará con la indicación clínica de realizada con teclado.
-                </span>
-                <button 
-                  onClick={() => setPhase('counting')} 
-                  className="mt-4 px-8 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
-                >
-                  Comenzar Evaluación con Teclado →
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="w-full bg-[#0a0b10] border border-red-500/20 rounded-2xl p-6 flex flex-col items-center">
-                  <span className="text-red-500/80 font-black tracking-[0.2em] text-[10px] uppercase mb-2">Confirmar Lectura</span>
-                  <span className="text-white/80 font-black text-lg md:text-xl uppercase tracking-wide text-center">
-                    MUEVE 2 VECES LA CARA ROJA (L2)<br/>O PRESIONA ENTER PARA COMENZAR
-                  </span>
-                </div>
-                
-                <button onClick={() => setPhase('counting')} className="mt-6 opacity-40 text-xs hover:opacity-100 transition-opacity uppercase tracking-widest border border-white/20 px-6 py-2.5 rounded-full font-bold cursor-pointer">
-                  Comenzar Manualmente →
-                </button>
-              </>
-            )}
-          </motion.div>
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.h1 
-              key={count}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.5, opacity: 0 }}
-              className={`text-[12rem] font-black leading-none drop-shadow-[0_0_40px_rgba(168,85,247,0.5)] ${count === 0 ? 'text-green-400 drop-shadow-[0_0_40px_rgba(74,222,128,0.5)]' : 'text-purple-500'}`}
-            >
-              {count > 0 ? count : '¡YA!'}
-            </motion.h1>
-          </AnimatePresence>
-        )}
+            {count > 0 ? count : '¡YA!'}
+          </motion.h1>
+        </AnimatePresence>
         
-        {phase === 'counting' && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-10 bg-white/5 border border-white/10 p-6 rounded-2xl max-w-lg w-full backdrop-blur-md shadow-2xl"
-          >
-            <p className="text-xs font-black text-white/50 uppercase tracking-[0.3em] mb-4">Preparación Motora</p>
-            <p className="text-xl sm:text-2xl font-bold leading-relaxed text-white/90">
-              Recuerda: Cara <span className="text-red-400 font-black">ROJA</span> a tu mano <span className="underline decoration-red-400/50 underline-offset-4">Izquierda</span>,<br/>
-              Cara <span className="text-orange-400 font-black">NARANJA</span> a tu mano <span className="underline decoration-orange-400/50 underline-offset-4">Derecha</span>.
-            </p>
-          </motion.div>
-        )}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-10 bg-white/5 border border-white/10 p-6 rounded-2xl max-w-lg w-full backdrop-blur-md shadow-2xl"
+        >
+          <p className="text-xs font-black text-white/50 uppercase tracking-[0.3em] mb-4">Preparación Motora</p>
+          <p className="text-xl sm:text-2xl font-bold leading-relaxed text-white/90">
+            Recuerda: Cara <span className="text-red-400 font-black">ROJA</span> a tu mano <span className="underline decoration-red-400/50 underline-offset-4">Izquierda</span>,<br/>
+            Cara <span className="text-orange-400 font-black">NARANJA</span> a tu mano <span className="underline decoration-orange-400/50 underline-offset-4">Derecha</span>.
+          </p>
+        </motion.div>
       </div>
     </div>
   );
@@ -788,17 +640,12 @@ export default function ReactionGameView({ onExit, onGameReady, subjectId, etiqu
         />
       )}
 
-      {/* PreTestModal: Instrucciones y Calibración antes de cada nivel */}
+      {/* PreTestModal: Instrucciones y Calibración Rápida antes de cada nivel (Simétrico para todos los niveles) */}
       {step === 'pre_test' && (
         <PreTestModal
           level={preTestLevel}
           onStart={() => {
-            // Nivel 4 pasa por tutorial extra y onboarding
-            if (preTestLevel === 4) {
-              setStep('tutorial');
-            } else {
-              setStep('countdown');
-            }
+            setStep('countdown');
           }}
           onCancel={() => {
             localStorage.removeItem('cognimirror_kiosco_active');
@@ -807,18 +654,6 @@ export default function ReactionGameView({ onExit, onGameReady, subjectId, etiqu
         />
       )}
 
-      {step === 'tutorial' && (
-        <TutorialPhase onCompleteTutorial={() => setStep('questions')} />
-      )}
-      {step === 'questions' && (
-        <OnboardingForm 
-          playerName={activePatient?.name || 'Estudiante'} 
-          onComplete={(data) => { 
-            setSessionMeta(data); 
-            setStep('countdown'); 
-          }} 
-        />
-      )}
       {step === 'countdown' && (
         <CountdownPhase gameMode={gameMode} onComplete={() => setStep('playing')} />
       )}

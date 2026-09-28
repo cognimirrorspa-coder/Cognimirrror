@@ -156,7 +156,9 @@ export default function EvaluadorPanel() {
       }
 
       // Refrescar el estado de los pacientes locales en el hook
-      await refreshData();
+      if (typeof refreshData === 'function') {
+        await refreshData();
+      }
 
       // 3. Redirigir al juego correspondiente con los query params de estudio o práctica
       const gamePath = selectedGame === 'reaction' ? '/reaction-game' : '/simon-game';
@@ -256,7 +258,9 @@ export default function EvaluadorPanel() {
       setSuccessMsg(`¡Botón de Pánico Activado! El Intento N° ${attemptNum} realizado a las ${sessionTime} fue ANULADO con éxito (marcado como inválido localmente).`);
       
       // Actualizar listado y base de datos local
-      await refreshData();
+      if (typeof refreshData === 'function') {
+        await refreshData();
+      }
       fetchRecentSessions(subjectId);
     } catch (err) {
       console.error(err);

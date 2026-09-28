@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import SimonGame from './SimonGame';
 import MemoryDashboard from './MemoryDashboard';
 import OnboardingForm from './OnboardingForm';
-import TutorialPhase from './TutorialPhase';
+import PreTestModal from './PreTestModal';
 import { useBluetoothCube } from '../contexts/BluetoothContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import PasscodeModal from './PasscodeModal';
@@ -422,10 +422,10 @@ export default function MemoryGameView({ onExit, subjectId, etiquetaEstudio, isW
             if (mode === 'practice') {
               setIsWarmupMode(true);
               setSessionMeta({ observaciones: 'Sesión de Entrenamiento / Práctica' });
-              setStep('playing');
+              setStep('countdown');
             } else {
               setIsWarmupMode(false);
-              setStep('tutorial');
+              setStep('pre_test');
             }
           }} 
           onHistory={() => setStep('history')}
@@ -457,18 +457,22 @@ export default function MemoryGameView({ onExit, subjectId, etiquetaEstudio, isW
         />
       )}
 
-      {step === 'tutorial' && (
-        <TutorialPhase onCompleteTutorial={() => setStep('questions')} />
-      )}
-      
-      {step === 'questions' && (
-        <OnboardingForm 
-          playerName={activePatient?.name || 'Estudiante'} 
-          onComplete={(data) => { 
-            setSessionMeta(data); 
-            setStep('playing'); 
-          }} 
+      {/* PreTestModal: Instrucciones y Calibración Rápida de Memoria Visoespacial (Nivel 5) */}
+      {step === 'pre_test' && (
+        <PreTestModal
+          level={5}
+          onStart={() => {
+            setStep('countdown');
+          }}
+          onCancel={() => {
+            localStorage.removeItem('cognimirror_kiosco_active');
+            setStep('menu');
+          }}
         />
+      )}
+
+      {step === 'countdown' && (
+        <CountdownPhase onComplete={() => setStep('playing')} />
       )}
 
       {step === 'playing' && (

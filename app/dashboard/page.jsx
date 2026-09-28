@@ -11,6 +11,14 @@ import { usePatientsDB } from '../../hooks/usePatientsDB';
 import Cube3DViewer from '../../components/Cube3DViewer';
 import CoordinadorDashboard from '../../components/CoordinadorDashboard';
 import ModalGestionUsuarios from '../../components/ModalGestionUsuarios';
+import GlobalSearchBar from '../../components/GlobalSearchBar';
+import PwaInstallButton from '../../components/PwaInstallButton';
+import DirectorioAlumnosPIE from '../../components/DirectorioAlumnosPIE';
+import ModuloReportes from '../../components/ModuloReportes';
+import ModalOrdenarCubo from '../../components/ModalOrdenarCubo';
+import CheckinDiarioPIE from '../../components/CheckinDiarioPIE';
+import BottomNavOneThumb from '../../components/BottomNavOneThumb';
+import RemoteEvalGenerator from '../../components/RemoteEvalGenerator';
 import {
   Users,
   UserPlus,
@@ -23,6 +31,8 @@ import {
   FileSpreadsheet,
   Plus,
   RotateCcw,
+  ClipboardCheck,
+  HeartPulse,
   CheckCircle2,
   Clock,
   LogOut,
@@ -54,7 +64,8 @@ import {
   UserCheck,
   ChevronDown,
   Info,
-  Menu
+  Menu,
+  Wand2
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -90,23 +101,41 @@ function ClassicDashboard() {
   const { moveHistory, cubeRotation, resetCubeState } = useCubeState();
   const joicube = useJoicube();
   const { user, profile, signOut } = useAuth();
-  const { patients, loadingPatients } = usePatientsDB();
+  const { patients, cursos, loadingPatients, createPatient } = usePatientsDB();
+
+  const studentParam = searchParams ? searchParams.get('student') : null;
 
   const [activeTab, setActiveTab] = useState(
-    tabParam === 'niveles' || tabParam === 'batteries' || tabParam === 'baterias' ? 'niveles' : 'resumen'
-  ); // 'resumen' | 'niveles' | 'alumnos' | 'gemelo'
+    studentParam || tabParam === 'alumnos' || tabParam === 'estudiantes'
+      ? 'alumnos'
+      : tabParam === 'checkin' || tabParam === 'checklist'
+        ? 'checkin'
+        : tabParam === 'niveles' || tabParam === 'batteries' || tabParam === 'baterias' 
+          ? 'niveles' 
+          : tabParam === 'informes' || tabParam === 'export' || tabParam === 'reportes'
+            ? 'informes'
+            : 'resumen'
+  ); // 'resumen' | 'checkin' | 'niveles' | 'alumnos' | 'gemelo' | 'informes' | 'usuarios' | 'auditoria'
   const [theme, setTheme] = useState('dark');
   const [searchQuery, setSearchQuery] = useState('');
   const [isOfflineNetwork, setIsOfflineNetwork] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isOrdenarCuboOpen, setIsOrdenarCuboOpen] = useState(false);
+  const [isRemoteEvalOpen, setIsRemoteEvalOpen] = useState(false);
 
   useEffect(() => {
-    if (tabParam === 'niveles' || tabParam === 'batteries' || tabParam === 'baterias') {
+    if (studentParam || tabParam === 'alumnos' || tabParam === 'estudiantes') {
+      setActiveTab('alumnos');
+    } else if (tabParam === 'checkin' || tabParam === 'checklist') {
+      setActiveTab('checkin');
+    } else if (tabParam === 'niveles' || tabParam === 'batteries' || tabParam === 'baterias') {
       setActiveTab('niveles');
     } else if (tabParam === 'usuarios' || tabParam === 'users') {
       setActiveTab('usuarios');
+    } else if (tabParam === 'informes' || tabParam === 'export' || tabParam === 'reportes') {
+      setActiveTab('informes');
     }
-  }, [tabParam]);
+  }, [tabParam, studentParam]);
 
   // Estados del Gemelo Digital
   const [lastTurn, setLastTurn] = useState(null);
@@ -461,26 +490,32 @@ function ClassicDashboard() {
     }
   };
 
-  const handleManualMove = useCallback((move) => {
-    const cleanFace = move.replace("'", "").charAt(0);
+  // Escuchar giros entrantes (Bluetooth, sensor o teclado) y actualizar estadísticas
+  const handleIncomingMove = useCallback((move) => {
+    if (!move) return;
+    const cleanFace = move.replace("'", "").replace("2", "").charAt(0);
     setLastTurn(cleanFace);
     setGemeloMoves(prev => [move, ...prev.slice(0, 15)]);
     setFaceStats(prev => ({
       ...prev,
       [cleanFace]: (prev[cleanFace] || 0) + 1
     }));
-    try {
-      broadcastMove(cleanFace);
-    } catch(e) {}
-  }, [broadcastMove]);
+  }, []);
 
-  // Escuchar giros en vivo por Bluetooth
+  // Escuchar giros en vivo por Bluetooth o globales sin re-emitir
   useEffect(() => {
     const unsub = subscribeToMoves((move) => {
-      handleManualMove(move);
+      handleIncomingMove(move);
     });
     return () => unsub();
-  }, [subscribeToMoves, handleManualMove]);
+  }, [subscribeToMoves, handleIncomingMove]);
+
+  // Manejador cuando el usuario pulsa botones en pantalla o presiona teclas
+  const handleUserTriggerMove = useCallback((face) => {
+    try {
+      broadcastMove(face);
+    } catch(e) {}
+  }, [broadcastMove]);
 
   // Escuchar giros por teclado en pestaña Gemelo Digital
   useEffect(() => {
@@ -496,12 +531,12 @@ function ClassicDashboard() {
       else if (k === 'B') face = 'B';
 
       if (face) {
-        handleManualMove(face);
+        handleUserTriggerMove(face);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeTab, handleManualMove]);
+  }, [activeTab, handleUserTriggerMove]);
 
   // Cálculos estadísticos para el Dashboard Institucional
   const dashboardMetrics = useMemo(() => {
@@ -682,44 +717,31 @@ function ClassicDashboard() {
           </button>
         </div>
 
-        {/* Navegación */}
+        {/* Tarjeta de Perfil del Profesional en el Menú Lateral */}
+        <div className={`p-4 border-b ${isDark ? 'border-[#1b202e] bg-[#141824]/60' : 'border-slate-100 bg-slate-50'}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-sm shadow-md shrink-0">
+              {specialistName.charAt(0) || 'P'}
+            </div>
+            <div className="min-w-0">
+              <h3 className={`text-sm font-bold truncate leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {specialistName}
+              </h3>
+              <p className="text-[11px] text-blue-400 font-semibold truncate">
+                Psicólogo PIE • Investigador
+              </p>
+              <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                {schoolName || 'Colegio San Agustín PIE'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navegación Móvil (Solo herramientas clínicas y de gestión, las demás están en la barra inferior) */}
         <nav className="flex-1 overflow-y-auto p-3 flex flex-col gap-1 text-sm font-medium">
-
-          <button
-            onClick={() => { setActiveTab('resumen'); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
-              activeTab === 'resumen'
-                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <School className="w-5 h-5" />
-            <span>Dashboard Institucional</span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTab('niveles'); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
-              activeTab === 'niveles'
-                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Layers className="w-5 h-5 text-purple-400" />
-            <span>Batería de 5 Niveles</span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTab('alumnos'); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
-              activeTab === 'alumnos'
-                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
-                : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Users className="w-5 h-5 text-blue-400" />
-            <span>Directorio Alumnos PIE</span>
-          </button>
+          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Herramientas Especializadas
+          </div>
 
           <button
             onClick={() => { setActiveTab('gemelo'); setIsMobileMenuOpen(false); }}
@@ -730,19 +752,18 @@ function ClassicDashboard() {
             }`}
           >
             <Box className="w-5 h-5 text-cyan-400" />
-            <span>Gemelo Digital</span>
+            <span>Gemelo Digital 3D</span>
           </button>
 
-          <Link
-            href="/remote-eval?token=demo-token"
-            onClick={() => setIsMobileMenuOpen(false)}
+          <button
+            onClick={() => { setIsRemoteEvalOpen(true); setIsMobileMenuOpen(false); }}
             className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
               isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Wifi className="w-5 h-5 text-emerald-400 animate-pulse" />
             <span>Evaluación Remota</span>
-          </Link>
+          </button>
 
           <Link
             href="/admin/evaluador"
@@ -760,16 +781,9 @@ function ClassicDashboard() {
             </div>
           </Link>
 
-          <Link
-            href="/export"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer font-bold ${
-              isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Download className="w-5 h-5 text-orange-400" />
-            <span>Centro de Exportación</span>
-          </Link>
+          <div className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Administración & Auditoría
+          </div>
 
           <button
             onClick={() => { setActiveTab('usuarios'); setIsMobileMenuOpen(false); }}
@@ -885,6 +899,23 @@ function ClassicDashboard() {
             </button>
 
             <button
+              onClick={() => setActiveTab('checkin')}
+              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
+                activeTab === 'checkin'
+                  ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                  : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardCheck className="w-4 h-4 text-emerald-400" />
+                <span>Check-in Diario</span>
+              </div>
+              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                Hoy
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('niveles')}
               className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
                 activeTab === 'niveles'
@@ -920,25 +951,27 @@ function ClassicDashboard() {
               <span>Gemelo Digital</span>
             </button>
 
-            <Link
-              href="/remote-eval?token=demo-token"
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
+            <button
+              onClick={() => setIsRemoteEvalOpen(true)}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold w-full ${
                 isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Wifi className="w-4 h-4 text-emerald-400 animate-pulse" />
               <span>Evaluación Remota</span>
-            </Link>
+            </button>
 
-            <Link
-              href="/export"
+            <button
+              onClick={() => setActiveTab('informes')}
               className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold ${
-                isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                activeTab === 'informes'
+                  ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-600/30'
+                  : isDark ? 'text-[#8a99ad] hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <FileSpreadsheet className="w-4 h-4 text-amber-500" />
-              <span>Informes</span>
-            </Link>
+              <FileSpreadsheet className={`w-4 h-4 ${activeTab === 'informes' ? 'text-white' : 'text-amber-400'}`} />
+              <span>Reportes y FUDEI</span>
+            </button>
 
             {/* Módulo Privado del Evaluador (Founders & Validación n=10) */}
             <Link
@@ -1068,24 +1101,24 @@ function ClassicDashboard() {
         
         {/* HEADER SUPERIOR */}
         {/* HEADER SUPERIOR */}
-        <header className={`sticky top-0 z-30 px-4 sm:px-6 md:px-10 py-3 md:py-4 border-b flex items-center justify-between gap-4 backdrop-blur-md transition-colors ${
+        <header className={`sticky top-0 z-30 px-2.5 sm:px-6 md:px-10 py-2 sm:py-3 md:py-4 border-b flex items-center justify-between gap-1.5 sm:gap-4 backdrop-blur-md transition-colors ${
           isDark ? 'bg-[#121622]/90 border-[#1b202e]' : 'bg-white/80 border-slate-200'
         }`}>
           {/* Botón hamburguesa móvil */}
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className={`md:hidden w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+            className={`md:hidden w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
               isDark ? 'text-slate-300 hover:text-white hover:bg-white/10' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5" />
           </button>
-          {/* Logo y Especialista (idéntico a la imagen de referencia) */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+          {/* Logo y Especialista (en móvil solo logo para dejar espacio al buscador) */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
               <Brain className="w-4 h-4 text-white" />
             </div>
-            <div>
+            <div className="hidden md:block">
               <div className="flex items-center gap-2">
                 <h2 className={`text-sm sm:text-base font-bold tracking-tight leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   {specialistName}
@@ -1100,33 +1133,48 @@ function ClassicDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Theme Toggle Desktop & Mobile */}
-            <button
-              onClick={toggleTheme}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-300 hover:bg-[#252b3e]' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-600" />}
-              <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
-            </button>
+          {/* Barra de Búsqueda Global Inteligente */}
+          <div className="flex-1 min-w-0 max-w-xs sm:max-w-sm md:max-w-md mx-1 sm:mx-2 flex justify-center">
+            <GlobalSearchBar
+              patients={patients}
+              cursos={cursos}
+              onSelectTab={setActiveTab}
+              isDark={isDark}
+              onOpenSolver={() => setIsOrdenarCuboOpen(true)}
+            />
+          </div>
 
-            {/* Cerrar Sesión */}
-            <button
-              onClick={() => signOut()}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-300 hover:bg-[#252b3e]' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              <LogOut className="w-3.5 h-3.5 text-slate-400" />
-              <span>Cerrar Sesión</span>
-            </button>
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Botón de Instalación PWA */}
+            <PwaInstallButton isDark={isDark} />
+
+            {/* Theme Toggle & Cerrar Sesión Desktop (en móvil se accede por el menú lateral) */}
+            <div className="hidden md:flex items-center gap-2 sm:gap-3">
+              <button
+                onClick={toggleTheme}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-300 hover:bg-[#252b3e]' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-600" />}
+                <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
+              </button>
+
+              <button
+                onClick={() => signOut()}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-300 hover:bg-[#252b3e]' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                <span>Cerrar Sesión</span>
+              </button>
+            </div>
           </div>
         </header>
 
         {/* CONTENIDO PRINCIPAL */}
-        <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl w-full mx-auto flex flex-col gap-5 md:gap-6">
+        <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl w-full mx-auto flex flex-col gap-5 md:gap-6 pb-36 sm:pb-36 md:pb-12">
           
           {/* TAB: CREACIÓN Y ADMINISTRACIÓN DE USUARIOS POR JERARQUÍA */}
           {activeTab === 'usuarios' && (
@@ -1744,73 +1792,32 @@ function ClassicDashboard() {
             </div>
           )}
 
+          {/* TAB: CHECK-IN DIARIO PIE (DAU ESCOLAR) */}
+          {activeTab === 'checkin' && (
+            <CheckinDiarioPIE specialistName={specialistName} />
+          )}
+
           {/* TAB 3: DIRECTORIO DE ALUMNOS PIE */}
           {activeTab === 'alumnos' && (
-            <div className="flex flex-col gap-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className={`text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Directorio de Estudiantes PIE</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Gestiona las fichas, historial de evaluaciones y diagnósticos de cada alumno.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="relative w-full sm:w-64">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar por nombre o NEE..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className={`w-full pl-9 pr-4 py-2 rounded-xl text-xs transition-all border ${
-                        isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-200 focus:border-blue-500' : 'bg-white border-slate-200 text-slate-800'
-                      }`}
-                    />
-                  </div>
-                  <Link
-                    href="/students"
-                    className="px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-500/20"
-                  >
-                    <Plus className="w-4 h-4" /> Registrar Alumno
-                  </Link>
-                </div>
-              </div>
+            <DirectorioAlumnosPIE
+              students={patients}
+              cursos={cursos}
+              loading={loadingPatients}
+              isDark={isDark}
+              onCreateStudent={createPatient}
+              initialStudentId={searchParams ? searchParams.get('student') : null}
+            />
+          )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredPatients.map(p => (
-                  <div
-                    key={p.id}
-                    className={`p-5 rounded-3xl border flex flex-col justify-between transition-all ${
-                      isDark ? 'bg-[#181b26] border-[#222736] hover:border-blue-500/40' : 'bg-white border-slate-200 hover:border-blue-300 shadow-sm'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <h4 className={`font-bold text-sm truncate max-w-[180px] ${isDark ? 'text-white' : 'text-slate-900'}`}>{p.name}</h4>
-                        <span className="text-[10px] font-mono font-bold bg-blue-500/15 text-blue-400 px-2.5 py-0.5 rounded-full border border-blue-500/20">
-                          {p.sessions?.length || 0} tests
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 mt-1 truncate">
-                        {p.diagnosticoNee || 'Sin diagnóstico asignado'}
-                      </p>
-                    </div>
-
-                    <div className={`mt-4 pt-3 border-t flex items-center justify-between ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        {p.idSujeto ? `ID: ${p.idSujeto}` : 'Local'}
-                      </span>
-                      <Link
-                        href={`/students?patientId=${p.id}`}
-                        className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
-                      >
-                        Ver Ficha <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* TAB: REPORTES Y CENTRO DE EXPORTACIÓN */}
+          {activeTab === 'informes' && (
+            <ModuloReportes
+              patients={patients}
+              cursos={cursos}
+              isDark={isDark}
+              profile={profile}
+              user={user}
+            />
           )}
 
           {/* TAB 4: GEMELO DIGITAL COMPLETO EN VIVO (MÓDULO CLÁSICO 3D) */}
@@ -1843,6 +1850,13 @@ function ClassicDashboard() {
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-purple-400" />
                     <span>Reiniciar Posición</span>
+                  </button>
+                  <button
+                    onClick={() => setIsOrdenarCuboOpen(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-600/25"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" />
+                    <span>Ordenar Cubo (Kociemba)</span>
                   </button>
                 </div>
               </div>
@@ -1886,7 +1900,7 @@ function ClassicDashboard() {
                         <button
                           key={face}
                           type="button"
-                          onClick={() => handleManualMove(face)}
+                          onClick={() => handleUserTriggerMove(face)}
                           className={`py-2 px-1 rounded-xl bg-white/5 border border-white/10 font-mono font-bold text-xs transition-all cursor-pointer ${bg}`}
                         >
                           {face}
@@ -3456,6 +3470,29 @@ function ClassicDashboard() {
         currentProfile={profile}
         schoolName={schoolName}
         onUserAction={handleUserAuditAction}
+      />
+
+      {/* MODAL ORDENAR CUBO ASISTIDO POR KOCIEMBA */}
+      <ModalOrdenarCubo
+        isOpen={isOrdenarCuboOpen}
+        onClose={() => setIsOrdenarCuboOpen(false)}
+        isDark={isDark}
+      />
+
+      {/* MODAL GENERADOR DE EVALUACIÓN REMOTA */}
+      {isRemoteEvalOpen && (
+        <RemoteEvalGenerator onClose={() => setIsRemoteEvalOpen(false)} />
+      )}
+
+      {/* BARRA DE ACCESO RÁPIDO INFERIOR ONE-THUMB (ESTILO SPOTIFY PARA MÓVIL/TABLET) */}
+      <BottomNavOneThumb
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          if (typeof window !== 'undefined') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
       />
     </div>
   );

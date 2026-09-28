@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity,
@@ -11,8 +11,10 @@ import {
   FileText,
   ShieldCheck,
   Zap,
-  RotateCcw
+  RotateCcw,
+  Wand2
 } from 'lucide-react';
+import ModalOrdenarCubo from './ModalOrdenarCubo';
 
 /**
  * Modal de Snapshot Post-Evaluación (Quick Insights)
@@ -39,6 +41,8 @@ export default function QuickInsightsModal({
   isOpen = true,
   onClose,
   onOpenFullReport,
+  onNextStudent = null,
+  nextStudent = null,
   metrics = {}
 }) {
   if (!isOpen) return null;
@@ -54,6 +58,8 @@ export default function QuickInsightsModal({
     levelTitle = 'Evaluación Oficial Reaction Mirror',
     patientName = 'Estudiante'
   } = metrics;
+
+  const [isSolverOpen, setIsSolverOpen] = useState(false);
 
   return (
     <AnimatePresence>
@@ -148,33 +154,80 @@ export default function QuickInsightsModal({
           </div>
 
           {/* Resumen Clínico Rápido */}
-          <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 mb-6 text-xs text-slate-600 leading-relaxed">
+          <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 mb-4 text-xs text-slate-600 leading-relaxed">
             <span className="font-semibold text-slate-900 block mb-0.5">Diagnóstico Preliminar de la Sesión:</span>
             El estudiante completó la evaluación con una latencia de <strong className="text-slate-900">{averageReactionTime} ms</strong> y un control inhibitorio del <strong className="text-slate-900">{inhibitoryControl}%</strong>. 
           </div>
 
-          {/* Dos Botones de Acción Requeridos */}
-          <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
-            {/* Botón Secundario */}
+          {/* Banner Rearmar Cubo Post-Evaluación */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-3 mb-5 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-600/10 text-blue-600 flex items-center justify-center shrink-0">
+                <Wand2 className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-slate-900 block">¿El cubo quedó desarmado?</span>
+                <span className="text-[11px] text-slate-500">Sigue el patrón de movimientos para dejarlo listo.</span>
+              </div>
+            </div>
             <button
               type="button"
-              onClick={onClose}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              onClick={() => setIsSolverOpen(true)}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shrink-0 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
             >
-              <Save className="w-3.5 h-3.5" />
-              <span>Guardar y Salir</span>
+              <Wand2 className="w-3.5 h-3.5" />
+              <span>Rearmar Cubo</span>
             </button>
+          </div>
 
-            {/* Botón Primario */}
-            <button
-              type="button"
-              onClick={onOpenFullReport}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Generar Reporte Completo</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+          {/* Modal Ordenar Cubo */}
+          <ModalOrdenarCubo
+            isOpen={isSolverOpen}
+            onClose={() => setIsSolverOpen(false)}
+            isDark={false}
+          />
+
+          {/* Botones de Acción */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-4 border-t border-slate-100">
+            {/* Botón Encadenar Siguiente Alumno */}
+            {nextStudent && onNextStudent ? (
+              <button
+                type="button"
+                onClick={() => onNextStudent(nextStudent)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-[9px] uppercase tracking-wider text-blue-200">Siguiente en sala</span>
+                  <span className="text-xs font-bold truncate max-w-[180px]">
+                    {nextStudent.name}
+                  </span>
+                </div>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </button>
+            ) : <div />}
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              {/* Botón Guardar y Salir */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Guardar y Salir</span>
+              </button>
+
+              {/* Botón Reporte Completo */}
+              <button
+                type="button"
+                onClick={onOpenFullReport}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Ver Reporte</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
         </motion.div>
