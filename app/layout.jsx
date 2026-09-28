@@ -30,11 +30,14 @@ export const metadata = {
   },
   icons: {
     icon: [
+      { url: '/logo.png', sizes: 'any', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { url: '/icon.svg', type: 'image/svg+xml' }
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' }
     ],
+    shortcut: '/logo.png',
     apple: [
+      { url: '/logo.png', sizes: '180x180', type: 'image/png' },
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
     ],
   },
@@ -43,6 +46,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es" className="dark">
+      <head>
+        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="shortcut icon" href="/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+      </head>
       <body className="bg-[#0a0c10] text-gray-100 font-sans min-h-screen antialiased">
         <ServiceWorkerRegister />
         {/* Three.js — required by Classic Dashboard */}
