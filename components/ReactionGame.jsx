@@ -841,27 +841,43 @@ export default function ReactionGame({
   else if (flash === 'black') bgColorClass = 'bg-stone-900'; // Flash de error NOGO/TimeOut
 
   return (
-    <div className={`relative w-full h-screen overflow-hidden flex items-center justify-center transition-colors duration-[0.1s] ${bgColorClass}`}>
-      {isWarmup && (
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 px-5 py-2.5 bg-orange-500/10 border border-orange-500/25 rounded-full flex items-center gap-3 text-[10px] font-black text-orange-400 uppercase tracking-widest backdrop-blur-md shadow-lg shadow-orange-500/5 select-none">
-          <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping shrink-0" />
-          Modo Calentamiento (Tiempo: {warmupTimeLeft}s)
-        </div>
-      )}
-
-      {modeBanner && (
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-40 px-4 py-2 bg-[#120f24]/90 border border-purple-500/40 rounded-full flex items-center gap-3 text-xs font-black text-purple-300 uppercase tracking-widest backdrop-blur-md shadow-[0_0_25px_rgba(168,85,247,0.3)] select-none">
+    <div className={`relative w-full h-screen overflow-hidden flex items-center justify-center transition-colors duration-[0.1s] pt-14 ${bgColorClass}`}>
+      {/* ── BARRA SUPERIOR INTEGRADA A PANTALLA COMPLETA (SIN HUECOS ARRIBA) ── */}
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-[#0a0d18] border-b border-white/10 px-4 sm:px-8 flex items-center justify-between backdrop-blur-xl shadow-lg select-none">
+        <div className="flex items-center gap-3">
           <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse shrink-0" />
-          <span>{modeBanner}</span>
+          <div className="flex flex-col text-left">
+            <span className="text-[10px] font-mono font-bold tracking-widest text-purple-400 uppercase">
+              {modeBanner ? modeBanner.split('(')[0].trim() : (isWarmup ? 'MODO CALENTAMIENTO' : 'COGNIMIRROR PROTOCOL')}
+            </span>
+            <span className="text-xs sm:text-sm font-black text-white tracking-tight truncate max-w-xs sm:max-w-md">
+              {idSujeto ? `Participante: ${idSujeto}` : 'Sujeto en Evaluación'} {gameMode ? `· ${gameMode.replace('_', ' ').toUpperCase()}` : ''}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 sm:gap-4">
+          {isWarmup ? (
+            <div className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">
+              Tiempo: {warmupTimeLeft}s
+            </div>
+          ) : (
+            <div className="text-xs font-mono font-bold text-slate-300 bg-white/5 border border-white/10 px-3 py-1 rounded-xl">
+              Ronda <span className="text-purple-300 font-black">{Math.min(round + 1, deck.length)}</span> / {deck.length}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => onExit(null)}
-            className="ml-2 px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] tracking-normal font-mono cursor-pointer transition-colors"
+            className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-white/10 text-xs font-bold font-mono cursor-pointer transition-all flex items-center gap-1.5"
+            title="Salir de la prueba"
           >
-            Salir
+            <span>Salir</span>
+            <span className="text-[10px]">✕</span>
           </button>
         </div>
-      )}
+      </header>
       
       {/* ── FASE: JUEGO ── */}
       {stage !== 'rules' && (

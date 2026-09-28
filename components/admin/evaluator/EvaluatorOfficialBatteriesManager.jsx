@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import ReactionGame from '../../ReactionGame';
+import SimonGame from '../../SimonGame';
 import FreeCubeExplorer from '../../FreeCubeExplorer';
 import { useBluetoothCube } from '../../../contexts/BluetoothContext';
 import { 
@@ -36,32 +37,35 @@ export default function EvaluatorOfficialBatteriesManager({
   auditFases = {},
   onBatteryCompleted,
   onAuditFaseUpdate,
+  onGameRunningChange,
   onNext,
   onBack
 }) {
   const { isConnected, isKeyboardMode } = useBluetoothCube();
   const subjectId = participantData?.codigoParticipante || 'P01';
 
-  // Batería activa seleccionada para visualización/ejecución (0, 1, 2, 3)
+  // Batería activa seleccionada para visualización/ejecución (0, 1, 2, 3, 4)
   const [selectedBatteryIdx, setSelectedBatteryIdx] = useState(0);
 
   // Estado del modal de juego a pantalla completa
-  // activeGameConfig: null | { type: 'explorer' | 'reaction', mode: 'single_face'|'bilateral_pure'|'official'|'warmup', isDemo: boolean, isPractice: boolean, maxRounds: number|null, banner: string, batteryKey: string }
+  // activeGameConfig: null | { type: 'explorer' | 'reaction' | 'memory', mode: 'single_face'|'bilateral_pure'|'official'|'warmup'|'memory', isDemo: boolean, isPractice: boolean, maxRounds: number|null, banner: string, batteryKey: string }
   const [activeGameConfig, setActiveGameConfig] = useState(null);
 
   // Estado de reproducción de voz clínica (Web Speech API)
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // Bloquear scroll de la ventana mientras el test a pantalla completa está activo
+  // Bloquear scroll de la ventana y notificar a la página padre mientras el test está activo
   useEffect(() => {
+    onGameRunningChange?.(Boolean(activeGameConfig));
     if (activeGameConfig) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = prev;
+        onGameRunningChange?.(false);
       };
     }
-  }, [activeGameConfig]);
+  }, [activeGameConfig, onGameRunningChange]);
 
   // Definición de las 4 Baterías Clínicas Creadas
   const BATTERIES_CONFIG = [
@@ -191,7 +195,39 @@ export default function EvaluatorOfficialBatteriesManager({
           badge: '✋ FRENO TOTAL'
         }
       ],
-      script: `Esta es la prueba principal. Si aparece ROJO, gira la cara roja con la mano izquierda. Si aparece NARANJO, gira la cara naranja con la mano derecha. Pero si aparece AZUL o VERDE, ¡FRENO TOTAL! No toques el cubo.`
+      script: `Esta es la prueba principal de reacción. Si aparece ROJO, gira la cara roja con la mano izquierda. Si aparece NARANJO, gira la cara naranja con la mano derecha. Pero si aparece AZUL o VERDE, ¡FRENO TOTAL! No toques el cubo.`
+    },
+    {
+      id: 'bat5_memory',
+      code: 'BAT-05',
+      title: 'Batería 5: Memory Mirror Clínico Oficial (Corsi)',
+      subtitle: 'Nivel 5 // Memoria de Trabajo Visuoespacial & Corsi 3D',
+      gameMode: 'memory',
+      gameType: 'memory',
+      roundsOfficial: 10,
+      construct: 'Memoria de trabajo visuoespacial (Span de Corsi), retención secuencial y reproducción motora sin interferencias.',
+      durationEst: '~3 min',
+      color: 'from-amber-500/20 to-yellow-500/20',
+      border: 'border-amber-500/40',
+      textAccent: 'text-amber-400',
+      badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      rules: [
+        {
+          colorName: 'OBSERVA LA SECUENCIA',
+          hex: '#F59E0B',
+          hand: 'Atención focal',
+          action: 'Observa qué caras del cubo se iluminan en orden y memoriza la secuencia sonora.',
+          badge: '👀 MEMORIZA'
+        },
+        {
+          colorName: 'REPRODUCE EL PATRÓN',
+          hex: '#3B82F6',
+          hand: 'Ambas manos',
+          action: 'Cuando aparezca "¡TU TURNO!", gira las caras en el mismo orden exacto.',
+          badge: '🔄 REPRODUCE'
+        }
+      ],
+      script: `Muy bien ${subjectId}. Ahora pasamos a Memory Mirror, la prueba de memoria de trabajo visuoespacial. En pantalla verás cómo se iluminan diferentes caras del cubo con un sonido. Observa con mucha atención. Cuando termine la secuencia y veas "¡TU TURNO!", gira las mismas caras en el orden exacto en que aparecieron.`
     }
   ];
 
@@ -299,11 +335,11 @@ export default function EvaluatorOfficialBatteriesManager({
   };
 
   const completedCount = Object.values(completedBatteries).filter(Boolean).length;
-  const allCompleted = completedCount >= 4;
+  const allCompleted = completedCount >= BATTERIES_CONFIG.length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* ── SELECTOR HORIZONTAL DE LAS 4 BATERÍAS ── */}
+      {/* ── SELECTOR HORIZONTAL DE LAS BATERÍAS ── */}
       <div className="bg-[#0c101a]/90 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md">
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
           <div className="flex items-center gap-2">
@@ -313,11 +349,11 @@ export default function EvaluatorOfficialBatteriesManager({
             </h3>
           </div>
           <div className="text-xs font-mono font-bold text-slate-400">
-            Progreso: <span className="text-emerald-400 font-black">{completedCount}</span> / 4 Oficiales
+            Progreso: <span className="text-emerald-400 font-black">{completedCount}</span> / {BATTERIES_CONFIG.length} Oficiales
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
           {BATTERIES_CONFIG.map((b, idx) => {
             const isDone = Boolean(completedBatteries[b.id]);
             const isSelected = selectedBatteryIdx === idx;
@@ -729,6 +765,12 @@ export default function EvaluatorOfficialBatteriesManager({
             <FreeCubeExplorer
               onBack={() => handleGameFinished(null)}
               onSelectLevel={() => handleGameFinished(null)}
+            />
+          ) : activeGameConfig.type === 'memory' ? (
+            <SimonGame
+              onExit={handleGameFinished}
+              playerName={subjectId}
+              isDemoMode={activeGameConfig.isDemo}
             />
           ) : (
             <ReactionGame

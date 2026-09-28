@@ -63,13 +63,17 @@ export default function EvaluadorAdminPage() {
     observacionesIniciales: ''
   });
 
-  // Estado de las 4 Baterías Clínicas (Paso 3)
+  // Estado de las Baterías Clínicas (Paso 3)
   const [completedBatteries, setCompletedBatteries] = useState({
     bat1_warmup: false,
     bat2_inhibitory: false,
     bat3_bimanual: false,
-    bat4_official: false
+    bat4_official: false,
+    bat5_memory: false
   });
+
+  // Control de pantalla completa sin superposición
+  const [isGameRunning, setIsGameRunning] = useState(false);
 
   // Sesiones individuales registradas para cada batería
   const [batterySessions, setBatterySessions] = useState({});
@@ -79,7 +83,8 @@ export default function EvaluadorAdminPage() {
     bat1_warmup: { demo: null, practice: null },
     bat2_inhibitory: { demo: null, practice: null },
     bat3_bimanual: { demo: null, practice: null },
-    bat4_official: { demo: null, practice: null }
+    bat4_official: { demo: null, practice: null },
+    bat5_memory: { demo: null, practice: null }
   });
 
   // Telemetría acumulada ensayo a ensayo
@@ -329,7 +334,8 @@ export default function EvaluadorAdminPage() {
       bat1_warmup: false,
       bat2_inhibitory: false,
       bat3_bimanual: false,
-      bat4_official: false
+      bat4_official: false,
+      bat5_memory: false
     });
 
     setBatterySessions({});
@@ -337,7 +343,8 @@ export default function EvaluadorAdminPage() {
       bat1_warmup: { demo: null, practice: null },
       bat2_inhibitory: { demo: null, practice: null },
       bat3_bimanual: { demo: null, practice: null },
-      bat4_official: { demo: null, practice: null }
+      bat4_official: { demo: null, practice: null },
+      bat5_memory: { demo: null, practice: null }
     });
     setCollectedTrials([]);
 
@@ -356,86 +363,89 @@ export default function EvaluadorAdminPage() {
   return (
     <div className="min-h-screen bg-[#07080f] text-slate-100 flex flex-col selection:bg-purple-500/30 selection:text-white">
       {/* ── BARRA SUPERIOR DE NAVEGACIÓN Y AUDITORÍA ── */}
-      <header className="sticky top-0 z-40 bg-[#07080f]/90 backdrop-blur-xl border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all cursor-pointer"
-            title="Volver al Dashboard"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 uppercase">
-                COGNIMIRROR PROTOCOL CORE
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
-                PRIVADO // N=10
+      {!isGameRunning && (
+        <header className="sticky top-0 z-40 bg-[#07080f]/90 backdrop-blur-xl border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all cursor-pointer"
+              title="Volver al Dashboard"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+            
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 uppercase">
+                  COGNIMIRROR PROTOCOL CORE
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                  PRIVADO // N=10
+                </span>
+              </div>
+              <h1 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                Módulo del Evaluador Clínico & Validación Escolar
+              </h1>
+            </div>
+          </div>
+
+          {/* Selector de Vista Principal: Protocolo en Vivo vs Directorio & Informes */}
+          <div className="flex items-center gap-2">
+            <div className="bg-[#0a0d18] border border-white/10 p-1 rounded-xl flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setMainView('live_protocol')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  mainView === 'live_protocol'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>Protocolo en Vivo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMainView('evaluated_directory')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  mainView === 'evaluated_directory'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>Fichas & 5 Informes</span>
+              </button>
+            </div>
+
+            {/* Métricas y Estado de Hardware */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-slate-400">Evaluados Hoy:</span>
+              <span className="font-mono font-bold text-white">{sessionCountToday} / 10</span>
+            </div>
+
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+              <Bluetooth className={`w-3.5 h-3.5 ${isConnected ? 'text-emerald-400' : isKeyboardMode ? 'text-amber-400' : 'text-slate-500'}`} />
+              <span className="hidden sm:inline text-slate-300 font-medium font-mono">
+                {isConnected ? (device || 'Cubo Conectado') : isKeyboardMode ? 'Modo Teclado' : 'Sin Cubo'}
               </span>
             </div>
-            <h1 className="text-sm sm:text-base font-bold text-white tracking-tight">
-              Módulo del Evaluador Clínico & Validación Escolar
-            </h1>
           </div>
-        </div>
-
-        {/* Selector de Vista Principal: Protocolo en Vivo vs Directorio & Informes */}
-        <div className="flex items-center gap-2">
-          <div className="bg-[#0a0d18] border border-white/10 p-1 rounded-xl flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setMainView('live_protocol')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                mainView === 'live_protocol'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Play className="w-3.5 h-3.5" />
-              <span>Protocolo en Vivo</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMainView('evaluated_directory')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                mainView === 'evaluated_directory'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <FolderOpen className="w-3.5 h-3.5" />
-              <span>Fichas & 4 Informes</span>
-            </button>
-          </div>
-
-          {/* Métricas y Estado de Hardware */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
-            <Users className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-slate-400">Evaluados Hoy:</span>
-            <span className="font-mono font-bold text-white">{sessionCountToday} / 10</span>
-          </div>
-
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
-            <Bluetooth className={`w-3.5 h-3.5 ${isConnected ? 'text-emerald-400' : isKeyboardMode ? 'text-amber-400' : 'text-slate-500'}`} />
-            <span className="hidden sm:inline text-slate-300 font-medium font-mono">
-              {isConnected ? (device || 'Cubo Conectado') : isKeyboardMode ? 'Modo Teclado' : 'Sin Cubo'}
-            </span>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* ── MODO 1: PROTOCOLO EN VIVO ── */}
       {mainView === 'live_protocol' && (
         <>
           {/* STEPPER BAR (BARRA DE 4 PASOS) */}
-          <div className="border-b border-white/5 bg-[#0a0d18]/60 px-4 sm:px-8 py-3">
-            <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2">
-              {STEPS.map((step) => {
-                const Icon = step.icon;
-                const isActive = currentStep === step.id;
+          {!isGameRunning && (
+            <div className="border-b border-white/5 bg-[#0a0d18]/60 px-4 sm:px-8 py-3">
+              <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2">
+                {STEPS.map((step) => {
+                  const Icon = step.icon;
+                  const isActive = currentStep === step.id;
                 const isDone = 
                   (step.id === 'FICHA_PARTICIPANTE' && currentStep !== 'FICHA_PARTICIPANTE') ||
                   (step.id === 'VERIFICACION_BLE' && (currentStep === 'BATERIAS_EVALUACION' || currentStep === 'ENCUESTA_SALIDA')) ||
@@ -514,7 +524,7 @@ export default function EvaluadorAdminPage() {
               </div>
             )}
 
-            {/* PASO 3: LAS 4 BATERÍAS CLÍNICAS OFICIALES EN TAMAÑO COMPLETO */}
+            {/* PASO 3: LAS BATERÍAS CLÍNICAS OFICIALES EN TAMAÑO COMPLETO */}
             {currentStep === 'BATERIAS_EVALUACION' && (
               <EvaluatorOfficialBatteriesManager
                 participantData={participantData}
@@ -523,6 +533,7 @@ export default function EvaluadorAdminPage() {
                 auditFases={auditFases}
                 onBatteryCompleted={handleBatteryCompleted}
                 onAuditFaseUpdate={handleAuditFaseUpdate}
+                onGameRunningChange={setIsGameRunning}
                 onNext={() => {
                   setCurrentStep('ENCUESTA_SALIDA');
                   window.scrollTo({ top: 0, behavior: 'smooth' });

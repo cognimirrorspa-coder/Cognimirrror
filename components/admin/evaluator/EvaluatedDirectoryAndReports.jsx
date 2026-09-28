@@ -427,6 +427,11 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
       code: 'BAT-04',
       name: 'Reaction Mirror Oficial',
       construct: 'Atención sostenida compleja y fatiga'
+    },
+    bat5_memory: {
+      code: 'BAT-05',
+      name: 'Memory Mirror Oficial (Corsi)',
+      construct: 'Memoria de trabajo visuoespacial y span secuencial'
     }
   };
 
@@ -593,20 +598,20 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
           )}
         </div>
 
-        {/* ── NAVEGADOR DE LOS 4 INFORMES CLÍNICOS ── */}
+        {/* ── NAVEGADOR DE LOS 5 INFORMES CLÍNICOS ── */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-2">
               <Activity className="w-4 h-4 text-purple-400" />
-              <span>Los 4 Informes Clínicos Especializados</span>
+              <span>Los 5 Informes Clínicos Especializados</span>
             </h3>
             <span className="text-[11px] text-slate-400">
               Selecciona una batería para visualizar su análisis executive completo
             </span>
           </div>
 
-          {/* Tabs de las 4 Baterías */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          {/* Tabs de las 5 Baterías */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
             {Object.entries(BATTERIES_METADATA).map(([bId, meta]) => {
               const isCompleted = Boolean(bCompletadas[bId]);
               const isSelected = activeBatteryTab === bId;
@@ -977,13 +982,13 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-bold text-slate-400">Baterías Oficiales:</span>
-                      <span className={`font-mono font-bold ${isFull ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {completedCount} / 4 Completadas
+                      <span className={`font-mono font-bold ${completedCount >= 5 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {completedCount} / 5 Completadas
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {['bat1_warmup', 'bat2_inhibitory', 'bat3_bimanual', 'bat4_official'].map((bKey, bIdx) => {
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {['bat1_warmup', 'bat2_inhibitory', 'bat3_bimanual', 'bat4_official', 'bat5_memory'].map((bKey, bIdx) => {
                         const done = Boolean(b[bKey]);
                         return (
                           <div
