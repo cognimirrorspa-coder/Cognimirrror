@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../../utils/supabaseClient';
 import ExecutiveReport from '../../ExecutiveReport';
 import { 
@@ -25,7 +25,12 @@ import {
   Layers,
   Sparkles,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Trash2,
+  CheckSquare,
+  Square,
+  FolderCheck,
+  Check
 } from 'lucide-react';
 
 export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
@@ -33,6 +38,13 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'complete' | 'in_progress'
+
+  // Modo Selección tipo carpeta y eliminación por lotes
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleteModal, setDeleteModal] = useState(null); // null | array of items
+  const longPressTimerRef = useRef(null);
+  const isLongPressTriggeredRef = useRef(false);
 
   // Sujeto seleccionado para ver su Ficha Clínica Integral
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -151,6 +163,184 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
       return matchSearch;
     });
   }, [sessions, searchTerm, filterMode]);
+  // Formateador de fecha seguro (evita 'Invalid Date')
+  const formatSessionDate = (val) => {
+    if (!val) return 'Fecha reciente';
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? 'Fecha reciente' : d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // Toggle selección de una ficha
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Seleccionar todas / deseleccionar todas
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredSessions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredSessions.map((s, idx) => s.id || `idx-${idx}`)));
+    }
+  };
+
+  // Handlers para Long-Press (mantener presionado para seleccionar como carpeta)
+  const handlePointerDown = (id) => {
+    isLongPressTriggeredRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressTriggeredRef.current = true;
+      setIsSelectionMode(true);
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 450);
+  };
+
+  const handlePointerUpOrLeave = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleCardClick = (id) => {
+    if (isLongPressTriggeredRef.current) {
+      isLongPressTriggeredRef.current = false;
+      return;
+    }
+    if (isSelectionMode || selectedIds.size > 0) {
+      toggleSelect(id);
+    }
+  };
+
+  // Exportar lote en CSV consolidado
+  const handleExportSelectedCSV = () => {
+    const selectedList = sessions.filter((s, idx) => selectedIds.has(s.id || `idx-${idx}`));
+    if (selectedList.length === 0) return;
+
+    const headers = [
+      'codigo_sujeto',
+      'bateria',
+      'ensayo_numero',
+      'color_estimulo',
+      'tipo_ensayo',
+      'latencia_reaccion_ms',
+      'acierto',
+      'error_comision',
+      'error_omision',
+      'cara_girada',
+      'fecha_evaluacion'
+    ];
+
+    const allRows = [];
+    selectedList.forEach(session => {
+      const trials = session.telemetria_ensayos || [];
+      const pCode = session.participante?.codigoParticipante || 'P01';
+      trials.forEach(t => {
+        allRows.push([
+          pCode,
+          t.battery_type || 'BAT_OFICIAL',
+          t.trial_number || 0,
+          t.stimulus_color || t.label || '',
+          t.type || (t.is_commission_error ? 'NOGO' : 'GO'),
+          t.reaction_time_ms || t.time || 0,
+          t.is_correct !== undefined ? t.is_correct : (t.status === 'Ok'),
+          Boolean(t.is_commission_error),
+          Boolean(t.is_omission_error),
+          t.face_turned || t.actualFace || '',
+          session.timestamp || session.fecha_sesion || ''
+        ]);
+      });
+    });
+
+    if (allRows.length === 0) {
+      alert('Las fichas seleccionadas no contienen telemetría ensayo a ensayo guardada.');
+      return;
+    }
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + 
+      [headers.join(','), ...allRows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `CogniMirror_Telemetria_Lote_${selectedList.length}_Fichas_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Exportar lote en JSON
+  const handleExportSelectedJSON = () => {
+    const selectedList = sessions.filter((s, idx) => selectedIds.has(s.id || `idx-${idx}`));
+    if (selectedList.length === 0) return;
+
+    const jsonStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(selectedList, null, 2));
+    const link = document.createElement('a');
+    link.setAttribute('href', jsonStr);
+    link.setAttribute('download', `CogniMirror_Lote_${selectedList.length}_Fichas_${Date.now()}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Ejecución de eliminación definitiva (LocalStorage + Supabase)
+  const executeDeletion = async (idsToDelete) => {
+    if (!idsToDelete || idsToDelete.length === 0) return;
+    const items = sessions.filter((s, idx) => idsToDelete.includes(s.id || `idx-${idx}`));
+    const subjectCodes = items.map(i => i.participante?.codigoParticipante).filter(Boolean);
+
+    // 1. LocalStorage
+    try {
+      const stored = localStorage.getItem('cognimirror_validation_n10_sessions');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const remaining = parsed.filter(item => {
+          const idMatch = idsToDelete.includes(item.id);
+          const codeMatch = item.participante?.codigoParticipante && subjectCodes.includes(item.participante.codigoParticipante);
+          return !idMatch && !codeMatch;
+        });
+        localStorage.setItem('cognimirror_validation_n10_sessions', JSON.stringify(remaining));
+      }
+    } catch (err) {
+      console.error('Error al remover de LocalStorage:', err);
+    }
+
+    // 2. Supabase
+    try {
+      if (subjectCodes.length > 0) {
+        await supabase.from('sesiones_clinicas').delete().in('id_sujeto', subjectCodes);
+      }
+      const realUuids = idsToDelete.filter(id => typeof id === 'string' && id.length > 20 && !id.startsWith('val-n10-') && !id.startsWith('idx-'));
+      if (realUuids.length > 0) {
+        await supabase.from('sesiones_clinicas').delete().in('id', realUuids);
+      }
+    } catch (sbErr) {
+      console.warn('Error al eliminar de Supabase:', sbErr);
+    }
+
+    // 3. Estado local
+    setSessions(prev => prev.filter((s, idx) => !idsToDelete.includes(s.id || `idx-${idx}`) && !subjectCodes.includes(s.participante?.codigoParticipante)));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      idsToDelete.forEach(id => next.delete(id));
+      return next;
+    });
+    setDeleteModal(null);
+    if (selectedSubject && (idsToDelete.includes(selectedSubject.id) || subjectCodes.includes(selectedSubject.participante?.codigoParticipante))) {
+      setSelectedSubject(null);
+    }
+  };
+
 
   // Exportar CSV de telemetría consolidada de un evaluado
   const handleExportCSV = (session) => {
@@ -276,6 +466,16 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
           </button>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteModal([selectedSubject.id])}
+              className="px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-2 cursor-pointer transition-all"
+              title="Eliminar esta ficha de evaluación"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Eliminar Ficha</span>
+            </button>
+
             <button
               type="button"
               onClick={handlePrintSummary}
@@ -515,15 +715,34 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={loadEvaluatedData}
-            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-300 flex items-center gap-2 cursor-pointer transition-all self-start sm:self-center"
-            title="Refrescar lista desde la base de datos"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-purple-400' : ''}`} />
-            <span>Refrescar</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSelectionMode(prev => !prev);
+                if (isSelectionMode) setSelectedIds(new Set());
+              }}
+              className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
+                isSelectionMode
+                  ? 'bg-purple-600 text-white border-purple-500 shadow-md'
+                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300'
+              }`}
+              title="Activar selección múltiple de carpetas"
+            >
+              <FolderCheck className="w-3.5 h-3.5" />
+              <span>{isSelectionMode ? 'Modo Selección Activo' : 'Seleccionar Fichas'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={loadEvaluatedData}
+              className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-300 flex items-center gap-2 cursor-pointer transition-all"
+              title="Refrescar lista desde la base de datos"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-purple-400' : ''}`} />
+              <span>Refrescar</span>
+            </button>
+          </div>
         </div>
 
         {/* Métricas rápidas del estudio */}
@@ -619,6 +838,70 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
         </div>
       </div>
 
+      {/* ── BARRA DE ACCIONES POR LOTE (MODO CARPETA) ── */}
+      {(isSelectionMode || selectedIds.size > 0) && (
+        <div className="bg-purple-950/40 border border-purple-500/40 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg backdrop-blur-md animate-in fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <span className="px-2.5 py-1 rounded-lg bg-purple-500/30 text-purple-200 text-xs font-mono font-bold border border-purple-500/40">
+              {selectedIds.size} seleccionada(s)
+            </span>
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="text-xs font-semibold text-purple-300 hover:text-white underline cursor-pointer"
+            >
+              {selectedIds.size === filteredSessions.length ? 'Deseleccionar todo' : 'Seleccionar todas'}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={selectedIds.size === 0}
+              onClick={handleExportSelectedCSV}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              title="Descargar telemetría consolidada de seleccionados en CSV"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Exportar CSV ({selectedIds.size})</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={selectedIds.size === 0}
+              onClick={handleExportSelectedJSON}
+              className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              title="Descargar JSON consolidado de seleccionados"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Exportar JSON</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={selectedIds.size === 0}
+              onClick={() => setDeleteModal(Array.from(selectedIds))}
+              className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              title="Eliminar fichas seleccionadas"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Eliminar ({selectedIds.size})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsSelectionMode(false);
+                setSelectedIds(new Set());
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs font-medium cursor-pointer transition-all"
+            >
+              Salir
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── LISTADO / GRID DE EVALUADOS ── */}
       {loading ? (
         <div className="p-12 text-center text-slate-400 text-xs animate-pulse">
@@ -647,14 +930,36 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
             return (
               <div
                 key={s.id || idx}
-                className={`bg-[#0c101a]/95 border rounded-2xl p-5 shadow-lg backdrop-blur-md transition-all flex flex-col justify-between hover:border-purple-500/40 hover:shadow-[0_0_25px_rgba(168,85,247,0.15)] ${
-                  isFull ? 'border-emerald-500/30' : 'border-white/10'
+                onPointerDown={() => handlePointerDown(s.id || `idx-${idx}`)}
+                onPointerUp={handlePointerUpOrLeave}
+                onPointerLeave={handlePointerUpOrLeave}
+                onClick={() => handleCardClick(s.id || `idx-${idx}`)}
+                className={`bg-[#0c101a]/95 border rounded-2xl p-5 shadow-lg backdrop-blur-md transition-all flex flex-col justify-between cursor-pointer select-none relative ${
+                  selectedIds.has(s.id || `idx-${idx}`)
+                    ? 'border-purple-500 bg-purple-950/20 shadow-[0_0_30px_rgba(168,85,247,0.3)] ring-2 ring-purple-500/50'
+                    : isFull ? 'border-emerald-500/30 hover:border-purple-500/40' : 'border-white/10 hover:border-purple-500/40'
                 }`}
               >
                 <div>
                   {/* Fila superior: Código y Fecha */}
                   <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/5">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
+                      {(isSelectionMode || selectedIds.size > 0 || selectedIds.has(s.id || `idx-${idx}`)) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelect(s.id || `idx-${idx}`);
+                          }}
+                          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
+                            selectedIds.has(s.id || `idx-${idx}`)
+                              ? 'bg-purple-600 border-purple-400 text-white'
+                              : 'border-white/30 bg-white/5 hover:border-white/60'
+                          }`}
+                        >
+                          {selectedIds.has(s.id || `idx-${idx}`) && <Check className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                       <span className="text-base font-black text-white font-mono bg-purple-500/20 px-2.5 py-0.5 rounded-lg border border-purple-500/30 text-purple-300">
                         {p.codigoParticipante || `P${String(idx + 1).padStart(2, '0')}`}
                       </span>
@@ -664,7 +969,7 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
                     </div>
 
                     <span className="text-[11px] text-slate-400 font-mono">
-                      {new Date(s.timestamp).toLocaleDateString('es-CL')}
+                      {formatSessionDate(s.timestamp || s.fecha_sesion || s.date)}
                     </span>
                   </div>
 
@@ -727,6 +1032,17 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
                     >
                       <Download className="w-3.5 h-3.5" />
                     </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteModal([s.id || `idx-${idx}`]);
+                      }}
+                      className="p-2 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-white/10 transition-colors cursor-pointer"
+                      title="Eliminar esta ficha permanentemente"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
                   <button
@@ -744,6 +1060,41 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
               </div>
             );
           })}
+        </div>
+      )}
+      {/* ── MODAL DE CONFIRMACIÓN DE ELIMINACIÓN ── */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-[#0c101a] border border-rose-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">¿Eliminar Ficha(s) de Evaluación?</h3>
+                <p className="text-xs text-slate-400">Se eliminarán {deleteModal.length} registro(s) permanentemente.</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-300 bg-rose-950/20 border border-rose-500/20 rounded-xl p-3 leading-relaxed">
+              Esta acción borrará definitivamente las sesiones seleccionadas del almacenamiento local y de la base de datos de validación escolar.
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModal(null)}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold cursor-pointer transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => executeDeletion(deleteModal)}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer transition-all shadow-md shadow-rose-600/30"
+              >
+                Sí, Eliminar Definitivamente
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import ReactionGame from '../../ReactionGame';
 import FreeCubeExplorer from '../../FreeCubeExplorer';
 import { useBluetoothCube } from '../../../contexts/BluetoothContext';
@@ -50,6 +51,17 @@ export default function EvaluatorOfficialBatteriesManager({
 
   // Estado de reproducción de voz clínica (Web Speech API)
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Bloquear scroll de la ventana mientras el test a pantalla completa está activo
+  useEffect(() => {
+    if (activeGameConfig) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [activeGameConfig]);
 
   // Definición de las 4 Baterías Clínicas Creadas
   const BATTERIES_CONFIG = [
@@ -710,9 +722,9 @@ export default function EvaluatorOfficialBatteriesManager({
         </div>
       </div>
 
-      {/* ── MODAL A PANTALLA COMPLETA DEL JUEGO ORIGINAL ── */}
-      {activeGameConfig && (
-        <div className="fixed inset-0 z-50 bg-[#07080f] flex flex-col overflow-hidden animate-in fade-in duration-200">
+      {/* ── MODAL A PANTALLA COMPLETA DEL JUEGO ORIGINAL (PORTAL AISLADO) ── */}
+      {activeGameConfig && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[99999] bg-[#07080f] w-screen h-screen flex flex-col overflow-hidden animate-in fade-in duration-150">
           {activeGameConfig.type === 'explorer' ? (
             <FreeCubeExplorer
               onBack={() => handleGameFinished(null)}
@@ -731,7 +743,8 @@ export default function EvaluatorOfficialBatteriesManager({
               omissionTimeoutMs={1200}
             />
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

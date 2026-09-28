@@ -40,23 +40,36 @@ export function AuthProvider({ children }) {
       return null;
     }
 
-    // Mock para usuarios bypass y colegio de pruebas CogniMirror Research Lab
+    // Mock para usuarios bypass y colegio de pruebas CogniMirror Research Lab / Founders
     const isLabAdmin = userObj.email === 'cognimirrorspa@gmail.com' || userObj.email === 'director@davinci.cl';
     const isBrayan = userObj.email === 'br.castros@duocuc.cl';
-    const isLabEvaluator = isBrayan || userObj.email === 'evaluador@cognimirror.cl' || userObj.email === 'evaluador@cognimirror.com' || userObj.email === 'psicologo@clinica.com';
+    const isMatias = userObj.email === 'matias.fierro@cognimirror.cl' || userObj.email === 'matias.fierro@cognimirror.com';
+    const isNicole = userObj.email === 'nicole.vargas@cognimirror.cl' || userObj.email === 'nicole.vargas@cognimirror.com';
+    const isJouse = userObj.email === 'jouse.alarcon@cognimirror.cl' || userObj.email === 'jouse.alarcon@cognimirror.com';
+    const isFounder = isBrayan || isMatias || isNicole || isJouse || userObj.email === 'cognimirrorspa@gmail.com';
+    const isLabEvaluator = isFounder || userObj.email === 'evaluador@cognimirror.cl' || userObj.email === 'evaluador@cognimirror.com' || userObj.email === 'psicologo@clinica.com';
     const isCoordinator = userObj.email === 'coordinador@colegio.com';
 
-    if (isLabAdmin || isLabEvaluator || isCoordinator || userObj.id?.startsWith('0000') || userObj.id?.startsWith('b000') || userObj.id?.startsWith('d000') || userObj.id?.startsWith('e000')) {
+    if (isLabAdmin || isLabEvaluator || isCoordinator || userObj.id?.startsWith('0000') || userObj.id?.startsWith('b000') || userObj.id?.startsWith('d000') || userObj.id?.startsWith('e000') || userObj.id?.startsWith('f')) {
+      const founderName = isBrayan ? 'Brayan Castro (Founder & Investigador)'
+        : isMatias ? 'Matías Fierro (Founder)'
+        : isNicole ? 'Nicole Vargas (Founder)'
+        : isJouse ? 'Jouse Alarcón (Founder)'
+        : (isLabAdmin ? 'Equipo CogniMirror (Administración & I+D)' : 'Evaluador de Investigación (200 Tests)');
+
       const mockProfile = {
-        id: userObj.id || (isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : (isBrayan ? 'b0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001')),
+        id: userObj.id || (isFounder ? 'f0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001'),
         email: userObj.email,
-        nombre_completo: isLabAdmin 
-          ? 'Equipo CogniMirror (Administración & I+D)' 
-          : (isBrayan ? 'Brayan Castro (Investigador PIE)' : 'Evaluador de Investigación (200 Tests)'),
-        colegio_id: 'c0000000-0000-0000-0000-000000000001',
-        rol: isLabAdmin ? 'director' : (isCoordinator ? 'coordinador_pie' : 'psicologo'),
-        cargo_texto: isLabAdmin ? 'Director de Investigación y Desarrollo' : 'Psicólogo Clínico / Investigador PIE',
-        colegio: {
+        nombre_completo: founderName,
+        colegio_id: isFounder ? 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08' : 'c0000000-0000-0000-0000-000000000001',
+        rol: isFounder ? 'founder' : (isCoordinator ? 'coordinador_pie' : 'psicologo'),
+        cargo_texto: isFounder ? 'Fundador & Equipo CogniMirror' : (isLabAdmin ? 'Director de Investigación y Desarrollo' : 'Psicólogo Clínico / Investigador PIE'),
+        colegio: isFounder ? {
+          id: 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08',
+          nombre: 'Colegio CogniMirror (Founders & Tests)',
+          rbd: 'COG-FOUNDERS-01',
+          comuna: 'Santiago'
+        } : {
           id: 'c0000000-0000-0000-0000-000000000001',
           nombre: 'CogniMirror Research Lab (Entorno de Pruebas)',
           rbd: '99999-9',
@@ -175,9 +188,19 @@ export function AuthProvider({ children }) {
       const normalizedEmail = email?.trim().toLowerCase();
 
       // 1. Cuentas del equipo y sandbox de pruebas CogniMirror
-      const isBrayan = normalizedEmail === 'br.castros@duocuc.cl';
-      const isDemoAccount = isBrayan ||
-                            normalizedEmail === 'cognimirrorspa@gmail.com' || 
+      const FOUNDERS_MAP = {
+        'br.castros@duocuc.cl': { name: 'Brayan Castro (Founder & Investigador)', id: 'b4a7a8d1-1234-4567-8901-abcdef123456' },
+        'matias.fierro@cognimirror.cl': { name: 'Matías Fierro (Founder & Equipo CogniMirror)', id: 'f1000000-0000-0000-0000-000000000001' },
+        'matias.fierro@cognimirror.com': { name: 'Matías Fierro (Founder & Equipo CogniMirror)', id: 'f1000000-0000-0000-0000-000000000001' },
+        'nicole.vargas@cognimirror.cl': { name: 'Nicole Vargas (Founder & Equipo CogniMirror)', id: 'f2000000-0000-0000-0000-000000000002' },
+        'nicole.vargas@cognimirror.com': { name: 'Nicole Vargas (Founder & Equipo CogniMirror)', id: 'f2000000-0000-0000-0000-000000000002' },
+        'jouse.alarcon@cognimirror.cl': { name: 'Jouse Alarcón (Founder & Equipo CogniMirror)', id: 'f3000000-0000-0000-0000-000000000003' },
+        'jouse.alarcon@cognimirror.com': { name: 'Jouse Alarcón (Founder & Equipo CogniMirror)', id: 'f3000000-0000-0000-0000-000000000003' },
+        'cognimirrorspa@gmail.com': { name: 'Equipo CogniMirror (Founders & I+D)', id: '00000000-0000-0000-0000-000000000000' }
+      };
+
+      const founderInfo = FOUNDERS_MAP[normalizedEmail];
+      const isDemoAccount = Boolean(founderInfo) ||
                             normalizedEmail === 'evaluador@cognimirror.cl' || 
                             normalizedEmail === 'evaluador@cognimirror.com' ||
                             normalizedEmail === 'psicologo@clinica.com' || 
@@ -185,15 +208,14 @@ export function AuthProvider({ children }) {
                             normalizedEmail === 'director@davinci.cl';
 
       if (isDemoAccount) {
-        const isLabAdmin = normalizedEmail === 'cognimirrorspa@gmail.com' || normalizedEmail === 'director@davinci.cl';
+        const isFounder = Boolean(founderInfo);
         const demoUserObj = {
-          id: isLabAdmin ? 'd0000000-0000-0000-0000-000000000001' : 
-              (isBrayan ? 'b0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001'),
+          id: founderInfo ? founderInfo.id : (normalizedEmail === 'director@davinci.cl' ? 'd0000000-0000-0000-0000-000000000001' : 'e0000000-0000-0000-0000-000000000001'),
           email: normalizedEmail,
           user_metadata: {
-            full_name: isLabAdmin 
-              ? 'Equipo CogniMirror (Administración & I+D)' 
-              : (isBrayan ? 'Brayan Castro (Investigador PIE)' : 'Evaluador de Investigación (200 Tests)')
+            full_name: founderInfo ? founderInfo.name : 'Evaluador de Investigación (200 Tests)',
+            colegio_id: isFounder ? 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08' : 'c0000000-0000-0000-0000-000000000001',
+            rol: isFounder ? 'founder' : 'evaluador'
           }
         };
         const demoSessionObj = {
