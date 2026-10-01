@@ -1,11 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { authenticateApiRequest } from '@/utils/apiAuth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(request) {
   try {
+    // 0. Blindaje de Autenticación (OWASP A01 / Ley 21.663)
+    const { user, errorResponse } = await authenticateApiRequest(request);
+    if (errorResponse) {
+      return errorResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const colegioId = searchParams.get('colegio_id');
 
@@ -21,6 +28,19 @@ export async function GET(request) {
       ? createClient(supabaseUrl, serviceRoleKey)
       : createClient(supabaseUrl, anonKey);
 
+    // Intentar consultar trazabilidad_auditoria (unificada e inmutable)
+    const { data: trazabilidad, error: errTrazabilidad } = await supabaseClient
+      .from('trazabilidad_auditoria')
+      .select('*')
+      .eq('institucion_id', colegioId)
+      .order('creado_en', { ascending: false })
+      .limit(100);
+
+    if (!errTrazabilidad && trazabilidad && trazabilidad.length > 0) {
+      return NextResponse.json({ logs: trazabilidad });
+    }
+
+    // Fallback a logs_auditoria clásica para compatibilidad
     const { data: logs, error } = await supabaseClient
       .from('logs_auditoria')
       .select('*')

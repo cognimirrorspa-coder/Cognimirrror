@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { supabase } from '@/utils/supabaseClient';
+import { authenticateApiRequest } from '@/utils/apiAuth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(request) {
   try {
+    // 0. Blindaje de Autenticación y Autorización (OWASP A01 & Ley 20.584)
+    const { user, errorResponse } = await authenticateApiRequest(request);
+    if (errorResponse) {
+      return errorResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const pacienteId = searchParams.get('paciente_id');
     const grupoId = searchParams.get('grupo_id') || 'grupo_brayan';
@@ -31,7 +38,26 @@ export async function GET(request) {
       return NextResponse.json({ error: 'No se encontraron sesiones clínicas para los filtros proporcionados.' }, { status: 404 });
     }
 
-    // 2. Crear Excel Workbook
+    // 2. Registro en Trazabilidad Inmutable de Acceso a Datos de Menores (Ley 21.663)
+    try {
+      await supabase.from('trazabilidad_auditoria').insert([{
+        usuario_id: user.id !== 'service-role-system' ? user.id : null,
+        usuario_email: user.email || 'evaluador@cognimirror.cl',
+        usuario_rol: user.rol || 'profesional',
+        accion: 'DESCARGA_INFORME_PIE_EXCEL',
+        entidad_afectada: 'sesiones_clinicas',
+        detalles: {
+          paciente_id: pacienteId || 'todos',
+          total_sesiones_exportadas: sessions.length,
+          formato: 'XLSX',
+          fecha_solicitud: new Date().toISOString()
+        }
+      }]);
+    } catch (e) {
+      console.warn('[Auditoria] No se pudo escribir log inmutable:', e.message);
+    }
+
+    // 3. Crear Excel Workbook
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Reporte de Auditoría PIE');
 

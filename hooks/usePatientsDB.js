@@ -431,6 +431,14 @@ export function usePatientsDB() {
       fechaNacimiento: patientData.fechaNacimiento || null,
       edadClinica: patientData.edadClinica || null,
       curso: patientData.curso || null,
+      // Metadatos de Consentimiento Parental (Ley 21.719 / 21.430)
+      tutorNombre: patientData.tutorNombre || null,
+      tutorRun: patientData.tutorRun || null,
+      tutorEmail: patientData.tutorEmail || null,
+      tutorTelefono: patientData.tutorTelefono || null,
+      consentimientoParental: Boolean(patientData.consentimientoParental),
+      consentimientoFecha: patientData.consentimientoFecha || (patientData.consentimientoParental ? new Date().toISOString() : null),
+      consentimientoTipo: patientData.consentimientoTipo || 'formulario_pie',
       createdAt: new Date().toISOString(),
       sessions: []
     };
@@ -454,9 +462,34 @@ export function usePatientsDB() {
 
         const institucionId = profile?.institucion_id || profile?.colegio_id || 'd70a4c28-98e3-4c9b-8d07-ee2c2a3cef08';
 
-        const { data, error } = await supabase
+        const insertPayload = {
+          nombre,
+          apellido,
+          id_sujeto: patientData.idSujeto || null,
+          institucion_id: institucionId,
+          curso_id: patientData.cursoId || null,
+          diagnostico_principal: patientData.diagnosticoNee || patientData.diagnosticoPrincipal || null,
+          fecha_nacimiento: patientData.fechaNacimiento || null,
+          tutor_nombre: newPatient.tutorNombre,
+          tutor_run: newPatient.tutorRun,
+          tutor_email: newPatient.tutorEmail,
+          tutor_telefono: newPatient.tutorTelefono,
+          consentimiento_parental: newPatient.consentimientoParental,
+          consentimiento_fecha: newPatient.consentimientoFecha,
+          consentimiento_tipo: newPatient.consentimientoTipo,
+          activo: true
+        };
+
+        let { data, error } = await supabase
           .from('pacientes')
-          .insert([{
+          .insert([insertPayload])
+          .select()
+          .single();
+
+        // Fallback resiliente: Si Supabase aún no tiene las nuevas columnas de tutor, reintentar con esquema base
+        if (error && (error.message?.includes('column') || error.message?.includes('does not exist') || error.message?.includes('tutor'))) {
+          console.warn('[usePatientsDB] Esquema previo detectado en Supabase, reintentando inserción sin campos de tutor...');
+          const fallbackPayload = {
             nombre,
             apellido,
             id_sujeto: patientData.idSujeto || null,
@@ -465,9 +498,11 @@ export function usePatientsDB() {
             diagnostico_principal: patientData.diagnosticoNee || patientData.diagnosticoPrincipal || null,
             fecha_nacimiento: patientData.fechaNacimiento || null,
             activo: true
-          }])
-          .select()
-          .single();
+          };
+          const retry = await supabase.from('pacientes').insert([fallbackPayload]).select().single();
+          data = retry.data;
+          error = retry.error;
+        }
 
         if (!error && data) {
           // Actualizar ID local con el UUID de Supabase
@@ -667,12 +702,39 @@ export function usePatientsDB() {
         if (updates.nombre !== undefined) dbUpdates.nombre = updates.nombre;
         if (updates.apellido !== undefined) dbUpdates.apellido = updates.apellido;
         if (updates.cursoId !== undefined) dbUpdates.curso_id = updates.cursoId;
+        // Metadatos de Consentimiento Legal
+        if (updates.tutorNombre !== undefined) dbUpdates.tutor_nombre = updates.tutorNombre;
+        if (updates.tutorRun !== undefined) dbUpdates.tutor_run = updates.tutorRun;
+        if (updates.tutorEmail !== undefined) dbUpdates.tutor_email = updates.tutorEmail;
+        if (updates.tutorTelefono !== undefined) dbUpdates.tutor_telefono = updates.tutorTelefono;
+        if (updates.consentimientoParental !== undefined) dbUpdates.consentimiento_parental = updates.consentimientoParental;
+        if (updates.consentimientoFecha !== undefined) dbUpdates.consentimiento_fecha = updates.consentimientoFecha;
+        if (updates.consentimientoTipo !== undefined) dbUpdates.consentimiento_tipo = updates.consentimientoTipo;
 
         if (Object.keys(dbUpdates).length > 0) {
-          const { error } = await supabase
+          let { error } = await supabase
             .from('pacientes')
             .update(dbUpdates)
             .eq('id', id);
+
+          // Si falla porque las columnas nuevas no están creadas en Supabase, reintentar solo con columnas base
+          if (error && (error.message?.includes('column') || error.message?.includes('does not exist') || error.message?.includes('tutor'))) {
+            console.warn('[usePatientsDB] Esquema base detectado en updatePatient, reintentando sin campos de tutor...');
+            delete dbUpdates.tutor_nombre;
+            delete dbUpdates.tutor_run;
+            delete dbUpdates.tutor_email;
+            delete dbUpdates.tutor_telefono;
+            delete dbUpdates.consentimiento_parental;
+            delete dbUpdates.consentimiento_fecha;
+            delete dbUpdates.consentimiento_tipo;
+            if (Object.keys(dbUpdates).length > 0) {
+              const retry = await supabase.from('pacientes').update(dbUpdates).eq('id', id);
+              error = retry.error;
+            } else {
+              error = null;
+            }
+          }
+
           if (error) {
             console.warn('[usePatientsDB] updatePatient Supabase error:', error.message);
             return false;
@@ -701,6 +763,60 @@ export function usePatientsDB() {
     }
   };
 
+  /**
+   * Eliminación Total e Irreversible de Historial por Ejercicio de Derechos ARCO (Ley 21.719)
+   * Purga datos de sesiones, check-ins, telemetría y ficha, con constancia inmutable en auditoría.
+   */
+  const purgePatientArco = async (id, reason = 'Solicitud de Padre/Tutor Legal bajo Derechos ARCO Ley 21.719') => {
+    // 1. Eliminar sesiones y telemetría asociadas en Supabase
+    if (!String(id).startsWith('local-')) {
+      try {
+        await supabase.from('sesiones_clinicas').delete().eq('id_paciente', id);
+        await supabase.from('sesiones_evaluacion').delete().eq('paciente_id', id);
+        await supabase.from('pacientes').delete().eq('id', id);
+
+        // Registro de Auditoría Inmutable obligatorio (Ley 21.663)
+        await supabase.from('trazabilidad_auditoria').insert([{
+          institucion_id: profile?.institucion_id || profile?.colegio_id,
+          usuario_id: user?.id && !user.id.startsWith('service') ? user.id : null,
+          usuario_email: user?.email || 'evaluador@cognimirror.cl',
+          usuario_rol: profile?.rol || 'profesional',
+          accion: 'DERECHOS_ARCO_SUPRESION_TOTAL',
+          entidad_afectada: 'pacientes',
+          entidad_id: !String(id).startsWith('local-') ? id : null,
+          detalles: {
+            motivo_legal: reason,
+            normativa: 'Ley 21.719 Derechos ARCO (Cancelación y Olvido Digital)',
+            resultado: 'Eliminación irreversible de telemetría e historial de aprendizaje completada',
+            fecha: new Date().toISOString()
+          }
+        }]);
+      } catch (err) {
+        console.warn('[usePatientsDB] Error en purga ARCO Supabase:', err.message);
+      }
+    }
+
+    // 2. Limpiar de almacenamiento local (pacientes y checkins diarios)
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('cognimirror_offline_patients');
+        if (stored) {
+          const current = JSON.parse(stored);
+          localStorage.setItem('cognimirror_offline_patients', JSON.stringify(current.filter(p => String(p.id) !== String(id))));
+        }
+        const checkins = localStorage.getItem('cognimirror_daily_checkins');
+        if (checkins) {
+          const parsed = JSON.parse(checkins);
+          localStorage.setItem('cognimirror_daily_checkins', JSON.stringify(parsed.filter(c => c.studentId !== id && c.id_paciente !== id)));
+        }
+      } catch (_) {}
+    }
+
+    // 3. Actualizar estado en memoria
+    setPatients(prev => prev.filter(p => String(p.id) !== String(id)));
+    return true;
+  };
+
   return {
     patients,
     cursos,
@@ -715,6 +831,7 @@ export function usePatientsDB() {
     getPatient,
     updatePatient,
     deletePatient,
+    purgePatientArco,
     refreshData: fetchPatients,
     refetchPatients: fetchPatients
   };

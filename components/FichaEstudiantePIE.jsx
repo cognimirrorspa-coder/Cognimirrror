@@ -11,7 +11,7 @@ import {
   ArrowLeft, Activity, Brain, Calendar, Clock, ChevronRight,
   TrendingUp, Save, ClipboardList, Plus, Trash2, Wifi, Sparkles,
   CheckCircle2, AlertCircle, Play, UserCheck, ShieldCheck, Tag,
-  Crosshair, Zap
+  Crosshair, Zap, Download, ShieldAlert, FileText, Lock
 } from 'lucide-react';
 
 export default function FichaEstudiantePIE({
@@ -20,7 +20,7 @@ export default function FichaEstudiantePIE({
   isDark = true
 }) {
   const router = useRouter();
-  const { updatePatient } = usePatientsDB();
+  const { updatePatient, purgePatientArco } = usePatientsDB();
 
   const [activeTab, setActiveTab] = useState('evolucion'); // 'evolucion' | 'historial' | 'expediente'
   const [activeTestType, setActiveTestType] = useState('general'); // 'general' | 'reaction' | 'memory' | 'single_face' | 'bilateral_pure' | 'checklist'
@@ -37,13 +37,43 @@ export default function FichaEstudiantePIE({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Tutor y Consentimiento Parental (Ley 21.719 / Ley 21.430)
+  const [tutorNombre, setTutorNombre] = useState(student?.tutorNombre || '');
+  const [tutorRun, setTutorRun] = useState(student?.tutorRun || '');
+  const [tutorEmail, setTutorEmail] = useState(student?.tutorEmail || '');
+  const [tutorTelefono, setTutorTelefono] = useState(student?.tutorTelefono || '');
+  const [consentimientoParental, setConsentimientoParental] = useState(Boolean(student?.consentimientoParental));
+  const [consentimientoFecha, setConsentimientoFecha] = useState(student?.consentimientoFecha || '');
+
+  // Modal y Gestión de Derechos ARCO (Ley 21.719)
+  const [showArcoModal, setShowArcoModal] = useState(false);
+  const [arcoConfirmCode, setArcoConfirmCode] = useState('');
+  const [isDeletingArco, setIsDeletingArco] = useState(false);
+
   useEffect(() => {
     if (student) {
       setFechaNacimiento(student.fechaNacimiento || '');
       setDiagnosticoNee(student.diagnosticoNee || '');
       setHistorialClinico(student.historialClinico || []);
+      setTutorNombre(student.tutorNombre || '');
+      setTutorRun(student.tutorRun || '');
+      setTutorEmail(student.tutorEmail || '');
+      setTutorTelefono(student.tutorTelefono || '');
+      setConsentimientoParental(Boolean(student.consentimientoParental));
+      setConsentimientoFecha(student.consentimientoFecha || '');
     }
   }, [student]);
+
+  // Cálculo de Edad y Verificación de Minoría de Edad (Ley 21.430)
+  const calculatedAge = useMemo(() => {
+    if (!fechaNacimiento) return null;
+    const diff = Date.now() - new Date(fechaNacimiento).getTime();
+    if (isNaN(diff) || diff < 0) return null;
+    const ageDate = new Date(diff);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  }, [fechaNacimiento]);
+
+  const isMinor = calculatedAge !== null ? calculatedAge < 18 : true;
 
   // Cargar Checklists conductuales del estudiante
   const studentCheckins = useMemo(() => {
@@ -128,13 +158,77 @@ export default function FichaEstudiantePIE({
     const updates = {
       fechaNacimiento,
       diagnosticoNee,
-      historialClinico
+      historialClinico,
+      tutorNombre,
+      tutorRun,
+      tutorEmail,
+      tutorTelefono,
+      consentimientoParental,
+      consentimientoFecha: consentimientoParental ? (consentimientoFecha || new Date().toISOString()) : null
     };
     const ok = await updatePatient(student.id, updates);
     setIsSaving(false);
     if (ok) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+    }
+  };
+
+  // Descarga de Expediente Completo (Portabilidad - Derechos ARCO Ley 21.719)
+  const handleExportArcoData = () => {
+    try {
+      const exportObject = {
+        titulo: 'Expediente Portabilidad de Datos (Derechos ARCO Ley 21.719)',
+        fechaGeneracion: new Date().toISOString(),
+        estudiante: {
+          id: student.id,
+          idSujeto: student.idSujeto,
+          nombreCompleto: student.name,
+          fechaNacimiento,
+          edadEstimada: calculatedAge,
+          esMenorDeEdad: isMinor,
+          diagnosticoNee
+        },
+        tutorLegalYConsentimiento: {
+          tutorNombre,
+          tutorRun,
+          tutorEmail,
+          tutorTelefono,
+          consentimientoVerificado: consentimientoParental,
+          fechaConsentimiento: consentimientoFecha
+        },
+        historialClinicoObservaciones: historialClinico,
+        sesionesEvaluacion: sessions || [],
+        checkinsDiariosConductuales: studentCheckins || [],
+        declaracionLegal: 'Documento expedido en cumplimiento del Artículo de Derechos ARCO (Acceso y Portabilidad) de la Ley N° 21.719 de Chile sobre Protección de Datos Personales.'
+      };
+
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `CogniMirror_Expediente_${student.idSujeto || 'estudiante'}_ARCO.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    } catch (e) {
+      alert('Error exportando datos: ' + e.message);
+    }
+  };
+
+  // Eliminación Total e Irreversible (Derecho de Supresión / Al Olvido Ley 21.719)
+  const handleExecuteArcoPurge = async () => {
+    if (arcoConfirmCode !== 'BORRAR-TOTAL') {
+      alert('Debe escribir exactamente BORRAR-TOTAL para confirmar la eliminación.');
+      return;
+    }
+    setIsDeletingArco(true);
+    try {
+      await purgePatientArco(student.id, `Eliminación solicitada por apoderado/tutor legal (${tutorNombre || 'Tutor'}) bajo Ley 21.719`);
+      setShowArcoModal(false);
+      onBack();
+    } catch (e) {
+      alert('Error en la supresión de datos: ' + e.message);
+      setIsDeletingArco(false);
     }
   };
 
@@ -501,7 +595,7 @@ export default function FichaEstudiantePIE({
       {activeTab === 'expediente' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           
-          {/* Panel Izquierdo: Datos Clínicos */}
+          {/* Panel Izquierdo: Datos Clínicos y Consentimiento */}
           <div className="bg-[#11141e] border border-white/10 rounded-3xl p-6 flex flex-col gap-5 shadow-xl">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
               <UserCheck className="w-4 h-4 text-indigo-400" />
@@ -551,10 +645,149 @@ export default function FichaEstudiantePIE({
                 </select>
               </div>
 
+              {/* Verificación de Minoría de Edad (Ley 21.430) */}
+              <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <div>
+                    <span className="text-[11px] font-bold text-white block">
+                      {calculatedAge !== null ? `${calculatedAge} años` : 'Edad sin definir'}
+                    </span>
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider font-mono">
+                      {isMinor ? 'Menor de Edad (Sujeto a Consentimiento Legal)' : 'Mayor de Edad'}
+                    </span>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                  consentimientoParental 
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                }`}>
+                  {consentimientoParental ? 'Consentimiento Activo' : 'Pendiente Consentimiento'}
+                </span>
+              </div>
+
+              {/* Sub-Panel: Consentimiento Parental Verificable (Ley 21.719 / Ley 21.430) */}
+              <div className="pt-3 border-t border-white/5 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
+                  <Lock className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Consentimiento del Tutor Legal</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+                      Nombre Tutor / Apoderado
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Carmen Gloria Morales"
+                      value={tutorNombre}
+                      onChange={e => setTutorNombre(e.target.value)}
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+                      RUN Tutor Legal
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: 14.234.567-8"
+                      value={tutorRun}
+                      onChange={e => setTutorRun(e.target.value)}
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+                      Email de Contacto del Tutor
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="tutor@ejemplo.cl"
+                      value={tutorEmail}
+                      onChange={e => setTutorEmail(e.target.value)}
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+                      Teléfono del Tutor
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+56 9 1234 5678"
+                      value={tutorTelefono}
+                      onChange={e => setTutorTelefono(e.target.value)}
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-black/20 border border-white/5 cursor-pointer hover:bg-black/30 transition-all select-none">
+                  <input
+                    type="checkbox"
+                    checked={consentimientoParental}
+                    onChange={e => {
+                      setConsentimientoParental(e.target.checked);
+                      if (e.target.checked && !consentimientoFecha) {
+                        setConsentimientoFecha(new Date().toISOString());
+                      }
+                    }}
+                    className="mt-0.5 rounded border-white/20 text-indigo-600 focus:ring-0 cursor-pointer"
+                  />
+                  <div className="text-[11px] text-slate-300 leading-snug">
+                    <span className="font-bold text-white block">Declaro contar con Consentimiento Informado Verificable</span>
+                    Autorización firmada del padre/madre/tutor legal para el registro y análisis neurocognitivo seguro de este menor conforme a la Ley 21.719 y Ley 21.430.
+                    {consentimientoFecha && (
+                      <span className="text-[9px] text-indigo-400 block font-mono mt-1">
+                        Registrado: {new Date(consentimientoFecha).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </label>
+              </div>
+
+              {/* Sub-Panel: Gestión de Derechos ARCO (Ley 21.719) */}
+              <div className="pt-3 border-t border-white/5 space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Marco de Derechos ARCO (Ley 21.719)</span>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  El tutor legal puede solicitar en cualquier momento el acceso, portabilidad o eliminación total irreversible de los datos de aprendizaje del menor.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleExportArcoData}
+                    className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    title="Descargar copia íntegra de telemetría y observaciones"
+                  >
+                    <Download className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Portabilidad (JSON)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowArcoModal(true)}
+                    className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    title="Eliminar permanentemente todo el historial del menor"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Eliminación Total</span>
+                  </button>
+                </div>
+              </div>
+
               {saveSuccess && (
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>¡Expediente guardado exitosamente!</span>
+                  <span>¡Expediente y consentimientos guardados exitosamente!</span>
                 </div>
               )}
 
@@ -658,6 +891,71 @@ export default function FichaEstudiantePIE({
       {/* Modal: Generador de Evaluación Remota */}
       {isRemoteEvalOpen && (
         <RemoteEvalGenerator onClose={() => setIsRemoteEvalOpen(false)} />
+      )}
+
+      {/* Modal: Eliminación Total por Derechos ARCO (Ley 21.719) */}
+      {showArcoModal && (
+        <div className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="w-full max-w-lg bg-[#0d1017] border border-red-500/30 rounded-3xl p-6 shadow-2xl flex flex-col gap-5">
+            <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+              <div className="w-10 h-10 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+                <ShieldAlert className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">
+                  Eliminación Total de Datos (Derechos ARCO)
+                </h3>
+                <span className="text-[10px] text-red-400 font-mono">
+                  Cumplimiento Ley N° 21.719 · Ejercicio de Derecho de Cancelación
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Está a punto de ejecutar la <strong>supresión total e irreversible</strong> del expediente de <strong className="text-white">{student.name}</strong>. Esta acción eliminará permanentemente todas sus sesiones de evaluación (Reaction y Memory Mirror), check-ins diarios, bitácora cualitativa y ficha escolar.
+            </p>
+
+            <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-[11px] text-red-300 leading-relaxed font-mono">
+              ⚠️ Esta operación no se puede deshacer. Se registrará un comprobante inmutable en la bitácora de auditoría institucional.
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">
+                Escriba <span className="text-red-400 font-mono font-black">BORRAR-TOTAL</span> para confirmar:
+              </label>
+              <input
+                type="text"
+                placeholder="BORRAR-TOTAL"
+                value={arcoConfirmCode}
+                onChange={e => setArcoConfirmCode(e.target.value)}
+                className="w-full bg-black/40 border border-red-500/30 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-red-500 font-mono tracking-widest uppercase"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowArcoModal(false);
+                  setArcoConfirmCode('');
+                }}
+                disabled={isDeletingArco}
+                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-bold text-xs cursor-pointer transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteArcoPurge}
+                disabled={arcoConfirmCode !== 'BORRAR-TOTAL' || isDeletingArco}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isDeletingArco ? 'Purgando datos...' : 'Confirmar Supresión Irreversible'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

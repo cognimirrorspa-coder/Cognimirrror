@@ -488,6 +488,7 @@ export default function EvaluadorAdminPage() {
               })}
             </div>
           </div>
+        )}
 
           {/* CONTENEDOR PRINCIPAL DEL PASO ACTIVO */}
           <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8">

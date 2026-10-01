@@ -1,19 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+import { authenticateApiRequest } from '@/utils/apiAuth';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Soportamos tanto GET como POST para facilitar pruebas desde el navegador o Postman
+// Soportamos tanto GET como POST siempre que cuenten con autenticación válida
 export async function GET(request) {
-  return handleGenerateBackup(request);
+  const { user, errorResponse } = await authenticateApiRequest(request);
+  if (errorResponse) return errorResponse;
+  return handleGenerateBackup(request, user);
 }
 
 export async function POST(request) {
-  return handleGenerateBackup(request);
+  const { user, errorResponse } = await authenticateApiRequest(request);
+  if (errorResponse) return errorResponse;
+  return handleGenerateBackup(request, user);
 }
 
-async function handleGenerateBackup(request) {
+async function handleGenerateBackup(request, authenticatedUser) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
