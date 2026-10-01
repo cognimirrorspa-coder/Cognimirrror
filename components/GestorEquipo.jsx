@@ -74,9 +74,34 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
     }
   };
 
-  const handleInvite = async (e) => {
+  const getAuthHeaders = async () => {
+    let token = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      token = session?.access_token;
+    } catch (e) {}
+    if (!token && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('cognimirror_bypass_session');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          token = parsed.access_token;
+        } catch (e) {}
+      }
+    }
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  };
+
+  const handleInvitar = async (e) => {
     e.preventDefault();
-    if (!nombre.trim() || !email.trim()) return;
+    if (!nombre.trim() || !email.trim()) {
+      setErrorMsg('Nombre y correo electrónico son requeridos.');
+      return;
+    }
+
     setInviting(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -85,9 +110,10 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
     const finalCargo = cargo.trim() || (rol === 'otro' ? customRol.trim() : 'Especialista');
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch('/api/equipo/invitar', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           nombre: nombre.trim(),
           email: email.trim().toLowerCase(),
@@ -128,9 +154,10 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
     if (!confirm(`¿Deseas ${actionText} la cuenta de "${nombreCompleto}"?`)) return;
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch('/api/equipo/toggle-activo', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           userId: id,
           activo: nuevoEstado,
@@ -158,8 +185,10 @@ export default function GestorEquipo({ colegioId, colegioNombre = 'Tu Colegio' }
     if (!confirmed) return;
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`/api/equipo/eliminar?id=${id}&colegio_id=${colegioId}&admin=${encodeURIComponent(profile?.nombre_completo || 'Director')}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders
       });
 
       const resData = await res.json();

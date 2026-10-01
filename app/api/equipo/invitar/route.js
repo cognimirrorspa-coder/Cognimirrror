@@ -1,11 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { authenticateApiRequest } from '@/utils/apiAuth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function POST(request) {
   try {
+    const { user: requestingUser, errorResponse } = await authenticateApiRequest(request);
+    if (errorResponse) return errorResponse;
     const { 
       email, 
       nombre, 

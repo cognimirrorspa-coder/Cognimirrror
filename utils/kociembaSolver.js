@@ -1,4 +1,4 @@
-import Cube from 'cubejs';
+import Cube from './cubejs';
 
 // Inicializar tablas del algoritmo de dos fases de Herbert Kociemba
 let isSolverInitialized = false;

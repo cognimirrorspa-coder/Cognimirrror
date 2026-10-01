@@ -1,13 +1,17 @@
 import { exec } from 'child_process';
 import { NextResponse } from 'next/server';
 import path from 'path';
+import { authenticateApiRequest } from '@/utils/apiAuth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function POST(request) {
   try {
-    const { action } = await request.json();
+    const { user: authUser, errorResponse } = await authenticateApiRequest(request);
+    if (errorResponse) return errorResponse;
+
+    const { action } = await request.json().catch(() => ({}));
 
     if (!action || (action !== 'right' && action !== 'left')) {
       return NextResponse.json(
@@ -16,18 +20,23 @@ export async function POST(request) {
       );
     }
 
-    // Ruta absoluta del script de PowerShell
-    const scriptPath = path.join(process.cwd(), 'scripts', 'press_key.ps1');
+    // Si el entorno no es Windows (ej: Vercel / Linux serverless), emular respuesta sin ejecutar comando
+    if (process.platform !== 'win32') {
+      return NextResponse.json({ 
+        success: true, 
+        action, 
+        mock: true, 
+        message: 'Ambiente en la nube (no-Windows), emulación lógica registrada.' 
+      });
+    }
 
-    // Ejecutar PowerShell con política de bypass y pasar la acción como parámetro
+    // Ruta absoluta del script de PowerShell en entorno local Windows
+    const scriptPath = path.join(process.cwd(), 'scripts', 'press_key.ps1');
     const cmd = `powershell -ExecutionPolicy Bypass -File "${scriptPath}" "${action}"`;
 
-    console.log(`[API Keyboard] Inyectando tecla física global de Windows: ${action.toUpperCase()}`);
-
-    // Ejecutar el comando de forma asíncrona de inmediato
     exec(cmd, (error) => {
       if (error) {
-        console.error('[API Keyboard] Error ejecutando inyección de hardware:', error.message);
+        console.error('[API Keyboard] Error en ejecución de hardware:', error.message);
       }
     });
 
