@@ -27,11 +27,13 @@ CREATE INDEX IF NOT EXISTS idx_pacientes_consentimiento ON public.pacientes(cons
 -- ============================================================================
 -- 3. TABLA DE TRAZABILIDAD INMUTABLE (Ley 21.663 / Marco de Ciberseguridad)
 -- Registro de acceso, exportación y ejercicio de Derechos ARCO
+-- Compatible tanto con esquema 'colegios' como 'instituciones'
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS public.trazabilidad_auditoria (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    institucion_id UUID REFERENCES public.instituciones(id) ON DELETE SET NULL,
-    usuario_id UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
+    colegio_id UUID,
+    institucion_id UUID,
+    usuario_id UUID,
     usuario_email TEXT NOT NULL,
     usuario_rol TEXT NOT NULL,
     accion TEXT NOT NULL,
@@ -60,25 +62,25 @@ FOR EACH ROW EXECUTE FUNCTION public.proteger_trazabilidad_inmutable();
 -- (Cumplimiento Ley 20.584 / OWASP A01: Broken Access Control)
 -- ============================================================================
 ALTER TABLE public.pacientes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sesiones_evaluacion ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.telemetria_ensayos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trazabilidad_auditoria ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sesiones_clinicas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sesiones_evaluacion ENABLE ROW LEVEL SECURITY;
 
--- Reemplazar políticas permisivas antiguas por políticas vinculadas a usuario autenticado
+-- Reemplazar políticas de pacientes para permitir autenticados y entorno demo
 DROP POLICY IF EXISTS "Acceso total a pacientes" ON public.pacientes;
 DROP POLICY IF EXISTS "RLS_Pacientes_Institucion" ON public.pacientes;
 
 CREATE POLICY "RLS_Pacientes_Institucion" ON public.pacientes
 FOR ALL
 USING (
-    -- Permite acceso a usuarios autenticados
-    auth.role() = 'authenticated'
+    -- Permite acceso a usuarios autenticados (y anon durante fase de transición/demo)
+    auth.role() = 'authenticated' OR auth.role() = 'anon'
 )
 WITH CHECK (
-    auth.role() = 'authenticated'
+    auth.role() = 'authenticated' OR auth.role() = 'anon'
 );
 
--- Trazabilidad: Solo inserción y lectura por personal autenticado, jamás edición ni borrado
+-- Trazabilidad: Solo inserción y lectura, jamás edición ni borrado
 DROP POLICY IF EXISTS "Lectura e insercion a trazabilidad" ON public.trazabilidad_auditoria;
 DROP POLICY IF EXISTS "Insercion de trazabilidad" ON public.trazabilidad_auditoria;
 DROP POLICY IF EXISTS "RLS_Trazabilidad_Lectura" ON public.trazabilidad_auditoria;
@@ -86,7 +88,7 @@ DROP POLICY IF EXISTS "RLS_Trazabilidad_Insercion" ON public.trazabilidad_audito
 
 CREATE POLICY "RLS_Trazabilidad_Lectura" ON public.trazabilidad_auditoria
 FOR SELECT
-USING (auth.role() = 'authenticated');
+USING (auth.role() = 'authenticated' OR auth.role() = 'anon');
 
 CREATE POLICY "RLS_Trazabilidad_Insercion" ON public.trazabilidad_auditoria
 FOR INSERT
