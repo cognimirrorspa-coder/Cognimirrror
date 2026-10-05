@@ -29,6 +29,7 @@ export default function AsistenteSmartCubeSolve({
   const [errorState, setErrorState] = useState(null);
   const [successFlash, setSuccessFlash] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showGhostLayer, setShowGhostLayer] = useState(true);
 
   useEffect(() => {
     if (initialFaces) {
@@ -173,6 +174,20 @@ export default function AsistenteSmartCubeSolve({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Toggle Capa Fantasma 3D Holográfica (Estilo Rubik's Connected) */}
+          <button
+            onClick={() => setShowGhostLayer(prev => !prev)}
+            title={showGhostLayer ? "Desactivar capa fantasma 3D holográfica" : "Activar capa fantasma 3D holográfica (estilo Rubik's Connected)"}
+            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+              showGhostLayer
+                ? 'bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-sm shadow-blue-500/20'
+                : 'bg-white/5 text-slate-400 border-white/10 hover:text-slate-200'
+            }`}
+          >
+            <Sparkles className={`w-3 h-3 ${showGhostLayer ? 'text-blue-400 animate-pulse' : ''}`} />
+            <span className="hidden sm:inline">{showGhostLayer ? 'Fantasma 3D ON' : 'Fantasma OFF'}</span>
+          </button>
+
           <button
             onClick={() => setSoundEnabled(prev => !prev)}
             title={soundEnabled ? 'Silenciar sonidos' : 'Activar sonidos'}
@@ -283,6 +298,8 @@ export default function AsistenteSmartCubeSolve({
           className="w-full"
           heightClass="h-[210px] sm:h-[280px]"
           showViewPresets={false}
+          activeGuideMove={errorState ? (errorState.undoNotation || errorState.correctionNotation) : currentStep?.notation}
+          showGhostLayer={showGhostLayer}
         />
       </div>
 

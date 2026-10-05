@@ -490,7 +490,7 @@ export default function EvaluadorAdminPage() {
           </div>
         )}
 
-          {/* CONTENEDOR PRINCIPAL DEL PASO ACTIVO */}
+        {/* CONTENEDOR PRINCIPAL DEL PASO ACTIVO */}
           <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8">
             {/* PASO 1: FICHA Y CONTEXTO */}
             {currentStep === 'FICHA_PARTICIPANTE' && (

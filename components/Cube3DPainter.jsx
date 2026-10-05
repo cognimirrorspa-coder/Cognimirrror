@@ -84,7 +84,9 @@ export default function Cube3DPainter({
   interactive = true,
   className = '',
   showViewPresets = true,
-  heightClass = null
+  heightClass = null,
+  activeGuideMove = null,
+  showGhostLayer = true
 }) {
   const containerRef = useRef(null);
   const threeRef = useRef(null);
@@ -92,6 +94,10 @@ export default function Cube3DPainter({
   facesRef.current = faces;
   const selectedColorRef = useRef(selectedColor);
   selectedColorRef.current = selectedColor;
+  const activeGuideMoveRef = useRef(activeGuideMove);
+  activeGuideMoveRef.current = activeGuideMove;
+  const showGhostLayerRef = useRef(showGhostLayer);
+  showGhostLayerRef.current = showGhostLayer;
 
   const [hoveredInfo, setHoveredInfo] = useState(null);
   const [activePreset, setActivePreset] = useState('ISO');
@@ -209,6 +215,135 @@ export default function Cube3DPainter({
     };
 
     updateStickerColors(facesRef.current);
+
+    // ═══════════════════════════════════════════════════════════
+    // CAPA FANTASMA 3D (HOLOGRÁFICA ESTILO RUBIK'S CONNECTED)
+    // ═══════════════════════════════════════════════════════════
+    const ghostGroup = new THREE.Group();
+    scene.add(ghostGroup);
+
+    const ghostState = {
+      activeMove: null,
+      axis: new THREE.Vector3(0, 1, 0),
+      targetAngle: 0,
+      materials: [],
+      lineMaterials: [],
+      startTime: performance.now(),
+      duration: 1350
+    };
+
+    const clearGhostGroup = () => {
+      while (ghostGroup.children.length > 0) {
+        const obj = ghostGroup.children[0];
+        ghostGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => m.dispose());
+        } else if (obj.material) {
+          obj.material.dispose();
+        }
+      }
+      ghostState.materials = [];
+      ghostState.lineMaterials = [];
+      ghostState.activeMove = null;
+      ghostGroup.rotation.set(0, 0, 0);
+    };
+
+    const rebuildGhostLayer = (moveNotation, showGhost) => {
+      clearGhostGroup();
+      if (!showGhost || !moveNotation || typeof moveNotation !== 'string') {
+        return;
+      }
+
+      const notation = moveNotation.trim();
+      if (!notation) return;
+      const face = notation[0].toUpperCase();
+      if (!['U', 'D', 'R', 'L', 'F', 'B'].includes(face)) return;
+
+      const isDouble = notation.includes('2');
+      const isPrime = notation.includes("'");
+      const modifier = isDouble ? 2 : (isPrime ? -1 : 1);
+
+      let axis = new THREE.Vector3(0, 1, 0);
+      let baseAngle = -Math.PI / 2;
+      let filterFn = null;
+
+      if (face === 'U') {
+        axis.set(0, 1, 0);
+        baseAngle = -Math.PI / 2;
+        filterFn = (c) => c.userData.y === 1;
+      } else if (face === 'D') {
+        axis.set(0, 1, 0);
+        baseAngle = Math.PI / 2;
+        filterFn = (c) => c.userData.y === -1;
+      } else if (face === 'R') {
+        axis.set(1, 0, 0);
+        baseAngle = -Math.PI / 2;
+        filterFn = (c) => c.userData.x === 1;
+      } else if (face === 'L') {
+        axis.set(1, 0, 0);
+        baseAngle = Math.PI / 2;
+        filterFn = (c) => c.userData.x === -1;
+      } else if (face === 'F') {
+        axis.set(0, 0, 1);
+        baseAngle = -Math.PI / 2;
+        filterFn = (c) => c.userData.z === 1;
+      } else if (face === 'B') {
+        axis.set(0, 0, 1);
+        baseAngle = Math.PI / 2;
+        filterFn = (c) => c.userData.z === -1;
+      }
+
+      const targetAngle = baseAngle * modifier;
+      const targetCubies = cubieMeshes.filter(filterFn);
+
+      const ghostBoxGeo = new THREE.BoxGeometry(0.96, 0.96, 0.96);
+      const edgesGeo = new THREE.EdgesGeometry(ghostBoxGeo);
+
+      targetCubies.forEach(cubie => {
+        // Materiales translúcidos con resplandor neón
+        const ghostMats = cubie.material.map(mat => {
+          const isCore = mat.color.getHex() === HEX_MAP.CORE;
+          const gMat = new THREE.MeshPhongMaterial({
+            color: mat.color.clone(),
+            emissive: isCore ? 0x0f172a : mat.color.clone(),
+            emissiveIntensity: isCore ? 0.05 : 0.45,
+            transparent: true,
+            opacity: isCore ? 0.35 : 0.65,
+            shininess: 90,
+            depthWrite: false
+          });
+          gMat.userData = { baseOpacity: isCore ? 0.35 : 0.65 };
+          ghostState.materials.push(gMat);
+          return gMat;
+        });
+
+        const ghostMesh = new THREE.Mesh(ghostBoxGeo, ghostMats);
+        ghostMesh.position.copy(cubie.position);
+        ghostGroup.add(ghostMesh);
+
+        // Borde láser neón cian estilo holograma futurista
+        const lineMat = new THREE.LineBasicMaterial({
+          color: 0x38bdf8,
+          transparent: true,
+          opacity: 0.85,
+          depthWrite: false
+        });
+        lineMat.userData = { baseOpacity: 0.85 };
+        ghostState.lineMaterials.push(lineMat);
+        const wireframe = new THREE.LineSegments(edgesGeo, lineMat);
+        wireframe.position.copy(cubie.position);
+        ghostGroup.add(wireframe);
+      });
+
+      ghostState.activeMove = notation;
+      ghostState.axis = axis;
+      ghostState.targetAngle = targetAngle;
+      ghostState.startTime = performance.now();
+      ghostState.duration = isDouble ? 1650 : 1350;
+    };
+
+    rebuildGhostLayer(activeGuideMoveRef.current, showGhostLayerRef.current);
 
     // ═══════════════════════════════════════════════════════════
     // GESTIÓN DE RATÓN / TOUCH: ROTACIÓN 360° Y DETECCIÓN CLICK
@@ -330,7 +465,7 @@ export default function Cube3DPainter({
     window.addEventListener('touchmove', handlePointerMove, { passive: true });
     window.addEventListener('touchend', handlePointerUp);
 
-    // Bucle de animación (Smooth slerp a la orientación deseada)
+    // Bucle de animación (Smooth slerp a la orientación deseada + Giro Fantasma 3D)
     let animId;
     const animate = () => {
       animId = requestAnimationFrame(animate);
@@ -340,6 +475,39 @@ export default function Cube3DPainter({
       spherical.phi += (targetSpherical.phi - spherical.phi) * 0.15;
       camera.position.setFromSpherical(spherical);
       camera.lookAt(0, 0, 0);
+
+      // Animación continua en bucle de la Capa Fantasma 3D (Estilo Rubik's Connected)
+      if (ghostState.activeMove && ghostGroup.children.length > 0) {
+        const elapsed = (performance.now() - ghostState.startTime) % ghostState.duration;
+        const progress = elapsed / ghostState.duration; // 0..1
+
+        let curAngle = 0;
+        let opacityMul = 1.0;
+
+        if (progress < 0.72) {
+          // Fase 1: Rotación activa con aceleración y desaceleración orgánica (easeInOut)
+          const p = progress / 0.72;
+          const ease = 0.5 * (1 - Math.cos(Math.PI * p));
+          curAngle = ghostState.targetAngle * ease;
+          opacityMul = 1.0;
+        } else {
+          // Fase 2: Breve pausa con desvanecimiento suave para reiniciar el ciclo limpiamente
+          const fadeP = (progress - 0.72) / 0.28;
+          curAngle = ghostState.targetAngle;
+          opacityMul = Math.max(0, 1.0 - fadeP);
+        }
+
+        ghostGroup.setRotationFromAxisAngle(ghostState.axis, curAngle);
+
+        for (let i = 0; i < ghostState.materials.length; i++) {
+          const m = ghostState.materials[i];
+          m.opacity = (m.userData.baseOpacity || 0.65) * opacityMul;
+        }
+        for (let i = 0; i < ghostState.lineMaterials.length; i++) {
+          const lm = ghostState.lineMaterials[i];
+          lm.opacity = (lm.userData.baseOpacity || 0.85) * opacityMul;
+        }
+      }
 
       renderer.render(scene, camera);
     };
@@ -361,6 +529,7 @@ export default function Cube3DPainter({
       camera,
       renderer,
       updateStickerColors,
+      updateGhostLayer: rebuildGhostLayer,
       setCameraTarget: (theta, phi) => {
         targetSpherical.theta = theta;
         targetSpherical.phi = phi;
@@ -380,6 +549,8 @@ export default function Cube3DPainter({
       window.removeEventListener('touchmove', handlePointerMove);
       window.removeEventListener('touchend', handlePointerUp);
       window.removeEventListener('resize', handleResize);
+      clearGhostGroup();
+      if (ghostGroup.parent) ghostGroup.parent.remove(ghostGroup);
       renderer.dispose();
       if (dom.parentNode) dom.parentNode.removeChild(dom);
     };
@@ -391,6 +562,13 @@ export default function Cube3DPainter({
       threeRef.current.updateStickerColors(faces);
     }
   }, [faces]);
+
+  // Actualizar capa fantasma 3D cuando cambia el paso del asistente Kociemba o la visibilidad
+  useEffect(() => {
+    if (threeRef.current && threeRef.current.updateGhostLayer) {
+      threeRef.current.updateGhostLayer(activeGuideMove, showGhostLayer);
+    }
+  }, [activeGuideMove, showGhostLayer, faces]);
 
   // Cambiar orientación a un preset
   const handleApplyPreset = (presetKey) => {
@@ -420,6 +598,14 @@ export default function Cube3DPainter({
           <RotateCw className="w-3.5 h-3.5 text-blue-400 animate-spin-slow" />
           <span>Arrastra para girar 360°</span>
         </div>
+
+        {/* BADGE DE GUÍA FANTASMA 3D HOLOGRÁFICA */}
+        {showGhostLayer && activeGuideMove && (
+          <div className="absolute bottom-3 left-3 z-10 px-2.5 py-1 rounded-full bg-blue-950/85 backdrop-blur-md border border-blue-400/40 text-[11px] font-bold text-blue-200 flex items-center gap-1.5 shadow-lg shadow-blue-950/50 pointer-events-none animate-in fade-in duration-200">
+            <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+            <span>Guía Fantasma 3D: <span className="font-mono text-white text-xs font-black bg-blue-500/30 px-1.5 py-0.5 rounded border border-blue-400/30">{activeGuideMove}</span></span>
+          </div>
+        )}
 
         {/* CONTROLES RÁPIDOS DE GIRO EN ESQUINA SUPERIOR DERECHA */}
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/60 backdrop-blur-md p-1 rounded-2xl border border-white/15">
