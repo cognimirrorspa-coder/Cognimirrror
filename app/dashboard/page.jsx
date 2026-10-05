@@ -19,6 +19,7 @@ import ModalOrdenarCubo from '../../components/ModalOrdenarCubo';
 import CheckinDiarioPIE from '../../components/CheckinDiarioPIE';
 import BottomNavOneThumb from '../../components/BottomNavOneThumb';
 import RemoteEvalGenerator from '../../components/RemoteEvalGenerator';
+import PixelThemeTransition from '../../components/PixelThemeTransition';
 import {
   Users,
   UserPlus,
@@ -482,11 +483,33 @@ function ClassicDashboard() {
     }
   }, []);
 
-  const toggleTheme = () => {
+  const dashboardContainerRef = useRef(null);
+  const pixelTransitionRef = useRef(null);
+
+  const toggleTheme = (e) => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('cognimirror_theme', nextTheme);
+    const rect = e?.currentTarget?.getBoundingClientRect?.();
+    const originX = rect ? rect.left + rect.width / 2 : (e?.clientX ?? (typeof window !== 'undefined' ? window.innerWidth - 80 : 0));
+    const originY = rect ? rect.top + rect.height / 2 : (e?.clientY ?? 32);
+
+    const switchThemeFn = () => {
+      setTheme(nextTheme);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cognimirror_theme', nextTheme);
+      }
+    };
+
+    if (pixelTransitionRef.current) {
+      pixelTransitionRef.current.start({
+        prevTheme: theme,
+        nextTheme,
+        originX,
+        originY,
+        targetElement: dashboardContainerRef.current,
+        onSwitchTheme: switchThemeFn
+      });
+    } else {
+      switchThemeFn();
     }
   };
 
@@ -676,9 +699,15 @@ function ClassicDashboard() {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`min-h-screen font-sans flex transition-colors duration-200 ${
-      isDark ? 'bg-[#121622] text-[#e2e8f0]' : 'bg-slate-50 text-slate-800'
-    }`}>
+    <div
+      ref={dashboardContainerRef}
+      id="cognimirror-dashboard-root"
+      className={`min-h-screen font-sans flex transition-colors duration-200 ${
+        isDark ? 'bg-[#121622] text-[#e2e8f0]' : 'bg-slate-50 text-slate-800'
+      }`}
+    >
+      {/* Transición Pixel Swap en toda la pantalla */}
+      <PixelThemeTransition ref={pixelTransitionRef} />
 
       {/* ── MENÚ MÓVIL HAMBURGUESA (DRAWER) ── */}
       {/* Overlay oscuro */}
@@ -843,7 +872,7 @@ function ClassicDashboard() {
           isDark ? 'border-[#1b202e]' : 'border-slate-200'
         }`}>
           <button
-            onClick={toggleTheme}
+            onClick={(e) => toggleTheme(e)}
             className={`w-full p-2.5 rounded-xl flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
               isDark ? 'bg-[#181b26] hover:bg-[#222736] text-slate-300 border border-[#222736]' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
@@ -1082,7 +1111,7 @@ function ClassicDashboard() {
         <div className="flex flex-col gap-3 pt-4 border-t border-[#1b202e]">
           {/* Toggle Modo Claro / Oscuro */}
           <button
-            onClick={toggleTheme}
+            onClick={(e) => toggleTheme(e)}
             className={`p-2.5 rounded-xl flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
               isDark ? 'bg-[#181b26] hover:bg-[#222736] text-slate-300 border border-[#222736]' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
@@ -1151,13 +1180,16 @@ function ClassicDashboard() {
             {/* Theme Toggle & Cerrar Sesión Desktop (en móvil se accede por el menú lateral) */}
             <div className="hidden md:flex items-center gap-2 sm:gap-3">
               <button
-                onClick={toggleTheme}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isDark ? 'bg-[#1c2130] border-[#2b3145] text-slate-300 hover:bg-[#252b3e]' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                onClick={(e) => toggleTheme(e)}
+                className={`px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer select-none active:scale-95 ${
+                  isDark
+                    ? 'bg-[#181d2a] border-white/60 text-white hover:bg-[#23293b] hover:border-white shadow-sm'
+                    : 'bg-white border-slate-900 text-slate-900 hover:bg-slate-100 hover:border-black shadow-sm'
                 }`}
+                title={isDark ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
               >
-                {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-600" />}
-                <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
+                {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" /> : <Moon className="w-3.5 h-3.5 text-slate-800 shrink-0" />}
+                <span className="font-medium">{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
               </button>
 
               <button
@@ -1281,6 +1313,7 @@ function ClassicDashboard() {
                             outerRadius={66}
                             paddingAngle={3}
                             dataKey="value"
+                            isAnimationActive={false}
                           >
                             {dashboardMetrics.demographicData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
@@ -1345,7 +1378,7 @@ function ClassicDashboard() {
                               color: isDark ? '#ffffff' : '#000000'
                             }}
                           />
-                          <Bar dataKey="Promedio" fill="#2563eb" radius={[6, 6, 0, 0]} barSize={44} />
+                          <Bar dataKey="Promedio" fill="#2563eb" radius={[6, 6, 0, 0]} barSize={44} isAnimationActive={false} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -1396,6 +1429,7 @@ function ClassicDashboard() {
                         fill="url(#colorEvaluacionesArea)"
                         dot={{ fill: '#2563eb', stroke: '#60a5fa', strokeWidth: 2, r: 4 }}
                         activeDot={{ r: 6, fill: '#60a5fa' }}
+                        isAnimationActive={false}
                       >
                         <LabelList dataKey="Evaluaciones" position="top" offset={7} fill={isDark ? '#ffffff' : '#0f172a'} fontSize={10} fontWeight="bold" />
                       </Area>
@@ -2293,9 +2327,9 @@ function ClassicDashboard() {
                               }}
                             />
                             <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                            <Bar dataKey="Ps. Brayan Castro" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Dra. María González" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Sistema / Remoto" stackId="a" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Ps. Brayan Castro" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                            <Bar dataKey="Dra. María González" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                            <Bar dataKey="Sistema / Remoto" stackId="a" fill="#06b6d4" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
@@ -2601,6 +2635,7 @@ function ClassicDashboard() {
                             outerRadius={70}
                             paddingAngle={4}
                             dataKey="value"
+                            isAnimationActive={false}
                           >
                             {auditAnalytics.categoryData.map((entry, index) => (
                               <Cell key={`audit-cat-${index}`} fill={entry.color} stroke="none" />
@@ -2674,6 +2709,7 @@ function ClassicDashboard() {
                           strokeWidth={3}
                           dot={{ fill: '#f59e0b', r: 4 }}
                           activeDot={{ r: 6 }}
+                          isAnimationActive={false}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -2709,7 +2745,7 @@ function ClassicDashboard() {
                             color: isDark ? '#ffffff' : '#000000'
                           }}
                         />
-                        <Bar dataKey="Eventos" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                        <Bar dataKey="Eventos" fill="#3b82f6" radius={[6, 6, 0, 0]} isAnimationActive={false} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

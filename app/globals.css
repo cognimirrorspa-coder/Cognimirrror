@@ -342,3 +342,16 @@
   background: rgba(245, 158, 11, 0.75);
 }
 
+/* ==========================================================================
+   REACTBITS PIXEL SWAP THEME TRANSITION
+   ========================================================================== */
+.pixel-theme-tile {
+  box-sizing: border-box;
+  overflow: hidden;
+  position: absolute;
+  contain: paint;
+  will-change: transform, opacity;
+}
+
+
+
