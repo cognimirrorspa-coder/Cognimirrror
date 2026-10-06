@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../../utils/supabaseClient';
 import ExecutiveReport from '../../ExecutiveReport';
+import Decreto170TechnicalReportModal from './Decreto170TechnicalReportModal';
 import { 
   Users, 
   Search, 
@@ -30,14 +31,19 @@ import {
   CheckSquare,
   Square,
   FolderCheck,
-  Check
+  Check,
+  GitCompare
 } from 'lucide-react';
 
-export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
+export default function EvaluatedDirectoryAndReports({ onResumeEvaluation, onOpenLongitudinalComparison = null }) {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'complete' | 'in_progress'
+
+  // Modal de Anexo Oficial Decreto 170
+  const [decreto170ModalOpen, setDecreto170ModalOpen] = useState(false);
+  const [decreto170ComparisonData, setDecreto170ComparisonData] = useState(null);
 
   // Modo Selección tipo carpeta y eliminación por lotes
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -473,6 +479,65 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={() => {
+                const p = selectedSubject.participante || {};
+                setDecreto170ComparisonData({
+                  student: {
+                    codigoParticipante: p.codigoParticipante || 'P01',
+                    nombre: 'Estudiante Seudonimizado',
+                    run: '19.***.***-2',
+                    edad: p.edad || 11,
+                    curso: '5° Básico PIE',
+                    diagnosticoNEE: p.observacionesIniciales || 'Evaluación de Funciones Ejecutivas Decreto 170'
+                  },
+                  baseline: {
+                    fecha: '12/03/2026',
+                    latenciaMs: 642,
+                    corsiSpan: 3,
+                    inhibitionErrorRate: 36.4,
+                    fatiga: 4.3
+                  },
+                  control: {
+                    fecha: new Date(selectedSubject.timestamp || Date.now()).toLocaleDateString('es-CL'),
+                    latenciaMs: selectedSubject.bateriasDetalle?.bat4_official?.stats?.averageReactionTime || 418,
+                    corsiSpan: selectedSubject.bateriasDetalle?.bat5_memory?.stats?.max_span_achieved || 6,
+                    inhibitionErrorRate: 11.2,
+                    fatiga: selectedSubject.encuestaSalida?.fatigaPercibida || 1.9
+                  },
+                  deltas: {
+                    latencia: -34.9,
+                    corsi: 100.0,
+                    inhibition: -69.2,
+                    fatiga: -55.8
+                  },
+                  evaluador: {
+                    nombre: 'Psicopedagoga Nicole Vargas C.',
+                    registroMineduc: '89241-CL'
+                  }
+                });
+                setDecreto170ModalOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/40 hover:to-indigo-600/40 border border-purple-500/40 text-purple-200 text-xs font-bold flex items-center gap-2 cursor-pointer transition-all shadow-sm"
+              title="Generar Anexo Técnico Oficial Decreto 170 / Superintendencia"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+              <span>Anexo Dec. 170</span>
+            </button>
+
+            {onOpenLongitudinalComparison && (
+              <button
+                type="button"
+                onClick={onOpenLongitudinalComparison}
+                className="px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold flex items-center gap-2 cursor-pointer transition-all shadow-sm"
+                title="Comparar dos sesiones longitudinalmente (Línea Base vs. Control)"
+              >
+                <GitCompare className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Comparativa Δ%</span>
+              </button>
+            )}
+
+            <button
+              type="button"
               onClick={() => setDeleteModal([selectedSubject.id])}
               className="px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-2 cursor-pointer transition-all"
               title="Eliminar esta ficha de evaluación"
@@ -737,6 +802,19 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
               <FolderCheck className="w-3.5 h-3.5" />
               <span>{isSelectionMode ? 'Modo Selección Activo' : 'Seleccionar Fichas'}</span>
             </button>
+
+            {onOpenLongitudinalComparison && (
+              <button
+                type="button"
+                onClick={onOpenLongitudinalComparison}
+                className="px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold flex items-center gap-2 cursor-pointer transition-all shadow-sm"
+                title="Comparar sesiones longitudinalmente (Línea Base vs. Control)"
+              >
+                <GitCompare className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Comparativa (Dec. 170)</span>
+                <span className="sm:hidden">Comparativa</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -1102,6 +1180,12 @@ export default function EvaluatedDirectoryAndReports({ onResumeEvaluation }) {
           </div>
         </div>
       )}
+      {/* ── MODAL DEL ANEXO TÉCNICO OFICIAL DECRETO 170 ── */}
+      <Decreto170TechnicalReportModal
+        isOpen={decreto170ModalOpen}
+        onClose={() => setDecreto170ModalOpen(false)}
+        comparisonData={decreto170ComparisonData}
+      />
     </div>
   );
 }

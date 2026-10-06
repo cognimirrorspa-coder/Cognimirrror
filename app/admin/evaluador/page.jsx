@@ -12,6 +12,7 @@ import ClinicalTeleprompter from '../../../components/admin/evaluator/ClinicalTe
 import EvaluatorOfficialBatteriesManager from '../../../components/admin/evaluator/EvaluatorOfficialBatteriesManager';
 import SessionSummaryAndSave from '../../../components/admin/evaluator/SessionSummaryAndSave';
 import EvaluatedDirectoryAndReports from '../../../components/admin/evaluator/EvaluatedDirectoryAndReports';
+import LongitudinalComparisonView from '../../../components/admin/evaluator/LongitudinalComparisonView';
 
 import { 
   User, 
@@ -23,12 +24,14 @@ import {
   ShieldCheck, 
   FileSpreadsheet, 
   Clock, 
-  Activity,
-  Award,
-  Layers,
-  HelpCircle,
-  Users,
-  FolderOpen
+  Activity, 
+  Award, 
+  Layers, 
+  HelpCircle, 
+  Users, 
+  FolderOpen,
+  GitCompare,
+  Zap
 } from 'lucide-react';
 
 const STEPS = [
@@ -129,6 +132,29 @@ export default function EvaluadorAdminPage() {
 
   const handleSurveyChange = (field, value) => {
     setSurveyData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Modo Demo Rápido / Visitante (<5 segundos para autoridades y sostenedores)
+  const handleQuickDemo = () => {
+    const demoParticipant = {
+      codigoParticipante: 'DEMO-MINEDUC',
+      edad: 10,
+      sexo: 'Femenino',
+      manoDominante: 'Derecha',
+      experienciaRubik: 'Principiante',
+      desayuno: true,
+      calidadSueno: 5,
+      animoInicial: 5,
+      toleranciaFrustracion: 4,
+      observacionesIniciales: 'Demostración en vivo ante Autoridades MINEDUC / Sostenedores (Decreto 170)'
+    };
+    setParticipantData(demoParticipant);
+    setMainView('live_protocol');
+    if (isConnected || isKeyboardMode) {
+      setCurrentStep('BATERIAS_EVALUACION');
+    } else {
+      setCurrentStep('VERIFICACION_BLE');
+    }
   };
 
   // Callback cuando una batería oficial es completada
@@ -415,9 +441,34 @@ export default function EvaluadorAdminPage() {
                 }`}
               >
                 <FolderOpen className="w-3.5 h-3.5" />
-                <span>Fichas & 5 Informes</span>
+                <span>Fichas & Informes</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMainView('longitudinal_comparison')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  mainView === 'longitudinal_comparison'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <GitCompare className="w-3.5 h-3.5" />
+                <span>Comparativa (Dec. 170)</span>
               </button>
             </div>
+
+            {/* Botón Acceso Rápido Demo MINEDUC (<5s) */}
+            <button
+              type="button"
+              onClick={handleQuickDemo}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+              title="Iniciar sesión en vivo en menos de 5 segundos con datos de demostración"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span className="hidden sm:inline">Demo Rápido MINEDUC</span>
+              <span className="sm:hidden">Demo</span>
+            </button>
 
             {/* Métricas y Estado de Hardware */}
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
@@ -501,6 +552,7 @@ export default function EvaluadorAdminPage() {
                   setCurrentStep('VERIFICACION_BLE');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
+                onQuickDemo={handleQuickDemo}
               />
             )}
 
@@ -565,11 +617,21 @@ export default function EvaluadorAdminPage() {
         </>
       )}
 
-      {/* ── MODO 2: DIRECTORIO DE EVALUADOS & LOS 4 INFORMES ── */}
+      {/* ── MODO 2: DIRECTORIO DE EVALUADOS & LOS INFORMES ── */}
       {mainView === 'evaluated_directory' && (
         <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8">
           <EvaluatedDirectoryAndReports
             onResumeEvaluation={handleResumeEvaluation}
+            onOpenLongitudinalComparison={() => setMainView('longitudinal_comparison')}
+          />
+        </main>
+      )}
+
+      {/* ── MODO 3: COMPARATIVA LONGITUDINAL (DECRETO 170) ── */}
+      {mainView === 'longitudinal_comparison' && (
+        <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8">
+          <LongitudinalComparisonView
+            onBack={() => setMainView('live_protocol')}
           />
         </main>
       )}

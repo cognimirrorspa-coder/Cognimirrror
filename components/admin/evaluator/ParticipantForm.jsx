@@ -10,11 +10,12 @@ import {
   FileText, 
   ArrowRight, 
   CheckCircle2, 
-  Sparkles,
-  Award
+  Sparkles, 
+  Award,
+  Zap
 } from 'lucide-react';
 
-export default function ParticipantForm({ formData, onChange, onNext, isLocked = false }) {
+export default function ParticipantForm({ formData, onChange, onNext, isLocked = false, onQuickDemo = null }) {
   const [errors, setErrors] = React.useState({});
 
   const validateAndProceed = (e) => {
@@ -74,6 +75,39 @@ export default function ParticipantForm({ formData, onChange, onNext, isLocked =
 
   return (
     <form onSubmit={validateAndProceed} className="space-y-8 animate-in fade-in duration-300">
+      {/* ── BANNER MODO DEMO RÁPIDO / VISITANTE (MINEDUC PITCH < 5 SEGUNDOS) ── */}
+      {onQuickDemo && !isLocked && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-purple-500/15 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-amber-500/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0">
+              <Zap className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-bold text-white">
+                  ¿Presentando ante Autoridades o Sostenedores?
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
+                  Demo &lt; 5s
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                Inicia la evaluación del Smart Cube con un perfil de demostración preconfigurado sin rellenar datos manuales.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onQuickDemo}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-500/25 transition-all cursor-pointer shrink-0"
+          >
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            <span>Iniciar Sesión Rápida</span>
+          </button>
+        </div>
+      )}
+
       {/* ── SECCIÓN 1: IDENTIFICACIÓN Y DEMOGRAFÍA ── */}
       <div className="bg-[#0c101a]/90 border border-white/10 rounded-2xl p-6 sm:p-7 shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-3 pb-4 mb-6 border-b border-white/10">
