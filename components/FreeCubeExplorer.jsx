@@ -6,6 +6,7 @@ import { useBluetoothCube } from '../contexts/BluetoothContext';
 import { useCubeState } from '../contexts/CubeStateContext';
 import Cube3DViewer from './Cube3DViewer';
 import TutorialPhase from './TutorialPhase';
+import SoftAurora from './SoftAurora';
 import { Compass, RotateCcw, Sparkles, Volume2, VolumeX, ArrowRight, ShieldCheck, Zap, Hand, BookOpen } from 'lucide-react';
 
 const FACE_INFO = {
@@ -123,8 +124,28 @@ export default function FreeCubeExplorer({ onBack, onSelectLevel }) {
 
   return (
     <div className="min-h-screen bg-[#07080f] text-white flex flex-col items-center justify-start p-4 sm:p-8 relative overflow-hidden">
+      {/* Efecto Soft Aurora ReactBits de fondo fijo y fluido */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-75">
+        <SoftAurora
+          speed={0.6}
+          scale={1.5}
+          brightness={1}
+          color1="#f7f7f7"
+          color2="#e100ff"
+          noiseFrequency={2.5}
+          noiseAmplitude={1}
+          bandHeight={0.5}
+          bandSpread={1}
+          octaveDecay={0.1}
+          layerOffset={0}
+          colorSpeed={1}
+          enableMouseInteraction
+          mouseInfluence={0.25}
+        />
+      </div>
+
       {/* Luces de fondo dinámicas */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none z-0" />
 
       {/* Barra Superior */}
       <div className="w-full max-w-5xl flex items-center justify-between z-10 mb-6">
