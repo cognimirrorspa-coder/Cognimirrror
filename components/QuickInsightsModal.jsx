@@ -12,6 +12,108 @@ import {
   Settings
 } from 'lucide-react';
 import ModalOrdenarCubo from './ModalOrdenarCubo';
+import MetallicCube3D from './animations/MetallicCube3D';
+
+/**
+ * Ilustración anatómica profesional de mano con sensores biométricos
+ */
+function BiometricHandMesh({ className = '' }) {
+  return (
+    <svg viewBox="0 0 100 85" className={className} fill="none">
+      <defs>
+        <filter id="hand-glow" x="-25%" y="-25%" width="150%" height="150%">
+          <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#00f2fe" floodOpacity="0.6" />
+        </filter>
+        <linearGradient id="hand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#00f2fe" stopOpacity="0.95" />
+          <stop offset="55%" stopColor="#818cf8" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#c084fc" stopOpacity="0.75" />
+        </linearGradient>
+        <linearGradient id="hand-laser-beam" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#00f2fe" stopOpacity="0" />
+          <stop offset="50%" stopColor="#00f2fe" stopOpacity="1" />
+          <stop offset="100%" stopColor="#c084fc" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {/* Silueta de mano anatómica profesional */}
+      <path
+        d="M 40 76 
+           C 36 70, 31 63, 27 54
+           C 25 50, 21 44, 18 42
+           C 15 40, 14 36, 17 34
+           C 20 32, 23 35, 27 38
+           C 30 40, 32 44, 34 46
+           L 34 26
+           C 34 21, 35 17, 38.5 17
+           C 42 17, 43 21, 43 26
+           L 43 38 L 44 21
+           C 44 16, 45 12, 49 12
+           C 53 12, 54 16, 54 21
+           L 54 38 L 55 24
+           C 55 19, 56.5 16, 60 16
+           C 63.5 16, 64.5 19, 64.5 24
+           L 64.5 40 L 65.5 30
+           C 65.5 26, 67 24, 70 24
+           C 73 24, 74 27, 74 32
+           C 74 44, 71 52, 69 57
+           C 66 65, 62 71, 58 76
+           Z"
+        stroke="url(#hand-grad)"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="rgba(0, 242, 254, 0.05)"
+        filter="url(#hand-glow)"
+      />
+
+      {/* Haz de láser biométrico animado que escanea de abajo hacia arriba */}
+      <line x1="16" y1="0" x2="74" y2="0" stroke="url(#hand-laser-beam)" strokeWidth="2.2" filter="url(#hand-glow)">
+        <animateTransform
+          attributeName="transform"
+          type="translate"
+          values="0,75; 0,16; 0,75"
+          dur="2.4s"
+          repeatCount="indefinite"
+        />
+      </line>
+
+      {/* Líneas de articulaciones falángicas */}
+      <path d="M 36 29 L 41 29 M 36 23 L 41 23" stroke="rgba(0, 242, 254, 0.5)" strokeWidth="0.8" />
+      <path d="M 46 25 L 52 25 M 46 19 L 52 19" stroke="rgba(0, 242, 254, 0.5)" strokeWidth="0.8" />
+      <path d="M 57 28 L 62 28 M 57 22 L 62 22" stroke="rgba(0, 242, 254, 0.5)" strokeWidth="0.8" />
+      <path d="M 67 33 L 72 33 M 67 38 L 72 38" stroke="rgba(0, 242, 254, 0.5)" strokeWidth="0.8" />
+      <path d="M 21 39 L 26 42" stroke="rgba(0, 242, 254, 0.5)" strokeWidth="0.8" />
+
+      {/* Pliegues palmares de flexión motriz */}
+      <path d="M 33 49 C 42 49, 55 53, 67 47" stroke="rgba(129, 140, 248, 0.45)" strokeWidth="0.9" strokeDasharray="2 2" />
+      <path d="M 31 56 C 40 59, 50 63, 61 62" stroke="rgba(129, 140, 248, 0.45)" strokeWidth="0.9" strokeDasharray="2 2" />
+
+      {/* Nodos de sensores biométricos en yemas (con halo pulsante) */}
+      <circle cx="17" cy="34" r="1.8" fill="#00f2fe">
+        <animate attributeName="r" values="1.6;2.5;1.6" dur="2s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="38.5" cy="17" r="1.8" fill="#00f2fe">
+        <animate attributeName="r" values="1.6;2.5;1.6" dur="2s" begin="0.3s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="49" cy="12" r="1.8" fill="#a855f7">
+        <animate attributeName="r" values="1.6;2.5;1.6" dur="2s" begin="0.6s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="60" cy="16" r="1.8" fill="#ec4899">
+        <animate attributeName="r" values="1.6;2.5;1.6" dur="2s" begin="0.9s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="70" cy="24" r="1.8" fill="#00f2fe">
+        <animate attributeName="r" values="1.6;2.5;1.6" dur="2s" begin="1.2s" repeatCount="indefinite" />
+      </circle>
+
+      {/* Puntos de telemetría sensorial en la palma */}
+      <circle cx="48" cy="46" r="1.4" fill="#38bdf8" opacity="0.9" />
+      <circle cx="42" cy="52" r="1.2" fill="#818cf8" opacity="0.8" />
+      <circle cx="54" cy="53" r="1.2" fill="#818cf8" opacity="0.8" />
+      <circle cx="48" cy="60" r="1.2" fill="#c084fc" opacity="0.8" />
+    </svg>
+  );
+}
 
 /**
  * Hook de conteo progresivo animado (Interpolación suave 800ms)
@@ -118,19 +220,21 @@ export default function QuickInsightsModal({
 
   const [isSolverOpen, setIsSolverOpen] = useState(false);
 
-  // 1. Contadores numéricos progresivos (800ms)
-  const animatedLatency = useAnimatedNumber(averageReactionTime, 800);
-  const animatedInhibition = useAnimatedNumber(inhibitoryControl, 850);
+  // 1. Contadores numéricos progresivos (Interpolación suave de 850ms)
+  const animatedLatency = useAnimatedNumber(averageReactionTime, 850);
+  const animatedInhibition = useAnimatedNumber(inhibitoryControl, 900);
+  const animatedDelta = useAnimatedNumber(asymmetryDelta, 900);
 
-  // 2. Dial digital segmentado (10 barras HUD)
-  const totalLedBars = 10;
-  // Calculamos cuántas barras deben encenderse en función de la latencia
+  // 2. Medidor de Latencia (Velocidad de reacción en % entre 180ms y 650ms)
+  // Menor latencia = mayor rendimiento (barra más llena)
+  const latencyScore = Math.max(18, Math.min(100, Math.round(((650 - Math.min(650, averageReactionTime)) / 450) * 82 + 18)));
+  const totalLedBars = 12;
   const targetLedBars = Math.min(
     totalLedBars,
-    Math.max(2, Math.round(((700 - Math.min(650, averageReactionTime)) / 450) * totalLedBars) || 8)
+    Math.max(2, Math.round((latencyScore / 100) * totalLedBars))
   );
 
-  // 3. Tacómetro radial para Inhibición
+  // 3. Tacómetro radial para Inhibición (Radio calibrado)
   const radius = 38;
   const arcLength = Math.PI * radius; // ~119.38
   const clampedInhibition = Math.min(100, Math.max(0, animatedInhibition));
@@ -141,12 +245,17 @@ export default function QuickInsightsModal({
   const dotX = 50 + radius * Math.cos(angleRad);
   const dotY = 46 - radius * Math.sin(angleRad);
 
+  // 4. Parámetros de Dominancia Motriz
+  const isRightHand = !dominanceHand.toLowerCase().includes('izq');
+  // Ancho de la barra de balance bilateral (15% a 48%)
+  const dominanceBalancePercent = Math.min(48, Math.max(18, Math.round((asymmetryDelta / 120) * 45 + 15)));
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
         
-        {/* Contenedor Exterior con Crosshairs HUD (+) */}
-        <div className="relative w-full max-w-xl">
+        {/* Contenedor Exterior Ampliado con Crosshairs HUD (+) */}
+        <div className="relative w-full max-w-3xl lg:max-w-4xl">
           
           {/* Marcadores de telemetría exterior en esquinas */}
           <span className="absolute -top-3.5 -left-3.5 text-cyan-400/50 font-mono text-sm select-none pointer-events-none">+</span>
@@ -200,202 +309,282 @@ export default function QuickInsightsModal({
                 </div>
               </div>
 
-              {/* ── 3 MÉTRICAS PRINCIPALES ── */}
+              {/* ── 3 MÉTRICAS PRINCIPALES CON ANIMACIONES DE LLENADO HUD ── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-5">
                 
-                {/* 1. Métrica: LATENCIA (Dial Segmentado HUD) */}
+                {/* 1. Métrica: LATENCIA (Barra de Energía HUD + LEDs Secuenciales) */}
                 <div
-                  className="rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/40 transition-all backdrop-blur-md"
+                  className="rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/50 transition-all backdrop-blur-md"
                   style={{
-                    background: 'rgba(13, 20, 38, 0.7)',
-                    border: '1px solid rgba(0, 242, 254, 0.15)'
+                    background: 'rgba(12, 19, 36, 0.78)',
+                    border: '1px solid rgba(0, 242, 254, 0.22)',
+                    boxShadow: '0 0 25px rgba(6, 182, 212, 0.14)'
                   }}
                 >
+                  {/* Micro-detalles cyber esquineros */}
+                  <span className="absolute top-1.5 left-2 text-[8px] font-mono text-cyan-400/40 select-none">+</span>
+                  <span className="absolute top-1.5 right-2 text-[8px] font-mono text-cyan-400/40 select-none">+</span>
+
                   <div>
-                    <div className="flex items-center justify-between text-slate-400 mb-3">
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-300">
-                        LATENCIA
+                    <div className="flex items-center justify-between text-slate-400 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Timer className="w-3.5 h-3.5 text-cyan-400" />
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-300">
+                          LATENCIA
+                        </span>
+                      </div>
+                      {/* Badge de velocidad dinámica */}
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
+                        averageReactionTime < 400
+                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                          : averageReactionTime < 520
+                          ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                          : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                      }`}>
+                        {averageReactionTime < 400 ? '⚡ RÁPIDO' : averageReactionTime < 520 ? '🎯 ÓPTIMO' : '⏱️ MODERADO'}
                       </span>
-                      <Timer className="w-4 h-4 text-cyan-400/70" />
                     </div>
 
-                    {/* Barras LED segmentadas con encendido secuencial (Micro-Glow) */}
-                    <div className="flex items-center gap-1.5 mb-3 py-1">
+                    {/* Barra de Energía HUD con Relleno Dinámico y Resplandor Neón */}
+                    <div className="relative w-full h-3 bg-slate-950/90 rounded-full border border-cyan-500/35 overflow-hidden p-0.5 shadow-inner my-2">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${latencyScore}%` }}
+                        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+                        className="h-full rounded-full bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-300 shadow-[0_0_12px_rgba(6,182,212,0.9)] relative"
+                      >
+                        {/* Chispa / Cursor brillante en la punta del avance */}
+                        <span className="absolute right-0 top-0 bottom-0 w-2.5 bg-white rounded-full shadow-[0_0_8px_#ffffff] animate-pulse" />
+                      </motion.div>
+                    </div>
+
+                    {/* Micro-Segmentos LED con encendido secuencial escalonado */}
+                    <div className="flex items-center gap-1 mb-2">
                       {Array.from({ length: totalLedBars }).map((_, i) => (
                         <motion.div
                           key={i}
-                          initial={{ opacity: 0.2, scaleY: 0.6 }}
+                          initial={{ opacity: 0.15, scaleY: 0.6 }}
                           animate={{
-                            opacity: i < targetLedBars ? 1 : 0.2,
+                            opacity: i < targetLedBars ? 1 : 0.15,
                             scaleY: 1
                           }}
                           transition={{
-                            delay: i * 0.05,
-                            duration: 0.25,
+                            delay: i * 0.045,
+                            duration: 0.2,
                             ease: 'easeOut'
                           }}
-                          className={`h-4.5 flex-1 rounded-[2px] transition-all duration-300 ${
+                          className={`h-2 flex-1 rounded-[1.5px] transition-all duration-300 ${
                             i < targetLedBars
-                              ? 'bg-gradient-to-t from-cyan-500 via-cyan-400 to-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.85)]'
-                              : 'bg-slate-800/60 border border-slate-700/30'
+                              ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.9)]'
+                              : 'bg-slate-800/60 border border-slate-700/20'
                           }`}
                         />
                       ))}
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                  <div className="mt-1">
+                    <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
                       {animatedLatency}
-                      <span className="text-xs font-normal text-slate-400 ml-1 font-mono">ms</span>
+                      <span className="text-xs font-normal text-cyan-400 ml-1 font-mono">ms</span>
                     </div>
-                    <p className="text-[11px] font-mono text-slate-400 mt-1">
-                      {sdReactionTime ? `SD: ±${sdReactionTime}ms` : 'Velocidad Media'}
+                    <p className="text-xs font-mono text-slate-400 mt-1">
+                      {sdReactionTime ? `SD: ±${sdReactionTime}ms · Precisión Alta` : 'Velocidad Media de Respuesta'}
                     </p>
                   </div>
                 </div>
 
-                {/* 2. Métrica: INHIBICIÓN (Hero Card con Tacómetro Radial & Resplandor Neón) */}
+                {/* 2. Métrica: INHIBICIÓN (Hero Card Tacómetro Radial HUD & Neón) */}
                 <div
                   className="rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden backdrop-blur-md"
                   style={{
-                    background: 'rgba(15, 20, 40, 0.75)',
-                    border: '1px solid rgba(236, 72, 153, 0.45)',
-                    boxShadow: '0 0 20px rgba(255, 0, 128, 0.28), inset 0 0 15px rgba(168, 85, 247, 0.15)'
+                    background: 'rgba(16, 20, 42, 0.82)',
+                    border: '1px solid rgba(236, 72, 153, 0.55)',
+                    boxShadow: '0 0 30px rgba(255, 0, 128, 0.32), inset 0 0 18px rgba(168, 85, 247, 0.18)'
                   }}
                 >
+                  {/* Micro-detalles cyber esquineros */}
+                  <span className="absolute top-1.5 left-2 text-[8px] font-mono text-pink-400/50 select-none">+</span>
+                  <span className="absolute top-1.5 right-2 text-[8px] font-mono text-pink-400/50 select-none">+</span>
+
                   <div>
                     <div className="flex items-center justify-between text-slate-400 mb-1">
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-300">
-                        INHIBICIÓN
+                      <div className="flex items-center gap-1.5">
+                        <Target className="w-3.5 h-3.5 text-pink-400" />
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-pink-300">
+                          INHIBICIÓN
+                        </span>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
+                        inhibitoryControl >= 80
+                          ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
+                          : inhibitoryControl >= 60
+                          ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                          : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                      }`}>
+                        {inhibitoryControl >= 80 ? '🎯 ALTO' : inhibitoryControl >= 60 ? '✨ BUENO' : '⚠️ REFUERZO'}
                       </span>
-                      <Target className="w-4 h-4 text-purple-400" />
                     </div>
 
-                    {/* Tacómetro Radial de Arco de Neón con degradado activo */}
+                    {/* Tacómetro Radial HUD con Calibración y Arco Dinámico */}
                     <div className="relative w-full flex items-center justify-center my-0.5">
-                      <svg viewBox="0 0 100 52" className="w-24 h-12 overflow-visible">
+                      <svg viewBox="0 0 100 52" className="w-28 h-14 overflow-visible">
                         <defs>
                           <linearGradient id="inhibit-grad" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" stopColor="#00f2fe" />
-                            <stop offset="50%" stopColor="#8b5cf6" />
+                            <stop offset="45%" stopColor="#8b5cf6" />
                             <stop offset="100%" stopColor="#ec4899" />
                           </linearGradient>
                           <filter id="glow-indicator" x="-50%" y="-50%" width="200%" height="200%">
-                            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#ec4899" />
-                            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#ec4899" floodOpacity="0.8" />
+                            <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#ec4899" />
+                            <feDropShadow dx="0" dy="0" stdDeviation="7" floodColor="#ec4899" floodOpacity="0.85" />
                           </filter>
                         </defs>
-                        {/* Pista de fondo */}
+
+                        {/* Pista de calibración con ticks de ingeniería */}
                         <path
                           d="M 12 46 A 38 38 0 0 1 88 46"
                           fill="none"
                           stroke="rgba(255,255,255,0.08)"
-                          strokeWidth="5"
+                          strokeWidth="6"
                           strokeLinecap="round"
                         />
-                        {/* Arco de progreso degradado azul a magenta */}
+                        {/* Marcas de referencia (0%, 25%, 50%, 75%, 100%) */}
+                        <line x1="12" y1="46" x2="16" y2="46" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                        <line x1="50" y1="8" x2="50" y2="12" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                        <line x1="88" y1="46" x2="84" y2="46" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+
+                        {/* Arco de progreso degradado azul a magenta con Relleno Fluido */}
                         <path
                           d="M 12 46 A 38 38 0 0 1 88 46"
                           fill="none"
                           stroke="url(#inhibit-grad)"
-                          strokeWidth="5.5"
+                          strokeWidth="6.5"
                           strokeLinecap="round"
                           strokeDasharray={arcLength}
                           strokeDashoffset={dashOffset}
+                          style={{ transition: 'stroke-dashoffset 0.1s ease-out' }}
                         />
+
                         {/* Nodo brillante en la punta del arco */}
                         <circle
                           cx={dotX}
                           cy={dotY}
-                          r="3.5"
+                          r="4"
                           fill="#ec4899"
                           filter="url(#glow-indicator)"
+                        />
+                        <circle
+                          cx={dotX}
+                          cy={dotY}
+                          r="1.8"
+                          fill="#ffffff"
                         />
                       </svg>
                     </div>
                   </div>
 
                   <div className="text-center mt-1">
-                    <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_12px_rgba(236,72,153,0.5)]">
+                    <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_14px_rgba(236,72,153,0.6)]">
                       {clampedInhibition}%
                     </div>
-                    <p className="text-[11px] font-mono text-purple-300/80 mt-1 truncate">
+                    {/* Visualizador de Ensayos No-Go con dots individuales */}
+                    <div className="flex items-center justify-center gap-1.5 mt-1">
+                      {Array.from({ length: Math.min(8, nogoTotal || 8) }).map((_, idx) => (
+                        <span
+                          key={idx}
+                          className={`w-1.5 h-1.5 rounded-full transition-all ${
+                            idx < (nogoTotal - nogoFails)
+                              ? 'bg-pink-400 shadow-[0_0_6px_#ec4899]'
+                              : 'bg-slate-700/60 border border-slate-600/40'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs font-mono text-purple-300/90 mt-1">
                       {nogoTotal > 0 ? `${nogoTotal - nogoFails}/${nogoTotal} No-Go Exitosos` : 'Sin Impulsividad'}
                     </p>
                   </div>
                 </div>
 
-                {/* 3. Métrica: DOMINANCIA (Malla de Puntos Wireframe / Dot-Mesh Neurocientífico) */}
+                {/* 3. Métrica: DOMINANCIA (Mano Biométrica con Escáner Láser + Barra Bilateral HUD) */}
                 <div
-                  className="rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group hover:border-indigo-500/40 transition-all backdrop-blur-md"
+                  className="rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/50 transition-all backdrop-blur-md"
                   style={{
-                    background: 'rgba(13, 20, 38, 0.7)',
-                    border: '1px solid rgba(0, 242, 254, 0.15)'
+                    background: 'rgba(13, 20, 38, 0.78)',
+                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                    boxShadow: '0 0 25px rgba(168, 85, 247, 0.15)'
                   }}
                 >
+                  {/* Micro-detalles cyber esquineros */}
+                  <span className="absolute top-1.5 left-2 text-[8px] font-mono text-purple-400/40 select-none">+</span>
+                  <span className="absolute top-1.5 right-2 text-[8px] font-mono text-purple-400/40 select-none">+</span>
+
                   <div>
-                    <div className="flex items-center justify-between text-slate-400 mb-1">
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-300">
-                        DOMINANCIA
+                    <div className="flex items-center justify-between text-slate-400 mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-purple-400" />
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-300">
+                          DOMINANCIA
+                        </span>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
+                        isRightHand
+                          ? 'bg-orange-500/15 border-orange-500/40 text-orange-300'
+                          : 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                      }`}>
+                        {isRightHand ? '🖐️ DER' : '🖐️ IZQ'}
                       </span>
-                      <Activity className="w-4 h-4 text-purple-400" />
                     </div>
 
-                    {/* Malla de Puntos de Mano / Dot-Mesh Neurocientífica */}
-                    <div className="flex items-center justify-center py-1 relative">
-                      <svg viewBox="0 0 68 50" className="w-18 h-12 text-cyan-400" fill="none">
-                        {/* Anillos de pulsos sensoriales concéntricos */}
-                        <ellipse cx="34" cy="25" rx="30" ry="20" stroke="rgba(168,85,247,0.2)" strokeWidth="0.8" strokeDasharray="3 3" />
-                        <ellipse cx="34" cy="25" rx="22" ry="14" stroke="rgba(0,242,254,0.25)" strokeWidth="0.8" />
-                        
-                        {/* Silueta de mano en malla de puntos interconectados */}
-                        <g opacity="0.9">
-                          {/* Pulgar */}
-                          <circle cx="18" cy="29" r="1.5" fill="#00f2fe" />
-                          <circle cx="21" cy="25" r="1.4" fill="#38bdf8" />
-                          <circle cx="25" cy="27" r="1.3" fill="#818cf8" />
-                          {/* Índice */}
-                          <circle cx="26.5" cy="12" r="1.5" fill="#00f2fe" />
-                          <circle cx="27" cy="18" r="1.4" fill="#38bdf8" />
-                          <circle cx="28" cy="24" r="1.3" fill="#818cf8" />
-                          {/* Medio */}
-                          <circle cx="33" cy="8" r="1.6" fill="#a855f7" />
-                          <circle cx="33.5" cy="15" r="1.4" fill="#c084fc" />
-                          <circle cx="34" cy="22" r="1.3" fill="#818cf8" />
-                          {/* Anular */}
-                          <circle cx="39.5" cy="10.5" r="1.5" fill="#ec4899" />
-                          <circle cx="40" cy="17" r="1.4" fill="#f472b6" />
-                          <circle cx="40.5" cy="24" r="1.3" fill="#818cf8" />
-                          {/* Meñique */}
-                          <circle cx="46" cy="17" r="1.4" fill="#00f2fe" />
-                          <circle cx="46" cy="22" r="1.3" fill="#38bdf8" />
-                          <circle cx="45" cy="27" r="1.3" fill="#818cf8" />
-                          {/* Palma y Muñeca */}
-                          <circle cx="29" cy="32" r="1.4" fill="#818cf8" />
-                          <circle cx="35" cy="31" r="1.4" fill="#c084fc" />
-                          <circle cx="41" cy="33" r="1.4" fill="#818cf8" />
-                          <circle cx="32" cy="38" r="1.5" fill="#38bdf8" />
-                          <circle cx="38" cy="39" r="1.5" fill="#a855f7" />
+                    {/* Visualizador Biométrico: Mano Anatómica con Escáner Láser Activo */}
+                    <div className="relative w-full h-15 flex items-center justify-center my-0.5">
+                      {/* Aura sutil de pulso biométrico */}
+                      <div className="absolute w-14 h-14 rounded-full bg-cyan-500/10 blur-lg pointer-events-none" />
+                      
+                      {/* Mano Anatómica Profesional con haz láser animado */}
+                      <div className="relative z-10 flex items-center justify-center pointer-events-none drop-shadow-[0_0_12px_rgba(0,242,254,0.45)]">
+                        <BiometricHandMesh className="w-18 h-14" />
+                      </div>
+                    </div>
 
-                          {/* Líneas tenues de interconexión wireframe */}
-                          <path
-                            d="M 18 29 L 21 25 L 25 27 L 29 32 L 32 38 M 26.5 12 L 27 18 L 28 24 L 29 32 M 33 8 L 33.5 15 L 34 22 L 35 31 M 39.5 10.5 L 40 17 L 40.5 24 L 41 33 M 46 17 L 46 22 L 45 27 L 41 33 M 32 38 L 38 39"
-                            stroke="rgba(0, 242, 254, 0.45)"
-                            strokeWidth="0.8"
-                            strokeDasharray="2 2"
+                    {/* Barra de Balance Bilateral HUD (Animación de relleno hacia el lado dominante) */}
+                    <div className="w-full mt-2">
+                      <div className="flex items-center justify-between text-[8px] font-mono font-bold text-slate-400 mb-0.5">
+                        <span className={!isRightHand ? "text-cyan-400 font-bold" : "text-slate-500"}>IZQ</span>
+                        <span className="text-[7px] text-slate-500 tracking-widest">BALANCE</span>
+                        <span className={isRightHand ? "text-orange-400 font-bold" : "text-slate-500"}>DER</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-950/90 rounded-full border border-purple-500/30 relative flex items-center overflow-hidden">
+                        {/* Línea divisoria central neutral */}
+                        <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-slate-600 z-10" />
+                        
+                        {/* Relleno animado dinámico hacia el lado dominante */}
+                        {isRightHand ? (
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${dominanceBalancePercent}%` }}
+                            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                            className="absolute left-1/2 h-full bg-gradient-to-r from-purple-500 to-orange-400 rounded-r-full shadow-[0_0_10px_rgba(251,146,60,0.85)]"
                           />
-                        </g>
-                      </svg>
+                        ) : (
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${dominanceBalancePercent}%` }}
+                            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                            className="absolute right-1/2 h-full bg-gradient-to-l from-purple-500 to-cyan-400 rounded-l-full shadow-[0_0_10px_rgba(6,182,212,0.85)]"
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-xl sm:text-2xl font-black text-white tracking-tight truncate drop-shadow-[0_0_8px_rgba(168,85,247,0.3)]" title={dominanceHand}>
-                      {dominanceHand.split(' ')[0] || 'Mano'}
+                  <div className="mt-1">
+                    <div className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-[0_0_10px_rgba(168,85,247,0.35)]" title={dominanceHand}>
+                      {dominanceHand.split('(')[0].trim() || 'Mano Derecha'}
                     </div>
-                    <p className="text-[11px] font-mono text-slate-400 mt-1">
-                      {asymmetryDelta ? `Delta: +${asymmetryDelta}ms` : 'Alternancia Motora'}
+                    <p className="text-xs font-mono text-slate-400 mt-1">
+                      {asymmetryDelta ? `Delta: +${animatedDelta}ms · Ventaja Motriz` : 'Alternancia Bilateral'}
                     </p>
                   </div>
                 </div>
@@ -438,90 +627,19 @@ export default function QuickInsightsModal({
                 </p>
               </div>
 
-              {/* ── BANNER REARMAR CUBO (CUBO 3D WIREFRAME CON ESCÁNER LÁSER) ── */}
+              {/* ── BANNER REARMAR CUBO (CUBO 3D METÁLICO PLATEADO ANIMADO) ── */}
               <div
                 className="rounded-2xl p-4 mb-6 flex items-center justify-between gap-4 relative overflow-hidden backdrop-blur-md"
                 style={{
-                  background: 'rgba(12, 19, 36, 0.75)',
-                  border: '1px solid rgba(0, 242, 254, 0.2)',
-                  boxShadow: '0 0 25px rgba(6, 182, 212, 0.12)'
+                  background: 'rgba(12, 19, 36, 0.78)',
+                  border: '1px solid rgba(0, 242, 254, 0.22)',
+                  boxShadow: '0 0 25px rgba(6, 182, 212, 0.14)'
                 }}
               >
-                
-                {/* Cubo Holográfico Isométrico con Animación de Escaneo Láser */}
+                {/* Cubo de Rubik 3D Metálico Plateado con Giros Continuos y Capas Aleatorias */}
                 <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-18 h-18 shrink-0 relative flex items-center justify-center">
-                    <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
-                      <defs>
-                        <filter id="cube-glow-tech" x="-30%" y="-30%" width="160%" height="160%">
-                          <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#00f2fe" floodOpacity="0.7" />
-                        </filter>
-                        <linearGradient id="cube-top-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="rgba(0,242,254,0.35)" />
-                          <stop offset="100%" stopColor="rgba(168,85,247,0.2)" />
-                        </linearGradient>
-                        <linearGradient id="cube-left-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="rgba(0,242,254,0.28)" />
-                          <stop offset="100%" stopColor="rgba(15,23,42,0.4)" />
-                        </linearGradient>
-                        <linearGradient id="cube-right-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="rgba(236,72,153,0.3)" />
-                          <stop offset="100%" stopColor="rgba(147,51,234,0.2)" />
-                        </linearGradient>
-                        <linearGradient id="laser-beam" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#00f2fe" stopOpacity="0" />
-                          <stop offset="50%" stopColor="#00f2fe" stopOpacity="1" />
-                          <stop offset="100%" stopColor="#ec4899" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-
-                      {/* Partículas de datos flotantes */}
-                      <circle cx="14" cy="28" r="1.5" fill="#00f2fe" opacity="0.8" />
-                      <circle cx="18" cy="74" r="1.2" fill="#ec4899" opacity="0.7" />
-                      <circle cx="86" cy="26" r="1.6" fill="#a855f7" opacity="0.8" />
-                      <circle cx="82" cy="70" r="1.3" fill="#00f2fe" opacity="0.7" />
-
-                      {/* Cara Superior Isométrica (3x3 grid) */}
-                      <path d="M 50 14 L 80 30 L 50 46 L 20 30 Z" fill="url(#cube-top-grad)" stroke="#00f2fe" strokeWidth="1.3" filter="url(#cube-glow-tech)" />
-                      <line x1="30" y1="24.7" x2="60" y2="40.7" stroke="#38bdf8" strokeWidth="0.8" strokeDasharray="1.5 1.5" />
-                      <line x1="40" y1="19.3" x2="70" y2="35.3" stroke="#38bdf8" strokeWidth="0.8" strokeDasharray="1.5 1.5" />
-                      <line x1="40" y1="35.3" x2="70" y2="19.3" stroke="#38bdf8" strokeWidth="0.8" strokeDasharray="1.5 1.5" />
-                      <line x1="30" y1="40.7" x2="60" y2="24.7" stroke="#38bdf8" strokeWidth="0.8" strokeDasharray="1.5 1.5" />
-
-                      {/* Cara Izquierda Isométrica */}
-                      <path d="M 20 30 L 50 46 L 50 82 L 20 66 Z" fill="url(#cube-left-grad)" stroke="#00f2fe" strokeWidth="1.3" />
-                      <line x1="30" y1="35.3" x2="30" y2="71.3" stroke="#00f2fe" strokeWidth="0.8" opacity="0.65" />
-                      <line x1="40" y1="40.7" x2="40" y2="76.7" stroke="#00f2fe" strokeWidth="0.8" opacity="0.65" />
-                      <line x1="20" y1="42" x2="50" y2="58" stroke="#00f2fe" strokeWidth="0.8" opacity="0.65" />
-                      <line x1="20" y1="54" x2="50" y2="70" stroke="#00f2fe" strokeWidth="0.8" opacity="0.65" />
-
-                      {/* Cara Derecha Isométrica */}
-                      <path d="M 50 46 L 80 30 L 80 66 L 50 82 Z" fill="url(#cube-right-grad)" stroke="#ec4899" strokeWidth="1.3" />
-                      <line x1="60" y1="40.7" x2="60" y2="76.7" stroke="#a855f7" strokeWidth="0.8" opacity="0.65" />
-                      <line x1="70" y1="35.3" x2="70" y2="71.3" stroke="#a855f7" strokeWidth="0.8" opacity="0.65" />
-                      <line x1="50" y1="58" x2="80" y2="42" stroke="#a855f7" strokeWidth="0.8" opacity="0.65" />
-                      <line x1="50" y1="70" x2="80" y2="54" stroke="#a855f7" strokeWidth="0.8" opacity="0.65" />
-
-                      {/* Vértices brillantes */}
-                      <circle cx="50" cy="14" r="2.2" fill="#ffffff" />
-                      <circle cx="20" cy="30" r="1.8" fill="#00f2fe" />
-                      <circle cx="80" cy="30" r="1.8" fill="#ec4899" />
-                      <circle cx="50" cy="46" r="2.2" fill="#00f2fe" />
-                      <circle cx="50" cy="82" r="2.2" fill="#ec4899" />
-
-                      {/* Haz de luz de escaneo horizontal animado (Láser Scan) */}
-                      <g>
-                        <line x1="10" y1="0" x2="90" y2="0" stroke="url(#laser-beam)" strokeWidth="2.5" filter="url(#cube-glow-tech)">
-                          <animateTransform
-                            attributeName="transform"
-                            type="translate"
-                            values="0,15; 0,80; 0,15"
-                            dur="2.8s"
-                            repeatCount="indefinite"
-                          />
-                        </line>
-                      </g>
-                    </svg>
+                  <div className="w-[82px] h-[82px] shrink-0 relative flex items-center justify-center">
+                    <MetallicCube3D size={82} />
                   </div>
 
                   <div className="min-w-0">
