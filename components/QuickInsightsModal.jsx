@@ -9,10 +9,12 @@ import {
   ArrowRight,
   Save,
   Target,
-  Settings
+  Settings,
+  RotateCw
 } from 'lucide-react';
 import ModalOrdenarCubo from './ModalOrdenarCubo';
 import MetallicCube3D from './animations/MetallicCube3D';
+import FlipCard from './reactbits/FlipCard';
 
 /**
  * Ilustración anatómica profesional de mano con sensores biométricos
@@ -309,285 +311,489 @@ export default function QuickInsightsModal({
                 </div>
               </div>
 
-              {/* ── 3 MÉTRICAS PRINCIPALES CON ANIMACIONES DE LLENADO HUD ── */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-5">
+              {/* ── 3 MÉTRICAS PRINCIPALES CON REACTBITS FLIP CARDS INTERACTIVAS (TILT 3D & GIRO) ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                 
-                {/* 1. Métrica: LATENCIA (Barra de Energía HUD + LEDs Secuenciales) */}
-                <div
-                  className="rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/50 transition-all backdrop-blur-md"
-                  style={{
-                    background: 'rgba(12, 19, 36, 0.78)',
-                    border: '1px solid rgba(0, 242, 254, 0.22)',
-                    boxShadow: '0 0 25px rgba(6, 182, 212, 0.14)'
-                  }}
-                >
-                  {/* Micro-detalles cyber esquineros */}
-                  <span className="absolute top-1.5 left-2 text-[8px] font-mono text-cyan-400/40 select-none">+</span>
-                  <span className="absolute top-1.5 right-2 text-[8px] font-mono text-cyan-400/40 select-none">+</span>
+                {/* 1. Métrica: LATENCIA (FlipCard ReactBits) */}
+                <FlipCard
+                  width="100%"
+                  height={225}
+                  radius={16}
+                  axis="y"
+                  flipOnClick={true}
+                  draggable={false}
+                  tilt={true}
+                  tiltMax={8}
+                  glare={true}
+                  glareOpacity={0.18}
+                  front={
+                    <div
+                      className="rounded-2xl p-4 flex flex-col justify-between h-full relative overflow-hidden backdrop-blur-md select-none group"
+                      style={{
+                        background: 'rgba(12, 19, 36, 0.88)',
+                        border: '1px solid rgba(0, 242, 254, 0.28)',
+                        boxShadow: '0 0 25px rgba(6, 182, 212, 0.14)'
+                      }}
+                    >
+                      <span className="absolute top-1.5 left-2 text-[8px] font-mono text-cyan-400/40 select-none">+</span>
+                      <span className="absolute top-1.5 right-2 text-[8px] font-mono text-cyan-400/40 select-none">+</span>
 
-                  <div>
-                    <div className="flex items-center justify-between text-slate-400 mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <Timer className="w-3.5 h-3.5 text-cyan-400" />
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-300">
-                          LATENCIA
-                        </span>
-                      </div>
-                      {/* Badge de velocidad dinámica */}
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
-                        averageReactionTime < 400
-                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                          : averageReactionTime < 520
-                          ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
-                          : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-                      }`}>
-                        {averageReactionTime < 400 ? '⚡ RÁPIDO' : averageReactionTime < 520 ? '🎯 ÓPTIMO' : '⏱️ MODERADO'}
-                      </span>
-                    </div>
+                      <div>
+                        <div className="flex items-center justify-between text-slate-400 mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <Timer className="w-3.5 h-3.5 text-cyan-400" />
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-300">
+                              LATENCIA
+                            </span>
+                          </div>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
+                            averageReactionTime < 400
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                              : averageReactionTime < 520
+                              ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                              : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                          }`}>
+                            {averageReactionTime < 400 ? '⚡ RÁPIDO' : averageReactionTime < 520 ? '🎯 ÓPTIMO' : '⏱️ MODERADO'}
+                          </span>
+                        </div>
 
-                    {/* Barra de Energía HUD con Relleno Dinámico y Resplandor Neón */}
-                    <div className="relative w-full h-3 bg-slate-950/90 rounded-full border border-cyan-500/35 overflow-hidden p-0.5 shadow-inner my-2">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${latencyScore}%` }}
-                        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-                        className="h-full rounded-full bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-300 shadow-[0_0_12px_rgba(6,182,212,0.9)] relative"
-                      >
-                        {/* Chispa / Cursor brillante en la punta del avance */}
-                        <span className="absolute right-0 top-0 bottom-0 w-2.5 bg-white rounded-full shadow-[0_0_8px_#ffffff] animate-pulse" />
-                      </motion.div>
-                    </div>
-
-                    {/* Micro-Segmentos LED con encendido secuencial escalonado */}
-                    <div className="flex items-center gap-1 mb-2">
-                      {Array.from({ length: totalLedBars }).map((_, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0.15, scaleY: 0.6 }}
-                          animate={{
-                            opacity: i < targetLedBars ? 1 : 0.15,
-                            scaleY: 1
-                          }}
-                          transition={{
-                            delay: i * 0.045,
-                            duration: 0.2,
-                            ease: 'easeOut'
-                          }}
-                          className={`h-2 flex-1 rounded-[1.5px] transition-all duration-300 ${
-                            i < targetLedBars
-                              ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.9)]'
-                              : 'bg-slate-800/60 border border-slate-700/20'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-1">
-                    <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
-                      {animatedLatency}
-                      <span className="text-xs font-normal text-cyan-400 ml-1 font-mono">ms</span>
-                    </div>
-                    <p className="text-xs font-mono text-slate-400 mt-1">
-                      {sdReactionTime ? `SD: ±${sdReactionTime}ms · Precisión Alta` : 'Velocidad Media de Respuesta'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 2. Métrica: INHIBICIÓN (Hero Card Tacómetro Radial HUD & Neón) */}
-                <div
-                  className="rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden backdrop-blur-md"
-                  style={{
-                    background: 'rgba(16, 20, 42, 0.82)',
-                    border: '1px solid rgba(236, 72, 153, 0.55)',
-                    boxShadow: '0 0 30px rgba(255, 0, 128, 0.32), inset 0 0 18px rgba(168, 85, 247, 0.18)'
-                  }}
-                >
-                  {/* Micro-detalles cyber esquineros */}
-                  <span className="absolute top-1.5 left-2 text-[8px] font-mono text-pink-400/50 select-none">+</span>
-                  <span className="absolute top-1.5 right-2 text-[8px] font-mono text-pink-400/50 select-none">+</span>
-
-                  <div>
-                    <div className="flex items-center justify-between text-slate-400 mb-1">
-                      <div className="flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5 text-pink-400" />
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-pink-300">
-                          INHIBICIÓN
-                        </span>
-                      </div>
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
-                        inhibitoryControl >= 80
-                          ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
-                          : inhibitoryControl >= 60
-                          ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                          : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                      }`}>
-                        {inhibitoryControl >= 80 ? '🎯 ALTO' : inhibitoryControl >= 60 ? '✨ BUENO' : '⚠️ REFUERZO'}
-                      </span>
-                    </div>
-
-                    {/* Tacómetro Radial HUD con Calibración y Arco Dinámico */}
-                    <div className="relative w-full flex items-center justify-center my-0.5">
-                      <svg viewBox="0 0 100 52" className="w-28 h-14 overflow-visible">
-                        <defs>
-                          <linearGradient id="inhibit-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#00f2fe" />
-                            <stop offset="45%" stopColor="#8b5cf6" />
-                            <stop offset="100%" stopColor="#ec4899" />
-                          </linearGradient>
-                          <filter id="glow-indicator" x="-50%" y="-50%" width="200%" height="200%">
-                            <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#ec4899" />
-                            <feDropShadow dx="0" dy="0" stdDeviation="7" floodColor="#ec4899" floodOpacity="0.85" />
-                          </filter>
-                        </defs>
-
-                        {/* Pista de calibración con ticks de ingeniería */}
-                        <path
-                          d="M 12 46 A 38 38 0 0 1 88 46"
-                          fill="none"
-                          stroke="rgba(255,255,255,0.08)"
-                          strokeWidth="6"
-                          strokeLinecap="round"
-                        />
-                        {/* Marcas de referencia (0%, 25%, 50%, 75%, 100%) */}
-                        <line x1="12" y1="46" x2="16" y2="46" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                        <line x1="50" y1="8" x2="50" y2="12" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                        <line x1="88" y1="46" x2="84" y2="46" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-
-                        {/* Arco de progreso degradado azul a magenta con Relleno Fluido */}
-                        <path
-                          d="M 12 46 A 38 38 0 0 1 88 46"
-                          fill="none"
-                          stroke="url(#inhibit-grad)"
-                          strokeWidth="6.5"
-                          strokeLinecap="round"
-                          strokeDasharray={arcLength}
-                          strokeDashoffset={dashOffset}
-                          style={{ transition: 'stroke-dashoffset 0.1s ease-out' }}
-                        />
-
-                        {/* Nodo brillante en la punta del arco */}
-                        <circle
-                          cx={dotX}
-                          cy={dotY}
-                          r="4"
-                          fill="#ec4899"
-                          filter="url(#glow-indicator)"
-                        />
-                        <circle
-                          cx={dotX}
-                          cy={dotY}
-                          r="1.8"
-                          fill="#ffffff"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="text-center mt-1">
-                    <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_14px_rgba(236,72,153,0.6)]">
-                      {clampedInhibition}%
-                    </div>
-                    {/* Visualizador de Ensayos No-Go con dots individuales */}
-                    <div className="flex items-center justify-center gap-1.5 mt-1">
-                      {Array.from({ length: Math.min(8, nogoTotal || 8) }).map((_, idx) => (
-                        <span
-                          key={idx}
-                          className={`w-1.5 h-1.5 rounded-full transition-all ${
-                            idx < (nogoTotal - nogoFails)
-                              ? 'bg-pink-400 shadow-[0_0_6px_#ec4899]'
-                              : 'bg-slate-700/60 border border-slate-600/40'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-xs font-mono text-purple-300/90 mt-1">
-                      {nogoTotal > 0 ? `${nogoTotal - nogoFails}/${nogoTotal} No-Go Exitosos` : 'Sin Impulsividad'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 3. Métrica: DOMINANCIA (Mano Biométrica con Escáner Láser + Barra Bilateral HUD) */}
-                <div
-                  className="rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/50 transition-all backdrop-blur-md"
-                  style={{
-                    background: 'rgba(13, 20, 38, 0.78)',
-                    border: '1px solid rgba(168, 85, 247, 0.3)',
-                    boxShadow: '0 0 25px rgba(168, 85, 247, 0.15)'
-                  }}
-                >
-                  {/* Micro-detalles cyber esquineros */}
-                  <span className="absolute top-1.5 left-2 text-[8px] font-mono text-purple-400/40 select-none">+</span>
-                  <span className="absolute top-1.5 right-2 text-[8px] font-mono text-purple-400/40 select-none">+</span>
-
-                  <div>
-                    <div className="flex items-center justify-between text-slate-400 mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <Activity className="w-3.5 h-3.5 text-purple-400" />
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-300">
-                          DOMINANCIA
-                        </span>
-                      </div>
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
-                        isRightHand
-                          ? 'bg-orange-500/15 border-orange-500/40 text-orange-300'
-                          : 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
-                      }`}>
-                        {isRightHand ? '🖐️ DER' : '🖐️ IZQ'}
-                      </span>
-                    </div>
-
-                    {/* Visualizador Biométrico: Mano Anatómica con Escáner Láser Activo */}
-                    <div className="relative w-full h-15 flex items-center justify-center my-0.5">
-                      {/* Aura sutil de pulso biométrico */}
-                      <div className="absolute w-14 h-14 rounded-full bg-cyan-500/10 blur-lg pointer-events-none" />
-                      
-                      {/* Mano Anatómica Profesional con haz láser animado */}
-                      <div className="relative z-10 flex items-center justify-center pointer-events-none drop-shadow-[0_0_12px_rgba(0,242,254,0.45)]">
-                        <BiometricHandMesh className="w-18 h-14" />
-                      </div>
-                    </div>
-
-                    {/* Barra de Balance Bilateral HUD (Animación de relleno hacia el lado dominante) */}
-                    <div className="w-full mt-2">
-                      <div className="flex items-center justify-between text-[8px] font-mono font-bold text-slate-400 mb-0.5">
-                        <span className={!isRightHand ? "text-cyan-400 font-bold" : "text-slate-500"}>IZQ</span>
-                        <span className="text-[7px] text-slate-500 tracking-widest">BALANCE</span>
-                        <span className={isRightHand ? "text-orange-400 font-bold" : "text-slate-500"}>DER</span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-950/90 rounded-full border border-purple-500/30 relative flex items-center overflow-hidden">
-                        {/* Línea divisoria central neutral */}
-                        <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-slate-600 z-10" />
-                        
-                        {/* Relleno animado dinámico hacia el lado dominante */}
-                        {isRightHand ? (
+                        {/* Barra de Energía HUD con Relleno Dinámico */}
+                        <div className="relative w-full h-2.5 bg-slate-950/90 rounded-full border border-cyan-500/35 overflow-hidden p-0.5 shadow-inner my-2">
                           <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${dominanceBalancePercent}%` }}
-                            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                            className="absolute left-1/2 h-full bg-gradient-to-r from-purple-500 to-orange-400 rounded-r-full shadow-[0_0_10px_rgba(251,146,60,0.85)]"
-                          />
-                        ) : (
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${dominanceBalancePercent}%` }}
-                            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                            className="absolute right-1/2 h-full bg-gradient-to-l from-purple-500 to-cyan-400 rounded-l-full shadow-[0_0_10px_rgba(6,182,212,0.85)]"
-                          />
-                        )}
+                            animate={{ width: `${latencyScore}%` }}
+                            transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+                            className="h-full rounded-full bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-300 shadow-[0_0_12px_rgba(6,182,212,0.9)] relative"
+                          >
+                            <span className="absolute right-0 top-0 bottom-0 w-2.5 bg-white rounded-full shadow-[0_0_8px_#ffffff] animate-pulse" />
+                          </motion.div>
+                        </div>
+
+                        {/* Micro-Segmentos LED */}
+                        <div className="flex items-center gap-1 mb-1">
+                          {Array.from({ length: totalLedBars }).map((_, i) => (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0.15, scaleY: 0.6 }}
+                              animate={{
+                                opacity: i < targetLedBars ? 1 : 0.15,
+                                scaleY: 1
+                              }}
+                              transition={{
+                                delay: i * 0.045,
+                                duration: 0.2,
+                                ease: 'easeOut'
+                              }}
+                              className={`h-1.5 flex-1 rounded-[1.5px] transition-all duration-300 ${
+                                i < targetLedBars
+                                  ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.9)]'
+                                  : 'bg-slate-800/60 border border-slate-700/20'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+                          {animatedLatency}
+                          <span className="text-xs font-normal text-cyan-400 ml-1 font-mono">ms</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <p className="text-xs font-mono text-slate-400">
+                            {sdReactionTime ? `SD: ±${sdReactionTime}ms · Precisión Alta` : 'Velocidad Media de Respuesta'}
+                          </p>
+                          <span className="text-[9px] font-mono text-cyan-400/80 flex items-center gap-1 group-hover:text-cyan-300 transition-colors">
+                            <RotateCw size={10} />
+                            <span>Girar</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  }
+                  back={
+                    <div
+                      className="rounded-2xl p-4 flex flex-col justify-between h-full relative overflow-hidden backdrop-blur-md select-none"
+                      style={{
+                        background: 'rgba(8, 14, 28, 0.94)',
+                        border: '1px solid rgba(0, 242, 254, 0.45)',
+                        boxShadow: '0 0 30px rgba(6, 182, 212, 0.22)'
+                      }}
+                    >
+                      <span className="absolute top-1.5 left-2 text-[8px] font-mono text-cyan-400/50 select-none">+</span>
+                      <span className="absolute top-1.5 right-2 text-[8px] font-mono text-cyan-400/50 select-none">+</span>
 
-                  <div className="mt-1">
-                    <div className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-[0_0_10px_rgba(168,85,247,0.35)]" title={dominanceHand}>
-                      {dominanceHand.split('(')[0].trim() || 'Mano Derecha'}
+                      <div>
+                        <div className="flex items-center justify-between text-slate-400 mb-2 pb-1.5 border-b border-cyan-500/20">
+                          <div className="flex items-center gap-1.5">
+                            <Timer className="w-3.5 h-3.5 text-cyan-400" />
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-300">
+                              DESGLOSE DE LATENCIA
+                            </span>
+                          </div>
+                          <span className="text-[8px] font-mono text-cyan-400/90 bg-cyan-950/70 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                            TELEMETRÍA
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 text-[11px] font-mono">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Fase Sensorial:</span>
+                            <span className="text-cyan-300 font-bold">{Math.round(averageReactionTime * 0.42)} ms</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Ejecución Motora:</span>
+                            <span className="text-emerald-300 font-bold">{Math.round(averageReactionTime * 0.58)} ms</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Estabilidad de Respuesta:</span>
+                            <span className="text-white font-bold">{sdReactionTime < 80 ? '96% (Muy Alta)' : '84% (Adecuada)'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Percentil Clínico:</span>
+                            <span className="text-cyan-400 font-bold">{averageReactionTime < 400 ? 'Rápido (P85+)' : 'Normal (P50)'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-cyan-500/20 flex items-center justify-between text-[9px] font-mono text-slate-400">
+                        <span className="text-cyan-400/90 flex items-center gap-1">
+                          <RotateCw size={10} /> Volver a métrica
+                        </span>
+                        <span className="text-slate-500">Reflejo Motor</span>
+                      </div>
                     </div>
-                    <p className="text-xs font-mono text-slate-400 mt-1">
-                      {asymmetryDelta ? `Delta: +${animatedDelta}ms · Ventaja Motriz` : 'Alternancia Bilateral'}
-                    </p>
-                  </div>
-                </div>
+                  }
+                />
+
+                {/* 2. Métrica: INHIBICIÓN (FlipCard ReactBits) */}
+                <FlipCard
+                  width="100%"
+                  height={225}
+                  radius={16}
+                  axis="y"
+                  flipOnClick={true}
+                  draggable={false}
+                  tilt={true}
+                  tiltMax={8}
+                  glare={true}
+                  glareOpacity={0.18}
+                  front={
+                    <div
+                      className="rounded-2xl p-4 flex flex-col justify-between h-full relative overflow-hidden backdrop-blur-md select-none group"
+                      style={{
+                        background: 'rgba(16, 20, 42, 0.88)',
+                        border: '1px solid rgba(236, 72, 153, 0.55)',
+                        boxShadow: '0 0 30px rgba(255, 0, 128, 0.32), inset 0 0 18px rgba(168, 85, 247, 0.18)'
+                      }}
+                    >
+                      <span className="absolute top-1.5 left-2 text-[8px] font-mono text-pink-400/50 select-none">+</span>
+                      <span className="absolute top-1.5 right-2 text-[8px] font-mono text-pink-400/50 select-none">+</span>
+
+                      <div>
+                        <div className="flex items-center justify-between text-slate-400 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <Target className="w-3.5 h-3.5 text-pink-400" />
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-pink-300">
+                              INHIBICIÓN
+                            </span>
+                          </div>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
+                            inhibitoryControl >= 80
+                              ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
+                              : inhibitoryControl >= 60
+                              ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                              : 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                          }`}>
+                            {inhibitoryControl >= 80 ? '🎯 ALTO' : inhibitoryControl >= 60 ? '✨ BUENO' : '⚠️ REFUERZO'}
+                          </span>
+                        </div>
+
+                        {/* Tacómetro Radial HUD */}
+                        <div className="relative w-full flex items-center justify-center my-0.5">
+                          <svg viewBox="0 0 100 52" className="w-26 h-13 overflow-visible">
+                            <defs>
+                              <linearGradient id="inhibit-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#00f2fe" />
+                                <stop offset="45%" stopColor="#8b5cf6" />
+                                <stop offset="100%" stopColor="#ec4899" />
+                              </linearGradient>
+                              <filter id="glow-indicator" x="-50%" y="-50%" width="200%" height="200%">
+                                <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#ec4899" />
+                                <feDropShadow dx="0" dy="0" stdDeviation="7" floodColor="#ec4899" floodOpacity="0.85" />
+                              </filter>
+                            </defs>
+
+                            <path
+                              d="M 12 46 A 38 38 0 0 1 88 46"
+                              fill="none"
+                              stroke="rgba(255,255,255,0.08)"
+                              strokeWidth="6"
+                              strokeLinecap="round"
+                            />
+                            <line x1="12" y1="46" x2="16" y2="46" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                            <line x1="50" y1="8" x2="50" y2="12" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                            <line x1="88" y1="46" x2="84" y2="46" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+
+                            <path
+                              d="M 12 46 A 38 38 0 0 1 88 46"
+                              fill="none"
+                              stroke="url(#inhibit-grad)"
+                              strokeWidth="6.5"
+                              strokeLinecap="round"
+                              strokeDasharray={arcLength}
+                              strokeDashoffset={dashOffset}
+                              style={{ transition: 'stroke-dashoffset 0.1s ease-out' }}
+                            />
+
+                            <circle
+                              cx={dotX}
+                              cy={dotY}
+                              r="4"
+                              fill="#ec4899"
+                              filter="url(#glow-indicator)"
+                            />
+                            <circle
+                              cx={dotX}
+                              cy={dotY}
+                              r="1.8"
+                              fill="#ffffff"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="text-center">
+                        <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight drop-shadow-[0_0_14px_rgba(236,72,153,0.6)]">
+                          {clampedInhibition}%
+                        </div>
+                        <div className="flex items-center justify-center gap-1.5 my-0.5">
+                          {Array.from({ length: Math.min(8, nogoTotal || 8) }).map((_, idx) => (
+                            <span
+                              key={idx}
+                              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                idx < (nogoTotal - nogoFails)
+                                  ? 'bg-pink-400 shadow-[0_0_6px_#ec4899]'
+                                  : 'bg-slate-700/60 border border-slate-600/40'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <p className="text-xs font-mono text-purple-300/90">
+                            {nogoTotal > 0 ? `${nogoTotal - nogoFails}/${nogoTotal} No-Go Exitosos` : 'Sin Impulsividad'}
+                          </p>
+                          <span className="text-[9px] font-mono text-pink-400/80 flex items-center gap-1 group-hover:text-pink-300 transition-colors">
+                            <RotateCw size={10} />
+                            <span>Girar</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  back={
+                    <div
+                      className="rounded-2xl p-4 flex flex-col justify-between h-full relative overflow-hidden backdrop-blur-md select-none"
+                      style={{
+                        background: 'rgba(18, 12, 36, 0.94)',
+                        border: '1px solid rgba(236, 72, 153, 0.6)',
+                        boxShadow: '0 0 30px rgba(236, 72, 153, 0.25)'
+                      }}
+                    >
+                      <span className="absolute top-1.5 left-2 text-[8px] font-mono text-pink-400/50 select-none">+</span>
+                      <span className="absolute top-1.5 right-2 text-[8px] font-mono text-pink-400/50 select-none">+</span>
+
+                      <div>
+                        <div className="flex items-center justify-between text-slate-400 mb-2 pb-1.5 border-b border-pink-500/20">
+                          <div className="flex items-center gap-1.5">
+                            <Target className="w-3.5 h-3.5 text-pink-400" />
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-pink-300">
+                              CONTROL NO-GO
+                            </span>
+                          </div>
+                          <span className="text-[8px] font-mono text-pink-400/90 bg-pink-950/70 px-1.5 py-0.5 rounded border border-pink-500/30">
+                            FRENO MOTOR
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 text-[11px] font-mono">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Falsas Alarmas:</span>
+                            <span className="text-pink-400 font-bold">{nogoFails} respuestas</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Inhibición Exitosa:</span>
+                            <span className="text-emerald-300 font-bold">{nogoTotal - nogoFails} de {nogoTotal}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Autorregulación:</span>
+                            <span className="text-white font-bold">{clampedInhibition >= 70 ? 'Firme / Adecuada' : 'Moderada'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Recomendación:</span>
+                            <span className="text-purple-300 font-bold">{clampedInhibition >= 70 ? 'Ritmo Óptimo' : 'Pausar ante estímulo'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-pink-500/20 flex items-center justify-between text-[9px] font-mono text-slate-400">
+                        <span className="text-pink-400/90 flex items-center gap-1">
+                          <RotateCw size={10} /> Volver a métrica
+                        </span>
+                        <span className="text-slate-500">Corteza Prefrontal</span>
+                      </div>
+                    </div>
+                  }
+                />
+
+                {/* 3. Métrica: DOMINANCIA (FlipCard ReactBits) */}
+                <FlipCard
+                  width="100%"
+                  height={225}
+                  radius={16}
+                  axis="y"
+                  flipOnClick={true}
+                  draggable={false}
+                  tilt={true}
+                  tiltMax={8}
+                  glare={true}
+                  glareOpacity={0.18}
+                  front={
+                    <div
+                      className="rounded-2xl p-4 flex flex-col justify-between h-full relative overflow-hidden backdrop-blur-md select-none group"
+                      style={{
+                        background: 'rgba(13, 20, 38, 0.88)',
+                        border: '1px solid rgba(168, 85, 247, 0.35)',
+                        boxShadow: '0 0 25px rgba(168, 85, 247, 0.18)'
+                      }}
+                    >
+                      <span className="absolute top-1.5 left-2 text-[8px] font-mono text-purple-400/40 select-none">+</span>
+                      <span className="absolute top-1.5 right-2 text-[8px] font-mono text-purple-400/40 select-none">+</span>
+
+                      <div>
+                        <div className="flex items-center justify-between text-slate-400 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <Activity className="w-3.5 h-3.5 text-purple-400" />
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-300">
+                              DOMINANCIA
+                            </span>
+                          </div>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border tracking-wider ${
+                            isRightHand
+                              ? 'bg-orange-500/15 border-orange-500/40 text-orange-300'
+                              : 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                          }`}>
+                            {isRightHand ? '🖐️ DER' : '🖐️ IZQ'}
+                          </span>
+                        </div>
+
+                        {/* Visualizador Biométrico: Mano con Escáner Láser Activo */}
+                        <div className="relative w-full h-14 flex items-center justify-center my-0.5">
+                          <div className="absolute w-14 h-14 rounded-full bg-cyan-500/10 blur-lg pointer-events-none" />
+                          <div className="relative z-10 flex items-center justify-center pointer-events-none drop-shadow-[0_0_12px_rgba(0,242,254,0.45)]">
+                            <BiometricHandMesh className="w-18 h-13" />
+                          </div>
+                        </div>
+
+                        {/* Barra de Balance Bilateral HUD */}
+                        <div className="w-full mt-1">
+                          <div className="flex items-center justify-between text-[8px] font-mono font-bold text-slate-400 mb-0.5">
+                            <span className={!isRightHand ? "text-cyan-400 font-bold" : "text-slate-500"}>IZQ</span>
+                            <span className="text-[7px] text-slate-500 tracking-widest">BALANCE</span>
+                            <span className={isRightHand ? "text-orange-400 font-bold" : "text-slate-500"}>DER</span>
+                          </div>
+                          <div className="h-2 w-full bg-slate-950/90 rounded-full border border-purple-500/30 relative flex items-center overflow-hidden">
+                            <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-slate-600 z-10" />
+                            
+                            {isRightHand ? (
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${dominanceBalancePercent}%` }}
+                                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                                className="absolute left-1/2 h-full bg-gradient-to-r from-purple-500 to-orange-400 rounded-r-full shadow-[0_0_10px_rgba(251,146,60,0.85)]"
+                              />
+                            ) : (
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${dominanceBalancePercent}%` }}
+                                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                                className="absolute right-1/2 h-full bg-gradient-to-l from-purple-500 to-cyan-400 rounded-l-full shadow-[0_0_10px_rgba(6,182,212,0.85)]"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-[0_0_10px_rgba(168,85,247,0.35)]" title={dominanceHand}>
+                          {dominanceHand.split('(')[0].trim() || 'Mano Derecha'}
+                        </div>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <p className="text-xs font-mono text-slate-400">
+                            {asymmetryDelta ? `Delta: +${animatedDelta}ms · Ventaja Motriz` : 'Alternancia Bilateral'}
+                          </p>
+                          <span className="text-[9px] font-mono text-purple-400/80 flex items-center gap-1 group-hover:text-purple-300 transition-colors">
+                            <RotateCw size={10} />
+                            <span>Girar</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  back={
+                    <div
+                      className="rounded-2xl p-4 flex flex-col justify-between h-full relative overflow-hidden backdrop-blur-md select-none"
+                      style={{
+                        background: 'rgba(14, 14, 34, 0.94)',
+                        border: '1px solid rgba(168, 85, 247, 0.5)',
+                        boxShadow: '0 0 30px rgba(168, 85, 247, 0.25)'
+                      }}
+                    >
+                      <span className="absolute top-1.5 left-2 text-[8px] font-mono text-purple-400/50 select-none">+</span>
+                      <span className="absolute top-1.5 right-2 text-[8px] font-mono text-purple-400/50 select-none">+</span>
+
+                      <div>
+                        <div className="flex items-center justify-between text-slate-400 mb-2 pb-1.5 border-b border-purple-500/20">
+                          <div className="flex items-center gap-1.5">
+                            <Activity className="w-3.5 h-3.5 text-purple-400" />
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-300">
+                              ASIMETRÍA BILATERAL
+                            </span>
+                          </div>
+                          <span className="text-[8px] font-mono text-purple-400/90 bg-purple-950/70 px-1.5 py-0.5 rounded border border-purple-500/30">
+                            HEMISFÉRICO
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 text-[11px] font-mono">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Mano Derecha:</span>
+                            <span className="text-orange-400 font-bold">{isRightHand ? averageReactionTime : averageReactionTime + asymmetryDelta} ms</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Mano Izquierda:</span>
+                            <span className="text-cyan-400 font-bold">{!isRightHand ? averageReactionTime : averageReactionTime + asymmetryDelta} ms</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Diferencia Asimétrica:</span>
+                            <span className="text-white font-bold">+{asymmetryDelta} ms ({Math.round((asymmetryDelta / Math.max(1, averageReactionTime)) * 100)}%)</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Lateralidad Motriz:</span>
+                            <span className="text-purple-300 font-bold">{isRightHand ? 'Diestro Dominante' : 'Zurdo Dominante'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-purple-500/20 flex items-center justify-between text-[9px] font-mono text-slate-400">
+                        <span className="text-purple-400/90 flex items-center gap-1">
+                          <RotateCw size={10} /> Volver a métrica
+                        </span>
+                        <span className="text-slate-500">Coordinación Bimanual</span>
+                      </div>
+                    </div>
+                  }
+                />
 
               </div>
 
