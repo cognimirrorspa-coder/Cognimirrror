@@ -21,7 +21,7 @@ import FlipCard from './reactbits/FlipCard';
  */
 function BiometricHandMesh({ className = '' }) {
   return (
-    <svg viewBox="0 0 100 85" className={className} fill="none">
+    <svg viewBox="0 0 100 85" width="48" height="42" className={className} fill="none">
       <defs>
         <filter id="hand-glow" x="-25%" y="-25%" width="150%" height="150%">
           <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#00f2fe" floodOpacity="0.6" />
@@ -689,9 +689,9 @@ export default function QuickInsightsModal({
 
                         {/* Visualizador Biométrico: Mano con Escáner Láser Activo */}
                         <div className="relative w-full h-14 flex items-center justify-center my-0.5">
-                          <div className="absolute w-14 h-14 rounded-full bg-cyan-500/10 blur-lg pointer-events-none" />
-                          <div className="relative z-10 flex items-center justify-center pointer-events-none drop-shadow-[0_0_12px_rgba(0,242,254,0.45)]">
-                            <BiometricHandMesh className="w-18 h-13" />
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-500/15 via-indigo-500/15 to-purple-500/20 border border-purple-500/40 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)] relative">
+                            <div className="absolute inset-0 rounded-full bg-cyan-400/10 blur-sm pointer-events-none" />
+                            <BiometricHandMesh className="w-10 h-8 object-contain relative z-10 drop-shadow-[0_0_10px_rgba(0,242,254,0.6)]" />
                           </div>
                         </div>
 

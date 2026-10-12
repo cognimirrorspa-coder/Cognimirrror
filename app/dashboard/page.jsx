@@ -20,6 +20,7 @@ import CheckinDiarioPIE from '../../components/CheckinDiarioPIE';
 import BottomNavOneThumb from '../../components/BottomNavOneThumb';
 import RemoteEvalGenerator from '../../components/RemoteEvalGenerator';
 import PixelThemeTransition from '../../components/PixelThemeTransition';
+import HoverBorderDraw from '../../components/animations/HoverBorderDraw';
 import {
   Users,
   UserPlus,
@@ -1540,12 +1541,13 @@ function ClassicDashboard() {
                 {/* PROTOCOLO 01 */}
                 <Link
                   href="/reaction-game?level=free"
-                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                  className={`group box relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-200 cursor-pointer ${
                     isDark
-                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-600 hover:shadow-sm'
+                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-800/40 hover:shadow-lg'
                       : 'bg-white border-slate-200/90 hover:border-emerald-400/80 hover:shadow-md border-l-4 border-l-emerald-500'
                   }`}
                 >
+                  <HoverBorderDraw color="#10b981" rx={12} />
                   <div>
                     <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
                       <span className="font-semibold text-emerald-600 dark:text-slate-500 tracking-wide uppercase">
@@ -1597,12 +1599,13 @@ function ClassicDashboard() {
                 {/* PROTOCOLO 02 */}
                 <Link
                   href="/reaction-game?level=single_face"
-                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                  className={`group box relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-200 cursor-pointer ${
                     isDark
-                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-600 hover:shadow-sm'
+                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-800/40 hover:shadow-lg'
                       : 'bg-white border-slate-200/90 hover:border-purple-400/80 hover:shadow-md border-l-4 border-l-purple-500'
                   }`}
                 >
+                  <HoverBorderDraw color="#a855f7" rx={12} />
                   <div>
                     <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
                       <span className="font-semibold text-purple-600 dark:text-slate-500 tracking-wide uppercase">
@@ -1654,12 +1657,13 @@ function ClassicDashboard() {
                 {/* PROTOCOLO 03 */}
                 <Link
                   href="/reaction-game?level=bilateral_pure"
-                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                  className={`group box relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-200 cursor-pointer ${
                     isDark
-                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-600 hover:shadow-sm'
+                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-800/40 hover:shadow-lg'
                       : 'bg-white border-slate-200/90 hover:border-indigo-400/80 hover:shadow-md border-l-4 border-l-indigo-500'
                   }`}
                 >
+                  <HoverBorderDraw color="#6366f1" rx={12} />
                   <div>
                     <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
                       <span className="font-semibold text-indigo-600 dark:text-slate-500 tracking-wide uppercase">
@@ -1711,12 +1715,13 @@ function ClassicDashboard() {
                 {/* PROTOCOLO 04 */}
                 <Link
                   href="/reaction-game"
-                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                  className={`group box relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-200 cursor-pointer ${
                     isDark
-                      ? 'bg-[#0d111c] border-pink-900/60 hover:border-pink-500/80 hover:shadow-sm'
+                      ? 'bg-[#0d111c] border-pink-900/60 hover:border-pink-900/20 hover:shadow-lg'
                       : 'bg-white border-slate-200/90 hover:border-pink-400/80 hover:shadow-md border-l-4 border-l-pink-500'
                   }`}
                 >
+                  <HoverBorderDraw color="#ec4899" rx={12} />
                   <div>
                     <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
                       <span className="font-semibold text-pink-600 dark:text-pink-400 tracking-wide uppercase">
@@ -1768,12 +1773,13 @@ function ClassicDashboard() {
                 {/* PROTOCOLO 05 */}
                 <Link
                   href="/simon-game"
-                  className={`group relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-150 cursor-pointer ${
+                  className={`group box relative flex flex-col justify-between rounded-xl p-5 border transition-all duration-200 cursor-pointer ${
                     isDark
-                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-600 hover:shadow-sm'
+                      ? 'bg-[#0d111c] border-slate-800 hover:border-slate-800/40 hover:shadow-lg'
                       : 'bg-white border-slate-200/90 hover:border-cyan-400/80 hover:shadow-md border-l-4 border-l-cyan-500'
                   }`}
                 >
+                  <HoverBorderDraw color="#06b6d4" rx={12} />
                   <div>
                     <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-3">
                       <span className="font-semibold text-cyan-600 dark:text-slate-500 tracking-wide uppercase">
