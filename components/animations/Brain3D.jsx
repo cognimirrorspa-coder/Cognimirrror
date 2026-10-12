@@ -103,6 +103,7 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
 
       const cyanGlowTexture = createGlowTexture(56, 189, 248);   // #38bdf8 (Reacción)
       const purpleGlowTexture = createGlowTexture(168, 85, 247); // #a855f7 (Memory)
+      const coreGlowTexture = createGlowTexture(255, 255, 255);  // #ffffff (Núcleo central)
 
       // Referencias acumuladoras
       const dynamicRefs = {
@@ -114,7 +115,17 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
         reactionSpritesGroup: new THREE.Group(),
         memorySpritesGroup: new THREE.Group(),
         spritesData: [],
+        coreSprite: null,
+        coreInitialScale: 1,
         opacities: { reaction: 1.0, memory: 1.0 },
+        particleSystems: [],
+        gatherConfig: {
+          isGathering: true,
+          startTime: null,
+          duration: 1.8, // 1.8s de expansión fluida desde el núcleo
+          stagger: 0.5,  // 0.5s de desfase radial
+          lineFade: 0.0,
+        },
       };
 
       // 5. Carga de Modelo 3D OBJ del Cerebro
@@ -124,16 +135,88 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
         (obj) => {
           const pointsGroup = new THREE.Group();
 
+          // 1. Calcular la caja envolvente GLOBAL del modelo consolidado
+          const globalBox = new THREE.Box3().setFromObject(obj);
+          const center = globalBox.getCenter(new THREE.Vector3());
+          const size = globalBox.getSize(new THREE.Vector3());
+          const finalMaxDim = Math.max(size.x, size.y, size.z);
+          const targetSize = 3.2; // Tamaño objetivo original de la escena por defecto
+          const scale = targetSize / finalMaxDim; // Escala matemática original exacta por defecto
+
+          // Núcleo central compacto: las partículas inician concentradas aquí
+          const coreRadius = finalMaxDim * 0.035;
+
+          // Helper para inicializar la expansión radial desde el núcleo hacia el exterior
+          const setupParticleGathering = (geometry, vertsArray) => {
+            const count = vertsArray.length / 3;
+            const targetPositions = new Float32Array(vertsArray);
+            const startPositions = new Float32Array(vertsArray.length);
+            const delays = new Float32Array(count);
+
+            for (let i = 0; i < count; i++) {
+              const i3 = i * 3;
+              const tx = targetPositions[i3];
+              const ty = targetPositions[i3 + 1];
+              const tz = targetPositions[i3 + 2];
+
+              // Posición inicial dentro del núcleo esférico central
+              const u = Math.random();
+              const v = Math.random();
+              const theta = u * 2.0 * Math.PI;
+              const phi = Math.acos(2.0 * v - 1.0);
+              const r = Math.cbrt(Math.random()) * coreRadius;
+              const sinPhi = Math.sin(phi);
+
+              startPositions[i3] = center.x + r * sinPhi * Math.cos(theta);
+              startPositions[i3 + 1] = center.y + r * sinPhi * Math.sin(theta);
+              startPositions[i3 + 2] = center.z + r * Math.cos(phi);
+
+              // Desfase progresivo desde el núcleo interior hacia la periferia externa
+              const dx = tx - center.x;
+              const dy = ty - center.y;
+              const dz = tz - center.z;
+              const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+              const normDist = Math.min(dist / (finalMaxDim * 0.5), 1.0);
+              delays[i] = normDist * 0.35 + Math.random() * 0.15;
+            }
+
+            // Asignar posición inicial concentrada en el núcleo
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(startPositions, 3));
+
+            dynamicRefs.particleSystems.push({
+              geometry,
+              targetPositions,
+              startPositions,
+              delays,
+              count,
+            });
+          };
+
+          // Sprite luminoso del Núcleo Central
+          const coreSpriteMat = new THREE.SpriteMaterial({
+            map: coreGlowTexture,
+            color: 0xffffff,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            opacity: 1.0,
+          });
+          const coreSprite = new THREE.Sprite(coreSpriteMat);
+          coreSprite.position.copy(center);
+          coreSprite.scale.setScalar(finalMaxDim * 0.12);
+          pointsGroup.add(coreSprite);
+          dynamicRefs.coreSprite = coreSprite;
+          dynamicRefs.coreInitialScale = finalMaxDim * 0.12;
+
           obj.traverse((child) => {
             if (child.isMesh) {
               child.geometry.computeBoundingBox();
               const box = child.geometry.boundingBox;
               if (!box) return;
 
-              const size = box.getSize(new THREE.Vector3());
               const min = box.min;
               const max = box.max;
-              const maxDim = Math.max(size.x, size.y, size.z);
+              const maxDim = Math.max(max.x - min.x, max.y - min.y, max.z - min.z);
 
               const positions = child.geometry.attributes.position.array;
               const count = positions.length / 3;
@@ -151,6 +234,7 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
                 const y = positions[idx + 1];
                 const z = positions[idx + 2];
 
+                // Normalización anatómica por defecto
                 const nz = (z - min.z) / (max.z - min.z);
                 const ny = (y - min.y) / (max.y - min.y);
 
@@ -163,9 +247,9 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
                 }
               }
 
-              // Estructura base completa (#64748b)
+              // Estructura base completa (#64748b) con convergencia armónica
               const baseGeo = new THREE.BufferGeometry();
-              baseGeo.setAttribute('position', new THREE.Float32BufferAttribute(allVerts, 3));
+              setupParticleGathering(baseGeo, allVerts);
               const baseMat = new THREE.PointsMaterial({
                 color: 0x64748b,
                 size: 0.013,
@@ -177,10 +261,10 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
               dynamicRefs.basePointsMats.push(baseMat);
               pointsGroup.add(new THREE.Points(baseGeo, baseMat));
 
-              // Capas cromáticas superpuestas
+              // Capas cromáticas superpuestas con convergencia armónica
               const createPointsObj = (vertsArray, colorHex, initialOpacity, size = 0.017) => {
                 const geo = new THREE.BufferGeometry();
-                geo.setAttribute('position', new THREE.Float32BufferAttribute(vertsArray, 3));
+                setupParticleGathering(geo, vertsArray);
                 const mat = new THREE.PointsMaterial({
                   color: colorHex,
                   size,
@@ -204,7 +288,7 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
                 pointsGroup.add(mData.pointsObj);
               }
 
-              // Materiales únicos compartidos para Sprites para máxima aceleración GPU
+              // Materiales únicos de Sprites
               const rSpriteMat = new THREE.SpriteMaterial({
                 map: cyanGlowTexture,
                 color: 0x38bdf8,
@@ -223,39 +307,93 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
                 opacity: 0.85,
               });
 
-              // Sprites Reacción
+              // Sprites Reacción emergiendo desde el núcleo
               const selReaction = reactionPosList.sort(() => 0.5 - Math.random()).slice(0, 75);
               selReaction.forEach((pos) => {
                 const sprite = new THREE.Sprite(rSpriteMat);
-                sprite.position.copy(pos);
-                sprite.scale.setScalar(maxDim * 0.022 * (0.6 + Math.random() * 0.6));
+                const targetPos = pos.clone();
+
+                // Inicio en el núcleo
+                const u = Math.random();
+                const v = Math.random();
+                const theta = u * 2.0 * Math.PI;
+                const phi = Math.acos(2.0 * v - 1.0);
+                const r = Math.cbrt(Math.random()) * coreRadius;
+                const sinPhi = Math.sin(phi);
+                const startPos = new THREE.Vector3(
+                  center.x + r * sinPhi * Math.cos(theta),
+                  center.y + r * sinPhi * Math.sin(theta),
+                  center.z + r * Math.cos(phi)
+                );
+
+                sprite.position.copy(startPos);
+                const targetScale = maxDim * 0.022 * (0.6 + Math.random() * 0.6);
+                sprite.scale.setScalar(0);
                 dynamicRefs.reactionSpritesGroup.add(sprite);
+
+                const dx = targetPos.x - center.x;
+                const dy = targetPos.y - center.y;
+                const dz = targetPos.z - center.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                const normDist = Math.min(dist / (finalMaxDim * 0.5), 1.0);
+
                 dynamicRefs.spritesData.push({
                   sprite,
                   type: 'reaction',
+                  targetPos,
+                  startPos,
+                  targetScale,
+                  delay: normDist * 0.35 + Math.random() * 0.15,
                   baseOpacity: 0.6 + Math.random() * 0.4,
                   phase: Math.random() * Math.PI * 2,
                   speed: 0.015 + Math.random() * 0.02,
                 });
               });
 
-              // Sprites Memory
+              // Sprites Memory emergiendo desde el núcleo
               const selMemory = memoryPosList.sort(() => 0.5 - Math.random()).slice(0, 75);
               selMemory.forEach((pos) => {
                 const sprite = new THREE.Sprite(mSpriteMat);
-                sprite.position.copy(pos);
-                sprite.scale.setScalar(maxDim * 0.022 * (0.6 + Math.random() * 0.6));
+                const targetPos = pos.clone();
+
+                // Inicio en el núcleo
+                const u = Math.random();
+                const v = Math.random();
+                const theta = u * 2.0 * Math.PI;
+                const phi = Math.acos(2.0 * v - 1.0);
+                const r = Math.cbrt(Math.random()) * coreRadius;
+                const sinPhi = Math.sin(phi);
+                const startPos = new THREE.Vector3(
+                  center.x + r * sinPhi * Math.cos(theta),
+                  center.y + r * sinPhi * Math.sin(theta),
+                  center.z + r * Math.cos(phi)
+                );
+
+                sprite.position.copy(startPos);
+                const targetScale = maxDim * 0.022 * (0.6 + Math.random() * 0.6);
+                sprite.scale.setScalar(0);
                 dynamicRefs.memorySpritesGroup.add(sprite);
+
+                const dx = targetPos.x - center.x;
+                const dy = targetPos.y - center.y;
+                const dz = targetPos.z - center.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                const normDist = Math.min(dist / (finalMaxDim * 0.5), 1.0);
+
                 dynamicRefs.spritesData.push({
                   sprite,
                   type: 'memory',
+                  targetPos,
+                  startPos,
+                  targetScale,
+                  delay: normDist * 0.35 + Math.random() * 0.15,
                   baseOpacity: 0.6 + Math.random() * 0.4,
                   phase: Math.random() * Math.PI * 2,
                   speed: 0.015 + Math.random() * 0.02,
                 });
               });
 
-              // Red sináptica por zona
+              // Red sináptica por zona (inicia invisible y se revela cuando el cerebro se completa)
               const createRegionLines = (posArray, colorHex) => {
                 const linePositions = [];
                 posArray.forEach((pos, i) => {
@@ -279,7 +417,7 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
                   const lineMat = new THREE.LineBasicMaterial({
                     color: colorHex,
                     transparent: true,
-                    opacity: 0.4,
+                    opacity: 0.0, // Inicia invisible hasta que la expansión se consolida
                     blending: THREE.AdditiveBlending,
                   });
                   pointsGroup.add(new THREE.LineSegments(lineGeo, lineMat));
@@ -300,30 +438,14 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
           pointsGroup.add(dynamicRefs.memorySpritesGroup);
           brainMesh = pointsGroup;
 
-          const boundingBox = new THREE.Box3().setFromObject(brainMesh);
-          const center = boundingBox.getCenter(new THREE.Vector3());
-          const size = boundingBox.getSize(new THREE.Vector3());
-
-          const finalMaxDim = Math.max(size.x, size.y, size.z);
-          const targetSize = 3.2;
-          const scale = targetSize / finalMaxDim;
-
-          brainMesh.scale.setScalar(0); // Empezar en 0 para animación de entrada GSAP
+          // Centrado geométrico y escala matemáticamente exactos por defecto
+          brainMesh.scale.setScalar(scale);
           brainMesh.position.x = -center.x * scale;
           brainMesh.position.y = -center.y * scale;
           brainMesh.position.z = -center.z * scale;
 
           scene.add(brainMesh);
           setModelLoaded(true);
-
-          // Animación de entrada GSAP ultra fluida para el Cerebro 3D
-          gsap.to(brainMesh.scale, {
-            x: scale,
-            y: scale,
-            z: scale,
-            duration: 1.4,
-            ease: 'power3.out',
-          });
         },
         undefined,
         (error) => {
@@ -350,6 +472,88 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
       const renderLoop = () => {
         if (!isVisible) return;
 
+        // ── MOTOR DE EXPANSIÓN DESDE EL NÚCLEO (ParticleText ReactBits) ──
+        if (dynamicRefs.gatherConfig.isGathering) {
+          if (dynamicRefs.gatherConfig.startTime === null) {
+            dynamicRefs.gatherConfig.startTime = performance.now();
+          }
+          const now = performance.now();
+          const elapsed = (now - dynamicRefs.gatherConfig.startTime) / 1000;
+          const { duration, stagger } = dynamicRefs.gatherConfig;
+
+          let allDone = true;
+
+          // Animación matemática de expansión desde el núcleo en Float32Array
+          for (let s = 0; s < dynamicRefs.particleSystems.length; s++) {
+            const sys = dynamicRefs.particleSystems[s];
+            const positions = sys.geometry.attributes.position.array;
+            const targets = sys.targetPositions;
+            const starts = sys.startPositions;
+            const delays = sys.delays;
+            const count = sys.count;
+
+            for (let i = 0; i < count; i++) {
+              const i3 = i * 3;
+              const local = (elapsed - delays[i]) / duration;
+              const p = Math.min(Math.max(local, 0), 1);
+              // easeOutCubic exacto de ParticleText
+              const eased = 1 - Math.pow(1 - p, 3);
+
+              positions[i3] = starts[i3] + (targets[i3] - starts[i3]) * eased;
+              positions[i3 + 1] = starts[i3 + 1] + (targets[i3 + 1] - starts[i3 + 1]) * eased;
+              positions[i3 + 2] = starts[i3 + 2] + (targets[i3 + 2] - starts[i3 + 2]) * eased;
+
+              if (p < 1) allDone = false;
+            }
+            sys.geometry.attributes.position.needsUpdate = true;
+          }
+
+          // Interpolación suave de Sprites saliendo del núcleo
+          for (let i = 0; i < dynamicRefs.spritesData.length; i++) {
+            const item = dynamicRefs.spritesData[i];
+            if (item.targetPos && item.startPos) {
+              const local = (elapsed - item.delay) / duration;
+              const p = Math.min(Math.max(local, 0), 1);
+              const eased = 1 - Math.pow(1 - p, 3);
+              item.sprite.position.lerpVectors(item.startPos, item.targetPos, eased);
+              item.sprite.scale.setScalar(item.targetScale * eased);
+            }
+          }
+
+          // Desvanecimiento suave del núcleo central a medida que el cerebro se completa
+          const globalProgress = Math.min(elapsed / (duration + stagger), 1);
+          if (dynamicRefs.coreSprite) {
+            const coreFade = Math.max(0, 1 - globalProgress * 1.3);
+            dynamicRefs.coreSprite.material.opacity = coreFade;
+            dynamicRefs.coreSprite.scale.setScalar(dynamicRefs.coreInitialScale * Math.max(0, 1 - globalProgress * 0.8));
+            if (globalProgress >= 0.95) {
+              dynamicRefs.coreSprite.visible = false;
+            }
+          }
+
+          // Revelado progresivo de líneas sinápticas (solo tras consolidar la estructura externa)
+          dynamicRefs.gatherConfig.lineFade = Math.max(0, (globalProgress - 0.6) / 0.4);
+
+          if (allDone && globalProgress >= 1) {
+            dynamicRefs.gatherConfig.isGathering = false;
+            dynamicRefs.gatherConfig.lineFade = 1.0;
+
+            // Bloquear en coordenadas exactas por defecto para 0% de uso de CPU
+            for (let s = 0; s < dynamicRefs.particleSystems.length; s++) {
+              const sys = dynamicRefs.particleSystems[s];
+              sys.geometry.attributes.position.array.set(sys.targetPositions);
+              sys.geometry.attributes.position.needsUpdate = true;
+            }
+            for (let i = 0; i < dynamicRefs.spritesData.length; i++) {
+              const item = dynamicRefs.spritesData[i];
+              if (item.targetPos) {
+                item.sprite.position.copy(item.targetPos);
+                item.sprite.scale.setScalar(item.targetScale);
+              }
+            }
+          }
+        }
+
         const { activeModules: currentActive, hoveredModule: currentHovered } = filterStateRef.current;
 
         let targetReaction = currentActive.reaction ? 1.0 : 0.0;
@@ -371,24 +575,39 @@ export const Brain3D = ({ activeModules: externalActiveModules, onToggleModule }
 
         const rFactor = dynamicRefs.opacities.reaction;
         const mFactor = dynamicRefs.opacities.memory;
+        const lineFade = dynamicRefs.gatherConfig.lineFade !== undefined ? dynamicRefs.gatherConfig.lineFade : 1.0;
 
-        // Actualización eficiente por lotes de opacidades
+        // Actualización eficiente por lotes de opacidades por defecto
+        dynamicRefs.basePointsMats.forEach((mat) => {
+          mat.opacity = 0.35;
+        });
         dynamicRefs.reactionPointsMats.forEach((mat) => {
           mat.opacity = 0.75 * rFactor;
         });
         dynamicRefs.reactionLineMats.forEach((mat) => {
-          mat.opacity = 0.4 * rFactor;
+          mat.opacity = 0.4 * rFactor * lineFade;
         });
         dynamicRefs.memoryPointsMats.forEach((mat) => {
           mat.opacity = 0.75 * mFactor;
         });
         dynamicRefs.memoryLineMats.forEach((mat) => {
-          mat.opacity = 0.4 * mFactor;
+          mat.opacity = 0.4 * mFactor * lineFade;
         });
 
         // Actualización por grupo de sprites
         dynamicRefs.reactionSpritesGroup.visible = rFactor > 0.01;
         dynamicRefs.memorySpritesGroup.visible = mFactor > 0.01;
+
+        // Pulsación sutil continua de nodos
+        if (!dynamicRefs.gatherConfig.isGathering) {
+          for (let i = 0; i < dynamicRefs.spritesData.length; i++) {
+            const item = dynamicRefs.spritesData[i];
+            item.phase += item.speed;
+            const pulse = (Math.sin(item.phase) + 1) / 2;
+            const factor = item.type === 'reaction' ? rFactor : mFactor;
+            item.sprite.material.opacity = item.baseOpacity * (0.3 + pulse * 0.7) * factor;
+          }
+        }
 
         if (brainMesh) {
           const scrollY = window.scrollY || 0;
