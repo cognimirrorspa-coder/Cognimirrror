@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+import './FoldText.css';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
@@ -29,8 +31,6 @@ const renderWhitespace = (value, key) =>
     );
   });
 
-import './FoldText.css';
-
 const FoldText = ({
   text = 'Design unfolds',
   splitBy = 'char',
@@ -48,7 +48,6 @@ const FoldText = ({
   style = {}
 }) => {
   const rootRef = useRef(null);
-  const timelineRef = useRef(null);
   const hingeConfig = HINGE_CONFIG[hinge] || HINGE_CONFIG.top;
   const safeCrease = clamp(creaseShading, 0, 1);
   const safePerspective = Math.max(120, perspective);
@@ -115,90 +114,79 @@ const FoldText = ({
     ));
   }, [text, splitBy, hinge, hingeConfig.origin, safePerspective]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
+  useGSAP(
+    () => {
+      const root = rootRef.current;
+      if (!root) return;
 
-    const root = rootRef.current;
-    if (!root) return undefined;
+      const pieces = root.querySelectorAll('.fold-text-piece');
+      if (!pieces.length) return;
 
-    const pieces = Array.from(root.querySelectorAll('.fold-text-piece'));
-    if (!pieces.length) return undefined;
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const activeDuration = reduceMotion ? Math.min(duration, 0.22) : duration;
+      const activeStagger = reduceMotion ? Math.min(stagger, 0.02) : stagger;
 
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const activeDuration = reduceMotion ? Math.min(duration, 0.22) : duration;
-    const activeStagger = reduceMotion ? Math.min(stagger, 0.02) : stagger;
-    const fromVars = {
-      opacity: 0,
-      rotateX: reduceMotion ? 0 : hingeConfig.rotateX,
-      rotateY: reduceMotion ? 0 : hingeConfig.rotateY,
-      '--fold-crease': reduceMotion ? 0 : safeCrease,
-      transformOrigin: hingeConfig.origin,
-      force3D: true
-    };
-    const toVars = {
-      opacity: 1,
-      rotateX: 0,
-      rotateY: 0,
-      '--fold-crease': 0,
-      duration: activeDuration,
-      ease: reduceMotion ? 'power1.out' : ease,
-      stagger: activeStagger,
-      clearProps: 'willChange'
-    };
+      const fromVars = {
+        opacity: 0,
+        rotateX: reduceMotion ? 0 : hingeConfig.rotateX,
+        rotateY: reduceMotion ? 0 : hingeConfig.rotateY,
+        '--fold-crease': reduceMotion ? 0 : safeCrease,
+        transformOrigin: hingeConfig.origin,
+        force3D: true
+      };
 
-    const killTimeline = () => {
-      timelineRef.current?.kill();
-      timelineRef.current = null;
-      gsap.killTweensOf(pieces);
-    };
+      const toVars = {
+        opacity: 1,
+        rotateX: 0,
+        rotateY: 0,
+        '--fold-crease': 0,
+        duration: activeDuration,
+        ease: reduceMotion ? 'power1.out' : ease,
+        stagger: activeStagger,
+        clearProps: 'willChange'
+      };
 
-    const play = repeat => {
-      killTimeline();
-      timelineRef.current = gsap.timeline({ repeat: repeat ? -1 : 0, repeatDelay: repeat ? 0.75 : 0 });
-      timelineRef.current.fromTo(pieces, fromVars, toVars);
-      return timelineRef.current;
-    };
+      const tl = gsap.timeline({ repeat: trigger === 'loop' ? -1 : 0, repeatDelay: 0.75 });
 
-    let scrollTrigger;
-    let hoverHandler;
-
-    if (trigger === 'hover') {
-      gsap.set(pieces, { opacity: 1, rotateX: 0, rotateY: 0, '--fold-crease': 0, transformOrigin: hingeConfig.origin });
-      hoverHandler = () => play(false);
-      root.addEventListener('mouseenter', hoverHandler);
-    } else if (trigger === 'scroll') {
-      gsap.set(pieces, fromVars);
-      scrollTrigger = ScrollTrigger.create({
-        trigger: root,
-        start: 'top 82%',
-        once: true,
-        onEnter: () => play(false)
-      });
-    } else if (trigger === 'loop') {
-      play(true);
-    } else {
-      play(false);
+      if (trigger === 'hover') {
+        gsap.set(pieces, { opacity: 1, rotateX: 0, rotateY: 0, '--fold-crease': 0, transformOrigin: hingeConfig.origin });
+        const onEnter = () => {
+          tl.restart();
+          tl.fromTo(pieces, fromVars, toVars);
+        };
+        root.addEventListener('mouseenter', onEnter);
+        return () => root.removeEventListener('mouseenter', onEnter);
+      } else if (trigger === 'scroll') {
+        gsap.set(pieces, fromVars);
+        ScrollTrigger.create({
+          trigger: root,
+          start: 'top 82%',
+          once: true,
+          onEnter: () => tl.fromTo(pieces, fromVars, toVars)
+        });
+      } else {
+        // 'mount' or 'loop'
+        tl.fromTo(pieces, fromVars, toVars);
+      }
+    },
+    {
+      scope: rootRef,
+      dependencies: [
+        text,
+        splitBy,
+        hinge,
+        duration,
+        stagger,
+        ease,
+        perspective,
+        safeCrease,
+        trigger,
+        hingeConfig.origin,
+        hingeConfig.rotateX,
+        hingeConfig.rotateY
+      ]
     }
-
-    return () => {
-      if (hoverHandler) root.removeEventListener('mouseenter', hoverHandler);
-      scrollTrigger?.kill();
-      killTimeline();
-    };
-  }, [
-    text,
-    splitBy,
-    hinge,
-    duration,
-    stagger,
-    ease,
-    perspective,
-    safeCrease,
-    trigger,
-    hingeConfig.origin,
-    hingeConfig.rotateX,
-    hingeConfig.rotateY
-  ]);
+  );
 
   const rootStyle = {
     '--fold-text-font-size': typeof fontSize === 'number' ? `${fontSize}px` : fontSize,
