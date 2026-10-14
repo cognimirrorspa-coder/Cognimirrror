@@ -115,9 +115,11 @@ export default function LandingPage() {
       <section className="relative overflow-hidden border-b border-white/5 pt-16 sm:pt-20 pb-6 sm:pb-14 px-4 sm:px-6">
         <div className="electric-glow top-1/2 left-1/4 transform -translate-x-1/2 -translate-y-1/2" />
 
+        {/* Aura oscura completa concéntrica al Cerebro 3D (sin cortes verticales ni límites de contenedor) */}
+        <div className="absolute top-1/2 right-[25%] translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] lg:w-[850px] lg:h-[850px] xl:w-[950px] xl:h-[950px] rounded-full bg-[radial-gradient(circle_at_center,_#0B0F19_20%,_rgba(11,15,25,0.85)_40%,_rgba(11,15,25,0.3)_65%,_transparent_80%)] pointer-events-none z-0 hidden md:block blur-xl" />
+
         {/* Brain3D en el lado derecho con Leyenda Cromática de Módulos (Escritorio Original 100% Intacto) */}
-        <div className="absolute top-0 right-0 w-full lg:w-1/2 h-full opacity-95 pointer-events-auto z-10 hidden md:block">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#0B0F19_20%,_transparent_75%)] z-0 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-full lg:w-1/2 h-full pointer-events-auto z-10 hidden md:block">
           <div className="relative z-10 w-full h-full flex items-center justify-center">
             <Brain3D activeModules={activeModules} onToggleModule={toggleModule} />
           </div>
