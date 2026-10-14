@@ -189,14 +189,26 @@ export default function LandingPage() {
                     LA INTERACCIÓN FÍSICA
                   </span>
                 </div>
-                <div className="relative aspect-[9/16] w-full max-w-[210px] sm:max-w-[280px] mx-auto overflow-hidden rounded-xl shadow-lg shadow-black/50 mb-4 sm:mb-8 border border-white/5 flex-grow">
-                  <iframe
-                    src="https://www.youtube.com/embed/Fj5hjHPPdeY?autoplay=1&mute=1&loop=1&playlist=Fj5hjHPPdeY"
-                    title="Niño jugando con cubo inteligente"
+                <div className="relative aspect-[9/16] w-full max-w-[210px] sm:max-w-[280px] mx-auto overflow-hidden rounded-xl shadow-lg shadow-black/50 mb-4 sm:mb-8 border border-white/5 flex-grow bg-black">
+                  <video
+                    src="/videos/experiencia-phygital.mp4"
+                    poster="/videos/experiencia-phygital-poster.jpg"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
                     className="absolute inset-0 w-full h-full object-cover"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                  >
+                    <iframe
+                      src="https://www.youtube-nocookie.com/embed/Fj5hjHPPdeY?autoplay=1&mute=1&loop=1&playlist=Fj5hjHPPdeY&playsinline=1"
+                      title="Niño jugando con cubo inteligente"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </video>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-300 font-light text-center leading-relaxed mt-auto">
                   El estudiante manipula el cubo inteligente, rastreando sus movimientos en tiempo real.
