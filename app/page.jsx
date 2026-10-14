@@ -236,7 +236,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== SECCIÓN 2: EL DOLOR ===== */}
-      <section className="py-12 sm:py-16 relative border-b border-white/5">
+      <section id="el-dolor" className="py-12 sm:py-16 relative border-b border-white/5">
         <div className="container mx-auto max-w-7xl px-4">
           <div className="text-center mb-8 sm:mb-12 space-y-2">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white max-w-3xl mx-auto tracking-tight">
@@ -282,7 +282,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== ESTUDIO CLÍNICO BANNER ===== */}
-      <section className="py-10 sm:py-14 px-4 relative border-b border-white/5">
+      <section id="estudio-clinico" className="py-10 sm:py-14 px-4 relative border-b border-white/5">
         <div className="absolute inset-0 bg-gradient-to-b from-[#3B82F6]/5 to-transparent pointer-events-none" />
         <div className="container mx-auto max-w-4xl relative z-10 text-center space-y-4 sm:space-y-5">
           <div className="inline-flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-3.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider">
@@ -636,7 +636,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== SECCIÓN 4: RESPALDO INSTITUCIONAL ===== */}
-      <section className="py-10 sm:py-14 px-4 relative flex flex-col items-center justify-center">
+      <section id="respaldo-institucional" className="py-10 sm:py-14 px-4 relative flex flex-col items-center justify-center">
         <div className="w-full max-w-4xl mx-auto flex flex-col items-center text-center space-y-5 sm:space-y-6">
           {/* Línea Divisora Superior */}
           <div className="w-full h-px bg-white/10" />
@@ -830,7 +830,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== SECCIÓN 5: CTA FINAL ===== */}
-      <section className="py-12 sm:py-16 flex flex-col items-center text-center relative overflow-hidden px-4">
+      <section id="cta-final" className="py-12 sm:py-16 flex flex-col items-center text-center relative overflow-hidden px-4">
         <div className="absolute inset-0 bg-gradient-to-t from-[#3B82F6]/10 to-transparent pointer-events-none" />
         <div className="container mx-auto max-w-4xl text-center relative z-10 space-y-4 sm:space-y-5">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">

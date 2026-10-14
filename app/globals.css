@@ -190,12 +190,14 @@
     margin-top: 1.25rem !important;
   }
 
-  /* --- Sección Experiencia Phygital --- */
+  /* --- Sección Experiencia Phygital: anclada en la posición exacta 897 bajo el navbar --- */
   #experiencia-phygital {
+    scroll-snap-align: start !important;
+    scroll-margin-top: 0 !important;
     padding-top: 2.25rem !important;
     padding-bottom: 2rem !important;
-    scroll-margin-top: 64px !important;
     min-height: calc(100vh - 64px) !important;
+    justify-content: flex-start !important;
   }
 
   #experiencia-phygital .mb-16 {
@@ -221,6 +223,26 @@
     gap: 1.25rem !important;
   }
 
+  /* --- Sección El Dolor (#el-dolor): anclada en la posición exacta 1790 y centrada verticalmente --- */
+  #el-dolor {
+    scroll-snap-align: start !important;
+    scroll-margin-top: 0 !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+    min-height: calc(100vh - 64px) !important;
+    justify-content: center !important;
+  }
+
+  /* --- Sección Estudio Clínico (#estudio-clinico): anclada en la posición exacta 2673 y centrada verticalmente --- */
+  #estudio-clinico {
+    scroll-snap-align: start !important;
+    scroll-margin-top: 0 !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+    min-height: calc(100vh - 64px) !important;
+    justify-content: center !important;
+  }
+
   /* --- Sección La Solución (#what-we-do): anclada al techo para que el título sea visible --- */
   #what-we-do {
     scroll-snap-align: start !important;
@@ -228,10 +250,34 @@
     padding-top: 1.5rem !important;
   }
 
-  /* --- Sección Validación (#about): centrada normalmente --- */
+  /* --- Sección Respaldo Institucional (#respaldo-institucional): anclada en la posición exacta 5535 y centrada verticalmente --- */
+  #respaldo-institucional {
+    scroll-snap-align: start !important;
+    scroll-margin-top: 0 !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+    min-height: calc(100vh - 64px) !important;
+    justify-content: center !important;
+  }
+
+  /* --- Sección Validación Ecosistema (#about): anclada en la posición exacta 6427 y centrada verticalmente --- */
   #about {
-    scroll-snap-align: center !important;
-    scroll-margin-top: 64px !important;
+    scroll-snap-align: start !important;
+    scroll-margin-top: 0 !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+    min-height: calc(100vh - 64px) !important;
+    justify-content: center !important;
+  }
+
+  /* --- Sección CTA Final (#cta-final): anclada en la posición exacta 7308 y centrada verticalmente --- */
+  #cta-final {
+    scroll-snap-align: start !important;
+    scroll-margin-top: 0 !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+    min-height: calc(100vh - 64px) !important;
+    justify-content: center !important;
   }
 
   /* Tipografía para fondos oscuros */
