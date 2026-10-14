@@ -19,6 +19,8 @@ const NeuralBackground3D = dynamic(
   { ssr: false }
 );
 import { SimulatedDashboard } from '../components/animations/SimulatedDashboard';
+import GradientText from '../components/reactbits/GradientText';
+import FoldText from '../components/reactbits/FoldText';
 
 // Brain3D se carga dinámicamente (solo cliente, sin SSR)
 const Brain3D = dynamic(
@@ -97,9 +99,19 @@ export default function LandingPage() {
       {/* ===== NAVBAR ===== */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111827]/85 backdrop-blur-md border-b border-white/5">
         <div className="container mx-auto max-w-7xl px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 select-none cursor-pointer">
             <img src="/logo.png" alt="CogniMirror" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
-            <span className="font-bold text-white text-xs sm:text-sm">CogniMirror</span>
+            <span className="font-bold text-white text-xs sm:text-sm flex items-center">
+              Cogni
+              <GradientText
+                colors={['#00f2fe', '#38bdf8', '#818cf8', '#c084fc', '#ec4899', '#00f2fe']}
+                animationSpeed={3.5}
+                showBorder={false}
+                className="font-bold inline-block"
+              >
+                Mirror
+              </GradientText>
+            </span>
           </div>
           <button
             onClick={goToLogin}
@@ -129,7 +141,17 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-12 gap-6 lg:gap-12 items-center min-h-0 sm:min-h-[420px] lg:min-h-[520px] lg:pt-4">
             <div className="lg:col-span-7 space-y-3.5 sm:space-y-6 text-left lg:pt-2 pointer-events-auto">
               <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight drop-shadow-sm">
-                Telemetría Phygital que blinda tu Programa PIE.
+                <FoldText
+                  text={"Telemetría Phygital\nque blinda tu\nPrograma PIE."}
+                  splitBy="char"
+                  hinge="top"
+                  duration={0.65}
+                  stagger={0.045}
+                  creaseShading={0.55}
+                  perspective={700}
+                  ease="power3.out"
+                  trigger="mount"
+                />
               </h1>
               <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-xl font-light leading-relaxed">
                 Deja atrás el "espejismo académico" y las evaluaciones subjetivas. CogniMirror transforma herramientas físicas en métricas clínicas exactas, ahorrando cientos de horas a tu equipo psicosocial.

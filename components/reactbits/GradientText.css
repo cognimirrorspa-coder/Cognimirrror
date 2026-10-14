@@ -1,0 +1,53 @@
+.gradient-text-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.gradient-text-content {
+  display: inline-block;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  background-size: 300% 100%;
+  animation: gradient-move var(--animation-duration, 3.5s) ease-in-out infinite alternate;
+  will-change: background-position;
+}
+
+.gradient-text-content.continuous {
+  animation: gradient-sweep var(--animation-duration, 3.5s) linear infinite;
+}
+
+.gradient-text-border {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  padding: 1.5px;
+  background-size: 300% 100%;
+  animation: gradient-move var(--animation-duration, 3.5s) ease-in-out infinite alternate;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes gradient-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}

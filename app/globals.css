@@ -426,5 +426,22 @@
   filter: drop-shadow(0 0 7px var(--border-color, currentColor));
 }
 
+/* ==========================================================================
+   GRADIENT TEXT ANIMADO (Efecto Cambiante Premium en "Mirror")
+   ========================================================================== */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
 
-
+.animate-gradient-shift {
+  background-size: 200% auto;
+  animation: gradientShift 4s ease-in-out infinite;
+}
