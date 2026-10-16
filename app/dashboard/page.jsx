@@ -21,6 +21,7 @@ import BottomNavOneThumb from '../../components/BottomNavOneThumb';
 import RemoteEvalGenerator from '../../components/RemoteEvalGenerator';
 import PixelThemeTransition from '../../components/PixelThemeTransition';
 import HoverBorderDraw from '../../components/animations/HoverBorderDraw';
+import HorarioKanbanOrganizacional from '../../components/HorarioKanbanOrganizacional';
 import {
   Users,
   UserPlus,
@@ -67,7 +68,8 @@ import {
   ChevronDown,
   Info,
   Menu,
-  Wand2
+  Wand2,
+  CalendarDays
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -866,6 +868,31 @@ function ClassicDashboard() {
             </button>
           </div>
 
+          {/* Botón de Horario Organizacional (Metodología Kanban) */}
+          <div className="mt-3 pt-2 border-t border-dashed border-white/10">
+            <button
+              type="button"
+              onClick={() => { setActiveTab('horario'); setIsMobileMenuOpen(false); }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold select-none active:scale-[0.97] group ${
+                activeTab === 'horario'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30'
+                  : isDark 
+                    ? 'text-sky-300 hover:text-white bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30' 
+                    : 'text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-200'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <CalendarDays className={`w-4 h-4 shrink-0 ${activeTab === 'horario' ? 'text-white' : 'text-sky-400'}`} />
+                <span className="truncate text-xs">Horario Organizacional</span>
+              </div>
+              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider shrink-0 ${
+                activeTab === 'horario' ? 'bg-white/20 text-white border border-white/30' : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+              }`}>
+                Kanban
+              </span>
+            </button>
+          </div>
+
         </nav>
 
         {/* Footer del drawer */}
@@ -904,7 +931,7 @@ function ClassicDashboard() {
       }`}>
         <div>
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-8 px-2">
+          <div className="flex items-center gap-3 mb-4 px-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
               <Brain className="w-5 h-5 text-white" />
             </div>
@@ -1105,11 +1132,34 @@ function ClassicDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Botón de Horario Organizacional (Kanban & Tiempos Libres) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('horario')}
+              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer font-bold select-none active:scale-[0.98] mt-1.5 ${
+                activeTab === 'horario'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30'
+                  : isDark 
+                    ? 'text-sky-300 hover:text-white bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30' 
+                    : 'text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-200'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <CalendarDays className={`w-4 h-4 shrink-0 ${activeTab === 'horario' ? 'text-white' : 'text-sky-400'}`} />
+                <span className="truncate">Horario Organizacional</span>
+              </div>
+              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider shrink-0 ${
+                activeTab === 'horario' ? 'bg-white/20 text-white border border-white/30' : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+              }`}>
+                Kanban
+              </span>
+            </button>
           </nav>
         </div>
 
         {/* Sección Inferior de la Barra Lateral */}
-        <div className="flex flex-col gap-3 pt-4 border-t border-[#1b202e]">
+        <div className="flex flex-col gap-3 pt-3 border-t border-[#1b202e]">
           {/* Toggle Modo Claro / Oscuro */}
           <button
             onClick={(e) => toggleTheme(e)}
@@ -1209,6 +1259,13 @@ function ClassicDashboard() {
         {/* CONTENIDO PRINCIPAL */}
         <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl w-full mx-auto flex flex-col gap-5 md:gap-6 pb-36 sm:pb-36 md:pb-12">
           
+          {/* TAB: HORARIO ORGANIZACIONAL KANBAN & TIEMPOS LIBRES (4 INTEGRANTES) */}
+          {activeTab === 'horario' && (
+            <div className="flex flex-col gap-5 md:gap-6 animate-in fade-in duration-200">
+              <HorarioKanbanOrganizacional isDark={isDark} />
+            </div>
+          )}
+
           {/* TAB: CREACIÓN Y ADMINISTRACIÓN DE USUARIOS POR JERARQUÍA */}
           {activeTab === 'usuarios' && (
             <div className="flex flex-col gap-5 md:gap-6 animate-in fade-in duration-200">
