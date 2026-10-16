@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
     const isBrayan = userObj.email === 'br.castros@duocuc.cl';
     const isMatias = userObj.email === 'matias.fierro@cognimirror.cl' || userObj.email === 'matias.fierro@cognimirror.com';
     const isNicole = userObj.email === 'nicole.vargas@cognimirror.cl' || userObj.email === 'nicole.vargas@cognimirror.com';
-    const isJouse = userObj.email === 'jouse.alarcon@cognimirror.cl' || userObj.email === 'jouse.alarcon@cognimirror.com';
+    const isJouse = userObj.email === 'jouse.alarcon@cognimirror.cl' || userObj.email === 'jouse.alarcon@cognimirror.com' || userObj.email === 'josuealarconvargas@gmail.com';
     const isFounder = isBrayan || isMatias || isNicole || isJouse || userObj.email === 'cognimirrorspa@gmail.com';
     const isLabEvaluator = isFounder || userObj.email === 'evaluador@cognimirror.cl' || userObj.email === 'evaluador@cognimirror.com' || userObj.email === 'psicologo@clinica.com';
     const isCoordinator = userObj.email === 'coordinador@colegio.com';
@@ -196,6 +196,7 @@ export function AuthProvider({ children }) {
         'nicole.vargas@cognimirror.com': { name: 'Nicole Vargas (Founder & Equipo CogniMirror)', id: 'f2000000-0000-0000-0000-000000000002' },
         'jouse.alarcon@cognimirror.cl': { name: 'Jouse Alarcón (Founder & Equipo CogniMirror)', id: 'f3000000-0000-0000-0000-000000000003' },
         'jouse.alarcon@cognimirror.com': { name: 'Jouse Alarcón (Founder & Equipo CogniMirror)', id: 'f3000000-0000-0000-0000-000000000003' },
+        'josuealarconvargas@gmail.com': { name: 'Josué Alarcón (Founder & Equipo CogniMirror)', id: 'f3000000-0000-0000-0000-000000000003' },
         'cognimirrorspa@gmail.com': { name: 'Equipo CogniMirror (Founders & I+D)', id: '00000000-0000-0000-0000-000000000000' }
       };
 

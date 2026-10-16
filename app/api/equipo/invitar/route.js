@@ -100,9 +100,42 @@ export async function POST(request) {
       });
 
       if (createError) {
-        return NextResponse.json({ error: createError.message }, { status: 400 });
+        const isAlreadyRegistered = createError.message?.toLowerCase().includes('already') || 
+                                    createError.message?.toLowerCase().includes('registered') ||
+                                    createError.message?.toLowerCase().includes('exists');
+        if (isAlreadyRegistered) {
+          // El usuario ya existe en Supabase Auth: actualizar su contraseña y confirmar email
+          console.log(`[API Invitar] Usuario ${email} ya existe en Auth. Actualizando su contraseña...`);
+          try {
+            const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+            const existingAuth = listData?.users?.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+            if (existingAuth) {
+              const { data: updateData, error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(existingAuth.id, {
+                password: tempPassword,
+                email_confirm: true,
+                user_metadata: {
+                  full_name: nombre.trim(),
+                  colegio_id: colegio_id,
+                  rol: rol.toLowerCase()
+                }
+              });
+
+              if (updateErr) {
+                return NextResponse.json({ error: updateErr.message }, { status: 400 });
+              }
+              authUser = updateData.user;
+            } else {
+              return NextResponse.json({ error: createError.message }, { status: 400 });
+            }
+          } catch (errList) {
+            return NextResponse.json({ error: createError.message }, { status: 400 });
+          }
+        } else {
+          return NextResponse.json({ error: createError.message }, { status: 400 });
+        }
+      } else {
+        authUser = createData.user;
       }
-      authUser = createData.user;
     } else {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email.trim().toLowerCase(), {
         data: {

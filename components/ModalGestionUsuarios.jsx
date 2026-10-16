@@ -214,6 +214,27 @@ export default function ModalGestionUsuarios({
     };
   }, [password]);
 
+  const getAuthHeaders = async () => {
+    let token = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      token = session?.access_token;
+    } catch (e) {}
+    if (!token && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('cognimirror_bypass_session');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          token = parsed.access_token;
+        } catch (e) {}
+      }
+    }
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  };
+
   // Manejar creación o edición de usuario
   const handleSubmitUser = async (e) => {
     e.preventDefault();
@@ -243,8 +264,30 @@ export default function ModalGestionUsuarios({
     setIsSubmitting(true);
 
     try {
+      const authHeaders = await getAuthHeaders();
+
       if (editingUserId) {
-        // EDICIÓN
+        // EDICIÓN EN SERVIDOR Y SUPABASE AUTH
+        const res = await fetch('/api/equipo/actualizar', {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            userId: editingUserId,
+            email: email.trim().toLowerCase(),
+            nombre: nombre.trim(),
+            rol,
+            cargo: cargo.trim(),
+            password: password.trim() || null,
+            colegioId: currentProfile?.colegio_id,
+            adminName: currentProfile?.nombre_completo || 'Director / Coordinador'
+          })
+        });
+
+        const resData = await res.json();
+        if (!res.ok) {
+          throw new Error(resData.error || 'Error al actualizar el usuario en el servidor.');
+        }
+
         setUsuarios(prev => prev.map(u => {
           if (u.id === editingUserId) {
             return {
@@ -259,11 +302,35 @@ export default function ModalGestionUsuarios({
           return u;
         }));
 
-        setFormFeedback({ type: 'success', text: `Usuario ${nombre.trim()} actualizado correctamente.` });
+        setFormFeedback({ 
+          type: 'success', 
+          text: password 
+            ? `Usuario ${nombre.trim()} y su contraseña fueron actualizados exitosamente en Supabase Auth.` 
+            : `Usuario ${nombre.trim()} actualizado correctamente.` 
+        });
         if (onUserAction) onUserAction('EDITAR_USUARIO', `Actualizado usuario ${nombre} (${rol})`);
       } else {
-        // CREACIÓN NUEVA
-        const newId = `usr-${Date.now().toString().slice(-4)}`;
+        // CREACIÓN NUEVA EN SERVIDOR Y SUPABASE AUTH
+        const res = await fetch('/api/equipo/invitar', {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            nombre: nombre.trim(),
+            email: email.trim().toLowerCase(),
+            rol,
+            cargo: cargo.trim(),
+            tempPassword: password.trim() || null,
+            colegio_id: currentProfile?.colegio_id || 'colegio-demo',
+            adminName: currentProfile?.nombre_completo || 'Director PIE'
+          })
+        });
+
+        const resData = await res.json();
+        if (!res.ok) {
+          throw new Error(resData.error || 'Error al crear el usuario en el servidor.');
+        }
+
+        const newId = resData.user?.id || `usr-${Date.now().toString().slice(-4)}`;
         const cleanUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '');
 
         const newUser = {
@@ -279,25 +346,7 @@ export default function ModalGestionUsuarios({
         };
 
         setUsuarios(prev => [newUser, ...prev]);
-        setFormFeedback({ type: 'success', text: `Usuario ${nombre.trim()} creado con éxito bajo jerarquía ${rol}.` });
-
-        // Intentar persistir en Supabase / API backend
-        try {
-          fetch('/api/equipo/invitar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              nombre: newUser.nombre,
-              email: newUser.email,
-              rol: newUser.rol,
-              cargo: newUser.cargo,
-              tempPassword: password,
-              colegio_id: currentProfile?.colegio_id || 'colegio-demo',
-              adminName: currentProfile?.nombre_completo || 'Director PIE'
-            })
-          }).catch(() => {});
-        } catch(e) {}
-
+        setFormFeedback({ type: 'success', text: `Usuario ${nombre.trim()} creado y habilitado en Supabase Auth.` });
         if (onUserAction) onUserAction('CREAR_USUARIO', `Registrado usuario: ${nombre} (${rol})`);
       }
 
@@ -308,7 +357,8 @@ export default function ModalGestionUsuarios({
       setEditingUserId(null);
       setTimeout(() => setFormFeedback({ type: '', text: '' }), 4000);
     } catch (err) {
-      setFormFeedback({ type: 'error', text: 'Ocurrió un error al procesar el usuario.' });
+      console.error('[ModalGestionUsuarios] Error al guardar:', err);
+      setFormFeedback({ type: 'error', text: err.message || 'Ocurrió un error al procesar el usuario.' });
     } finally {
       setIsSubmitting(false);
     }

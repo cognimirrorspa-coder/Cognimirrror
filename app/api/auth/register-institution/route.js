@@ -35,9 +35,55 @@ export async function POST(request) {
     });
 
     const newColegioId = `inst-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const newUserId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    let newUserId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     console.log(`[Register Institution] Registrando colegio: ${schoolName} (RBD: ${rbd})`);
+
+    // 0. Crear el usuario en Supabase Auth para que pueda iniciar sesión con su contraseña
+    if (serviceRoleKey) {
+      try {
+        const { data: authData, error: authErr } = await supabaseClient.auth.admin.createUser({
+          email: email.trim().toLowerCase(),
+          password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: adminName.trim(),
+            colegio_id: newColegioId,
+            rol: role
+          }
+        });
+
+        if (!authErr && authData?.user) {
+          newUserId = authData.user.id;
+        } else if (authErr?.message?.toLowerCase().includes('already')) {
+          const { data: listData } = await supabaseClient.auth.admin.listUsers();
+          const existing = listData?.users?.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+          if (existing) {
+            newUserId = existing.id;
+            await supabaseClient.auth.admin.updateUserById(existing.id, {
+              password,
+              email_confirm: true,
+              user_metadata: { full_name: adminName.trim(), colegio_id: newColegioId, rol: role }
+            });
+          }
+        }
+      } catch (authE) {
+        console.warn('[Register Institution] Error creando auth user:', authE.message);
+      }
+    } else {
+      try {
+        const { data: signUpData } = await supabaseClient.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            data: { full_name: adminName.trim(), colegio_id: newColegioId, rol: role }
+          }
+        });
+        if (signUpData?.user) {
+          newUserId = signUpData.user.id;
+        }
+      } catch (sErr) {}
+    }
 
     // 1. Insertar Institución / Colegio en Supabase BD 2
     try {
