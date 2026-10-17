@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   UserPlus, 
   Users, 
@@ -28,7 +28,8 @@ import {
   MessageSquare,
   Image,
   CreditCard,
-  ShieldAlert
+  ShieldAlert,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
 
@@ -66,14 +67,38 @@ const JERARQUIAS_CLINICAS = [
     cargoDefault: 'Terapeuta Sensoriomotriz PIE'
   },
   {
+    id: 'especialista',
+    label: 'Especialista Clínico PIE',
+    nivel: 'Nivel 3 (Operación Clínica)',
+    badgeColor: 'bg-teal-500/15 text-teal-400 border-teal-500/30',
+    icon: Stethoscope,
+    cargoDefault: 'Especialista Clínico PIE'
+  },
+  {
     id: 'evaluador',
     label: 'Evaluador(a) Técnico / Investigador n=10',
     nivel: 'Nivel 4 (Toma de Muestras)',
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     icon: FlaskConical,
     cargoDefault: 'Evaluador(a) Baterías Psicométricas'
+  },
+  {
+    id: 'founder',
+    label: 'Fundador / Dirección Ejecutiva',
+    nivel: 'Nivel 1 (Control Total)',
+    badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    icon: Crown,
+    cargoDefault: 'Director Fundador'
   }
 ];
+
+const getCargoDefault = (rolKey) => {
+  const found = JERARQUIAS_CLINICAS.find(j => j.id === rolKey);
+  if (found) return found.cargoDefault;
+  if (rolKey === 'founder') return 'Director Fundador';
+  if (rolKey === 'especialista') return 'Especialista Clínico PIE';
+  return 'Profesional PIE';
+};
 
 export default function ModalGestionUsuarios({
   isOpen,
@@ -85,53 +110,9 @@ export default function ModalGestionUsuarios({
   onUserAction = null,
   embedded = false
 }) {
-  // Estado de lista de usuarios
-  const [usuarios, setUsuarios] = useState([
-    {
-      id: 'usr-1',
-      username: 'brayan.castro',
-      nombre: 'Ps. Brayan Castro',
-      email: 'brayan.castro@cognimirror.cl',
-      rol: 'psicologo',
-      cargo: 'Psicólogo Clínico PIE',
-      activo: true,
-      debe_cambiar_pass: false,
-      creado_en: '2026-08-10'
-    },
-    {
-      id: 'usr-2',
-      username: 'josue.coordinador',
-      nombre: 'Josué Alarcón',
-      email: 'josue.alarcon@cognimirror.cl',
-      rol: 'coordinador_pie',
-      cargo: 'Coordinador General PIE',
-      activo: true,
-      debe_cambiar_pass: false,
-      creado_en: '2026-08-01'
-    },
-    {
-      id: 'usr-3',
-      username: 'maria.gonzalez',
-      nombre: 'Dra. María González',
-      email: 'maria.gonzalez@cognimirror.cl',
-      rol: 'director',
-      cargo: 'Directora Académica',
-      activo: true,
-      debe_cambiar_pass: false,
-      creado_en: '2026-07-20'
-    },
-    {
-      id: 'usr-4',
-      username: 'camila.terapeuta',
-      nombre: 'Lic. Camila Soto',
-      email: 'camila.soto@cognimirror.cl',
-      rol: 'terapeuta',
-      cargo: 'Terapeuta Ocupacional PIE',
-      activo: true,
-      debe_cambiar_pass: true,
-      creado_en: '2026-09-02'
-    }
-  ]);
+  // Estado de lista de usuarios real sincronizada con Supabase
+  const [usuarios, setUsuarios] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
   // Formulario nuevo usuario
   const [nombre, setNombre] = useState('');
@@ -153,38 +134,92 @@ export default function ModalGestionUsuarios({
   const [userToDelete, setUserToDelete] = useState(null);
   const [hasAuthorizedDelete, setHasAuthorizedDelete] = useState(false);
 
-  // Cargar usuarios de Supabase si existen
-  useEffect(() => {
-    if (!isOpen) return;
-
-    async function loadRemoteUsers() {
-      try {
-        const { data, error } = await supabase
-          .from('perfiles')
-          .select('*')
-          .order('creado_en', { ascending: false });
-
-        if (data && data.length > 0) {
-          const formatted = data.map(p => ({
-            id: p.id,
-            username: p.email ? p.email.split('@')[0] : p.nombre_completo.toLowerCase().replace(/\s+/g, '.'),
-            nombre: p.nombre_completo || 'Profesional',
-            email: p.email || 'sin-correo@colegio.cl',
-            rol: p.rol || 'psicologo',
-            cargo: p.cargo_texto || 'Especialista PIE',
-            activo: p.activo !== false,
-            debe_cambiar_pass: p.debe_cambiar_pass || false,
-            creado_en: p.creado_en || '2026-08-15'
-          }));
-          setUsuarios(formatted);
-        }
-      } catch (err) {
-        console.warn('[ModalGestionUsuarios] Usando usuarios locales predefinidos:', err);
+  const getAuthHeaders = async () => {
+    let token = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      token = session?.access_token;
+    } catch (e) {}
+    if (!token && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('cognimirror_bypass_session');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          token = parsed.access_token;
+        } catch (e) {}
       }
     }
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  };
 
-    loadRemoteUsers();
-  }, [isOpen]);
+  // Cargar usuarios de Supabase en tiempo real
+  const loadRemoteUsers = useCallback(async () => {
+    setLoadingUsers(true);
+    try {
+      // 1. Intentar cargar vía API protegida con Service Role (bypass RLS)
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch('/api/equipo/listar', {
+        headers: authHeaders,
+        cache: 'no-store'
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.usuarios)) {
+          const formatted = json.usuarios.map(p => ({
+            id: p.id,
+            username: p.email ? p.email.split('@')[0] : (p.nombre_completo || 'profesional').toLowerCase().replace(/\s+/g, '.'),
+            nombre: p.nombre_completo || p.email || 'Profesional',
+            email: p.email || 'sin-correo@colegio.cl',
+            rol: p.rol || 'psicologo',
+            cargo: p.cargo_texto || getCargoDefault(p.rol),
+            activo: p.activo !== false,
+            debe_cambiar_pass: Boolean(p.debe_cambiar_pass),
+            creado_en: p.created_at ? p.created_at.split('T')[0] : '2026-08-15',
+            colegio_id: p.colegio_id
+          }));
+          setUsuarios(formatted);
+          setLoadingUsers(false);
+          return;
+        }
+      }
+
+      // 2. Fallback directo a Supabase con created_at
+      const { data, error } = await supabase
+        .from('perfiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data && data.length > 0) {
+        const formatted = data.map(p => ({
+          id: p.id,
+          username: p.email ? p.email.split('@')[0] : (p.nombre_completo || 'profesional').toLowerCase().replace(/\s+/g, '.'),
+          nombre: p.nombre_completo || p.email || 'Profesional',
+          email: p.email || 'sin-correo@colegio.cl',
+          rol: p.rol || 'psicologo',
+          cargo: p.cargo_texto || getCargoDefault(p.rol),
+          activo: p.activo !== false,
+          debe_cambiar_pass: Boolean(p.debe_cambiar_pass),
+          creado_en: p.created_at ? p.created_at.split('T')[0] : '2026-08-15',
+          colegio_id: p.colegio_id
+        }));
+        setUsuarios(formatted);
+      }
+    } catch (err) {
+      console.warn('[ModalGestionUsuarios] Error al cargar perfiles remotos:', err);
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (isOpen || embedded) {
+      loadRemoteUsers();
+    }
+  }, [isOpen, embedded, loadRemoteUsers]);
 
   // Cambiar cargo sugerido al cambiar rol
   const handleRolSelect = (newRol) => {
@@ -213,27 +248,6 @@ export default function ModalGestionUsuarios({
       isValid
     };
   }, [password]);
-
-  const getAuthHeaders = async () => {
-    let token = null;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      token = session?.access_token;
-    } catch (e) {}
-    if (!token && typeof window !== 'undefined') {
-      const stored = localStorage.getItem('cognimirror_bypass_session');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          token = parsed.access_token;
-        } catch (e) {}
-      }
-    }
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
-  };
 
   // Manejar creación o edición de usuario
   const handleSubmitUser = async (e) => {
@@ -288,19 +302,7 @@ export default function ModalGestionUsuarios({
           throw new Error(resData.error || 'Error al actualizar el usuario en el servidor.');
         }
 
-        setUsuarios(prev => prev.map(u => {
-          if (u.id === editingUserId) {
-            return {
-              ...u,
-              nombre: nombre.trim(),
-              email: email.trim().toLowerCase(),
-              rol,
-              cargo: cargo.trim(),
-              debe_cambiar_pass: password ? true : u.debe_cambiar_pass
-            };
-          }
-          return u;
-        }));
+        await loadRemoteUsers();
 
         setFormFeedback({ 
           type: 'success', 
@@ -330,22 +332,8 @@ export default function ModalGestionUsuarios({
           throw new Error(resData.error || 'Error al crear el usuario en el servidor.');
         }
 
-        const newId = resData.user?.id || `usr-${Date.now().toString().slice(-4)}`;
-        const cleanUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '');
+        await loadRemoteUsers();
 
-        const newUser = {
-          id: newId,
-          username: cleanUsername,
-          nombre: nombre.trim(),
-          email: email.trim().toLowerCase(),
-          rol,
-          cargo: cargo.trim(),
-          activo: true,
-          debe_cambiar_pass: debeCambiarPass,
-          creado_en: new Date().toISOString().split('T')[0]
-        };
-
-        setUsuarios(prev => [newUser, ...prev]);
         setFormFeedback({ type: 'success', text: `Usuario ${nombre.trim()} creado y habilitado en Supabase Auth.` });
         if (onUserAction) onUserAction('CREAR_USUARIO', `Registrado usuario: ${nombre} (${rol})`);
       }
@@ -384,8 +372,19 @@ export default function ModalGestionUsuarios({
     setFormFeedback({ type: '', text: '' });
   };
 
-  // Suspender o Reactivar cuenta
-  const handleToggleActive = (userItem) => {
+  // Suspender o Reactivar cuenta en Supabase
+  const handleToggleActive = async (userItem) => {
+    const isCurrent = (currentUser?.email && userItem.email && currentUser.email.toLowerCase() === userItem.email.toLowerCase()) || 
+                      (currentProfile?.id && userItem.id === currentProfile.id);
+
+    if (isCurrent && userItem.activo) {
+      setFormFeedback({
+        type: 'error',
+        text: 'Protocolo de Seguridad: No puedes suspender tu propia cuenta activa.'
+      });
+      return;
+    }
+
     const nextState = !userItem.activo;
     const actionText = nextState ? 'reactivar' : 'desactivar temporalmente';
 
@@ -393,15 +392,49 @@ export default function ModalGestionUsuarios({
       return;
     }
 
+    // Actualización optimista inmediata
     setUsuarios(prev => prev.map(u => u.id === userItem.id ? { ...u, activo: nextState } : u));
-    if (onUserAction) onUserAction('ESTADO_USUARIO', `Cuenta ${userItem.nombre} ${nextState ? 'reactivada' : 'desactivada'}`);
+
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch('/api/equipo/toggle-activo', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          userId: userItem.id,
+          activo: nextState,
+          colegioId: currentProfile?.colegio_id || userItem.colegio_id || 'colegio-demo',
+          adminName: currentProfile?.nombre_completo || currentUser?.email || 'Director / Coordinador'
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || 'Error al actualizar el estado en el servidor.');
+      }
+
+      setFormFeedback({
+        type: 'success',
+        text: `Cuenta de ${userItem.nombre} ${nextState ? 'reactivada' : 'desactivada'} correctamente.`
+      });
+
+      if (onUserAction) onUserAction('ESTADO_USUARIO', `Cuenta ${userItem.nombre} ${nextState ? 'reactivada' : 'desactivada'}`);
+    } catch (err) {
+      console.error('[ModalGestionUsuarios] Error al cambiar estado:', err);
+      // Revertir cambio optimista
+      setUsuarios(prev => prev.map(u => u.id === userItem.id ? { ...u, activo: userItem.activo } : u));
+      setFormFeedback({
+        type: 'error',
+        text: `Error al cambiar estado: ${err.message}`
+      });
+    }
   };
 
   // Solicitar eliminación de usuario (Activa advertencia y caja de consecuencias)
   const handleDeleteUser = (userItem) => {
-    const isCurrent = currentUser?.email === userItem.email || 
-                      currentProfile?.nombre_completo === userItem.nombre || 
-                      userItem.id === 'usr-2'; // Bloqueo si es el usuario en sesión
+    const isCurrent = (currentUser?.email && userItem.email && currentUser.email.toLowerCase() === userItem.email.toLowerCase()) || 
+                      (currentProfile?.id && userItem.id === currentProfile.id) ||
+                      (currentProfile?.email && userItem.email && currentProfile.email.toLowerCase() === userItem.email.toLowerCase());
 
     if (isCurrent) {
       setFormFeedback({
@@ -417,26 +450,54 @@ export default function ModalGestionUsuarios({
   };
 
   // Confirmar eliminación una vez marcada la casilla de autorización obligatoria
-  const handleConfirmDeleteUser = () => {
+  const handleConfirmDeleteUser = async () => {
     if (!userToDelete || !hasAuthorizedDelete) return;
 
     const deletedUser = userToDelete;
-    setUsuarios(prev => prev.filter(u => u.id !== deletedUser.id));
+    setIsSubmitting(true);
 
-    if (onUserAction) {
-      onUserAction(
-        'ELIMINAR_USUARIO',
-        `Eliminado permanentemente usuario: ${deletedUser.nombre} (${deletedUser.email}). Purgados mensajes, fotos, suscripciones y registros asociados tras autorización explícita.`
-      );
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch('/api/equipo/eliminar', {
+        method: 'DELETE',
+        headers: authHeaders,
+        body: JSON.stringify({
+          id: deletedUser.id,
+          colegio_id: currentProfile?.colegio_id || deletedUser.colegio_id || 'colegio-demo',
+          admin: currentProfile?.nombre_completo || currentUser?.email || 'Director PIE'
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || 'Error al eliminar usuario en el servidor.');
+      }
+
+      setUsuarios(prev => prev.filter(u => u.id !== deletedUser.id));
+
+      if (onUserAction) {
+        onUserAction(
+          'ELIMINAR_USUARIO',
+          `Eliminado permanentemente usuario: ${deletedUser.nombre} (${deletedUser.email}). Purgados mensajes, fotos, suscripciones y registros asociados tras autorización explícita.`
+        );
+      }
+
+      setFormFeedback({
+        type: 'success',
+        text: `El usuario "${deletedUser.nombre}" fue eliminado permanentemente tras confirmar la autorización y caja de consecuencias.`
+      });
+
+      setUserToDelete(null);
+      setHasAuthorizedDelete(false);
+    } catch (err) {
+      console.error('[ModalGestionUsuarios] Error al eliminar usuario:', err);
+      setFormFeedback({
+        type: 'error',
+        text: `Error al eliminar usuario: ${err.message}`
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setFormFeedback({
-      type: 'success',
-      text: `El usuario "${deletedUser.nombre}" fue eliminado permanentemente tras confirmar la autorización y caja de consecuencias.`
-    });
-
-    setUserToDelete(null);
-    setHasAuthorizedDelete(false);
   };
 
   // Filtro de usuarios
@@ -711,8 +772,19 @@ export default function ModalGestionUsuarios({
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-emerald-400" />
                     <h4 className="text-sm font-black tracking-tight uppercase">
-                      Usuarios Registrados ({filteredUsers.length})
+                      Usuarios Registrados ({loadingUsers ? '...' : filteredUsers.length})
                     </h4>
+                    <button
+                      type="button"
+                      onClick={loadRemoteUsers}
+                      disabled={loadingUsers}
+                      title="Sincronizar con Supabase"
+                      className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                        isDark ? 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <Loader2 className={`w-3.5 h-3.5 ${loadingUsers ? 'animate-spin text-blue-400' : ''}`} />
+                    </button>
                   </div>
 
                   {/* Filtro y Buscador */}
@@ -742,7 +814,9 @@ export default function ModalGestionUsuarios({
                       <option value="coordinador_pie">Coordinación PIE</option>
                       <option value="psicologo">Psicología</option>
                       <option value="terapeuta">Terapia</option>
+                      <option value="especialista">Especialistas</option>
                       <option value="evaluador">Evaluador n=10</option>
+                      <option value="founder">Fundadores</option>
                     </select>
                   </div>
                 </div>
@@ -759,7 +833,16 @@ export default function ModalGestionUsuarios({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {filteredUsers.length === 0 ? (
+                      {loadingUsers && usuarios.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-12 text-center text-slate-400 text-xs">
+                            <div className="flex flex-col items-center justify-center gap-2.5">
+                              <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                              <span className="font-medium text-slate-400">Sincronizando usuarios con Supabase...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredUsers.length === 0 ? (
                         <tr>
                           <td colSpan={4} className="py-8 text-center text-slate-500 text-xs">
                             No se encontraron usuarios coincidentes.
@@ -767,9 +850,18 @@ export default function ModalGestionUsuarios({
                         </tr>
                       ) : (
                         filteredUsers.map(u => {
-                          const configJerarquia = JERARQUIAS_CLINICAS.find(j => j.id === u.rol) || JERARQUIAS_CLINICAS[2];
+                          const configJerarquia = JERARQUIAS_CLINICAS.find(j => j.id === u.rol) || {
+                            id: u.rol || 'psicologo',
+                            label: u.rol === 'founder' ? 'Fundador' : (u.rol === 'especialista' ? 'Especialista PIE' : (u.rol || 'Profesional PIE')),
+                            nivel: 'Operación Clínica',
+                            badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+                            icon: Stethoscope,
+                            cargoDefault: u.cargo || 'Especialista PIE'
+                          };
                           const IconoRol = configJerarquia.icon;
-                          const isSelf = currentUser?.email === u.email || currentProfile?.nombre_completo === u.nombre;
+                          const isSelf = (currentUser?.email && u.email && currentUser.email.toLowerCase() === u.email.toLowerCase()) || 
+                                         (currentProfile?.id && u.id === currentProfile.id) ||
+                                         (currentProfile?.email && u.email && currentProfile.email.toLowerCase() === u.email.toLowerCase());
 
                           return (
                             <tr key={u.id} className={`transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-100'}`}>

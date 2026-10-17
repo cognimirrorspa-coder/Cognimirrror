@@ -9,16 +9,16 @@ export async function POST(request) {
   try {
     const { user: requestingUser, errorResponse } = await authenticateApiRequest(request);
     if (errorResponse) return errorResponse;
-    const { userId, activo, colegioId, adminName = 'Director / Coordinador' } = await request.json();
+    const { userId, activo, colegioId = null, adminName = 'Director / Coordinador' } = await request.json();
 
-    if (!userId || colegioId === undefined || activo === undefined) {
+    if (!userId || activo === undefined) {
       return NextResponse.json(
-        { error: 'Faltan parámetros requeridos (userId, activo, colegioId)' },
+        { error: 'Faltan parámetros requeridos (userId, activo)' },
         { status: 400 }
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://viqtdxvoryovilzsfhwu.supabase.co';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hnbxhuqficktoaivrrqj.supabase.co';
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -34,7 +34,7 @@ export async function POST(request) {
 
       try {
         await supabaseAnon.from('logs_auditoria').insert([{
-          colegio_id: colegioId,
+          colegio_id: colegioId || 'colegio-demo',
           usuario_nombre: adminName,
           evento: activo ? 'CREAR_USUARIO' : 'DESACTIVAR_USUARIO',
           detalles: { accion: activo ? 'Cuenta reactivada' : 'Cuenta suspendida/desactivada', usuario_id: userId }
@@ -53,7 +53,7 @@ export async function POST(request) {
       .from('perfiles')
       .update({ activo })
       .eq('id', userId)
-      .select('nombre_completo, email')
+      .select('nombre_completo, email, colegio_id')
       .single();
 
     if (profileError) {
@@ -61,9 +61,10 @@ export async function POST(request) {
     }
 
     // 2. Registrar en auditoría
+    const targetColegioId = colegioId || updatedProfile?.colegio_id || 'colegio-demo';
     try {
       await supabaseAdmin.from('logs_auditoria').insert([{
-        colegio_id: colegioId,
+        colegio_id: targetColegioId,
         usuario_nombre: adminName,
         evento: activo ? 'CREAR_USUARIO' : 'DESACTIVAR_USUARIO',
         detalles: {
