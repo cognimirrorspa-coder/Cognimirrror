@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Kanban,
   Table as TableIcon,
@@ -30,7 +30,10 @@ import {
   Share2,
   HelpCircle,
   GripVertical,
-  ListChecks
+  ListChecks,
+  RefreshCw,
+  Cloud,
+  CloudOff
 } from 'lucide-react';
 
 import GradientText from './reactbits/GradientText';
@@ -350,6 +353,9 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
   // Pestaña activa superior: 'kanban' | 'calendar' | 'table'
   const [currentView, setCurrentView] = useState('kanban');
 
+  // Estado de sincronización en la nube con Supabase ('synced' | 'syncing' | 'local')
+  const [syncStatus, setSyncStatus] = useState('syncing');
+
   // Estado de las tareas
   const [tasks, setTasks] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -420,7 +426,7 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
   // Tema dinámico de progreso para GradientText y colores del medidor según semáforo de progreso
   const progressTheme = useMemo(() => getProgressTheme(taskForm.progress), [taskForm.progress]);
 
-  // Guardar en localStorage v4
+  // Guardar en localStorage como cache offline
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('cognimirror_kanban_tasks_v4', JSON.stringify(tasks));
@@ -438,6 +444,110 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
       localStorage.setItem('cognimirror_kanban_categories_v3', JSON.stringify(categories));
     }
   }, [categories]);
+
+  // Cargar datos remotos desde Supabase
+  const loadRemoteKanban = useCallback(async () => {
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch('/api/horario-organizacional', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isLiveSupabase && Array.isArray(data.tasks)) {
+          if (data.tasks.length > 0) {
+            setTasks(data.tasks);
+          }
+          if (data.availability && typeof data.availability === 'object') {
+            setAvailability(data.availability);
+          }
+          if (Array.isArray(data.categories)) {
+            setCategories(data.categories);
+          }
+          setSyncStatus('synced');
+          return;
+        } else if (data.notConfigured) {
+          setSyncStatus('local');
+          return;
+        }
+      }
+      setSyncStatus('local');
+    } catch (e) {
+      console.warn('[HorarioKanban] Trabajando en modo local:', e.message);
+      setSyncStatus('local');
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRemoteKanban();
+  }, [loadRemoteKanban]);
+
+  // Helpers de sincronización en tiempo real con Supabase
+  const syncTaskToCloud = async (task) => {
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch('/api/horario-organizacional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_task', task })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSyncStatus(data.notConfigured ? 'local' : 'synced');
+      }
+    } catch (e) {
+      setSyncStatus('local');
+    }
+  };
+
+  const deleteTaskFromCloud = async (taskId) => {
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch('/api/horario-organizacional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_task', taskId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSyncStatus(data.notConfigured ? 'local' : 'synced');
+      }
+    } catch (e) {
+      setSyncStatus('local');
+    }
+  };
+
+  const syncAvailabilityToCloud = async (newAvailability) => {
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch('/api/horario-organizacional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_availability', availability: newAvailability })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSyncStatus(data.notConfigured ? 'local' : 'synced');
+      }
+    } catch (e) {
+      setSyncStatus('local');
+    }
+  };
+
+  const syncCategoriesToCloud = async (newCategories) => {
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch('/api/horario-organizacional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_categories', categories: newCategories })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSyncStatus(data.notConfigured ? 'local' : 'synced');
+      }
+    } catch (e) {
+      setSyncStatus('local');
+    }
+  };
 
   // Filtrado de tareas
   const filteredTasks = useMemo(() => {
@@ -495,25 +605,31 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
     return filteredTasks.filter(t => t.status === 'finished');
   }, [filteredTasks]);
 
-  // Manejo de cambio de estado rápido de una tarea
+  // Manejo de cambio de estado rápido de una tarea (Drag o botón de acción)
   const handleMoveTask = (taskId, nextStatus) => {
+    let updatedTask = null;
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        return {
+        updatedTask = {
           ...t,
           status: nextStatus,
           progress: nextStatus === 'finished' ? 100 : t.progress === 100 ? 70 : t.progress,
           completedAt: nextStatus === 'finished' ? 'Hoy, ' + new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }) : null
         };
+        return updatedTask;
       }
       return t;
     }));
+    if (updatedTask) {
+      syncTaskToCloud(updatedTask);
+    }
   };
 
   // Eliminar tarea
   const handleDeleteTask = (taskId) => {
     if (confirm('¿Eliminar esta tarea del tablero?')) {
       setTasks(prev => prev.filter(t => t.id !== taskId));
+      deleteTaskFromCloud(taskId);
     }
   };
 
@@ -535,15 +651,18 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
     setCategories(updated);
     setNewCategoryName('');
     setIsAddingCategory(false);
+    syncCategoriesToCloud(updated);
   };
 
   const handleConfirmDeleteCategory = () => {
     if (!categoryToDelete) return;
-    setCategories(prev => prev.filter(c => c.id !== categoryToDelete.id));
+    const updated = categories.filter(c => c.id !== categoryToDelete.id);
+    setCategories(updated);
     if (taskForm.project === categoryToDelete.label) {
       setTaskForm(prev => ({ ...prev, project: '' }));
     }
     setCategoryToDelete(null);
+    syncCategoriesToCloud(updated);
   };
 
   // Abrir modal de creación/edición
@@ -598,21 +717,26 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
     e.preventDefault();
     if (!taskForm.title.trim()) return;
 
+    let targetTask = null;
     if (editingTask) {
-      setTasks(prev => prev.map(t => t.id === editingTask.id ? {
-        ...t,
+      targetTask = {
+        ...editingTask,
         ...taskForm,
-        completedAt: taskForm.status === 'finished' ? (t.completedAt || 'Hoy') : null
-      } : t));
+        completedAt: taskForm.status === 'finished' ? (editingTask.completedAt || 'Hoy') : null
+      };
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? targetTask : t));
     } else {
-      const newTask = {
+      targetTask = {
         id: `task-${Date.now()}`,
         ...taskForm,
         completedAt: taskForm.status === 'finished' ? 'Hoy' : null,
         commentsCount: 0,
         attachmentsCount: 0
       };
-      setTasks(prev => [newTask, ...prev]);
+      setTasks(prev => [targetTask, ...prev]);
+    }
+    if (targetTask) {
+      syncTaskToCloud(targetTask);
     }
     setIsTaskModalOpen(false);
   };
@@ -627,10 +751,12 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
       } else {
         memberSlots[key] = true;
       }
-      return {
+      const updated = {
         ...prev,
         [memberId]: memberSlots
       };
+      syncAvailabilityToCloud(updated);
+      return updated;
     });
   };
 
@@ -718,9 +844,56 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
             </div>
           </div>
 
-          {/* Acciones de la derecha: Buscador + Filtro Integrante + Botón Add Task */}
+          {/* Acciones de la derecha: Buscador + Filtro Integrante + Sincronización + Botón Add Task */}
           <div className="flex flex-wrap items-center gap-2.5">
             
+            {/* Indicador de Sincronización en la Nube con Supabase */}
+            <div className="flex items-center">
+              {syncStatus === 'synced' && (
+                <div 
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold shadow-sm"
+                  title="Sincronizado en tiempo real con Supabase"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">Nube Sincronizada</span>
+                  <button 
+                    onClick={loadRemoteKanban}
+                    title="Recargar desde Supabase"
+                    className="p-1 hover:bg-emerald-500/20 rounded-md transition-all cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3 text-emerald-300" />
+                  </button>
+                </div>
+              )}
+
+              {syncStatus === 'syncing' && (
+                <div 
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold shadow-sm"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                  <span className="hidden sm:inline">Sincronizando...</span>
+                </div>
+              )}
+
+              {syncStatus === 'local' && (
+                <div 
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-semibold shadow-sm"
+                  title="Modo local activo. Ejecuta el script SQL en Supabase para habilitar sincronización multi-dispositivo."
+                >
+                  <CloudOff className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Modo Local (SQL pendiente)</span>
+                  <button 
+                    onClick={loadRemoteKanban}
+                    title="Reintentar conexión con Supabase"
+                    className="p-1 hover:bg-amber-500/20 rounded-md transition-all cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3 text-amber-300" />
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Buscador */}
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
