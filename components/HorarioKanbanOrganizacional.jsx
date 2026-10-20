@@ -10,6 +10,8 @@ import {
   Clock,
   AlertCircle,
   MoreVertical,
+  MoreHorizontal,
+  CircleDot,
   Search,
   Filter,
   User,
@@ -23,6 +25,7 @@ import {
   X,
   Check,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   Briefcase,
   Layers,
@@ -101,8 +104,8 @@ const getProgressTheme = (progress = 0) => {
   };
 };
 
-// Helper de estilos y gradientes para las tarjetas del Kanban según su porcentaje de progreso (Lógica de Semáforo)
-const getCardProgressStyle = (progress = 0) => {
+// Helper de estilos y gradientes para las tarjetas del Kanban según su porcentaje de progreso y prioridad
+const getCardProgressStyle = (progress = 0, priority = 'Medium') => {
   const p = Number(progress) || 0;
 
   // 🟢 1. Terminado / Completado (100%): Verde esmeralda brillante a verde menta (#059669 a #10B981)
@@ -132,11 +135,19 @@ const getCardProgressStyle = (progress = 0) => {
     };
   }
 
-  // 🔴 4. Por Iniciar / Estado Crítico (0% a 25%): Azul oscuro a naranja/rojizo vibrante (#F97316 a #EF4444)
+  // 🔴 4. Por Iniciar / Estado Crítico (0% a 25%): Adaptado según prioridad (Baja = Azul cielo, Alta = Carmesí/Rojo)
+  if (priority === 'Low') {
+    return {
+      barStyle: { background: 'linear-gradient(90deg, #0284c7 0%, #38bdf8 100%)' },
+      textColor: 'text-sky-400',
+      glow: 'shadow-[0_0_10px_rgba(56,189,248,0.45)]'
+    };
+  }
+
   return {
-    barStyle: { background: 'linear-gradient(90deg, #1E293B 0%, #F97316 45%, #EF4444 100%)' },
-    textColor: 'text-[#F97316]',
-    glow: 'shadow-[0_0_10px_rgba(239,68,68,0.45)]'
+    barStyle: { background: 'linear-gradient(90deg, #e11d48 0%, #f43f5e 100%)' },
+    textColor: 'text-rose-400',
+    glow: 'shadow-[0_0_10px_rgba(244,63,94,0.45)]'
   };
 };
 
@@ -388,6 +399,32 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
+  // Control de interfaz móvil y menús desplegables estilo iPhone
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
+  const [activeTaskMenuId, setActiveTaskMenuId] = useState(null);
+
+  // Referencias para interacción táctil y scroll suave
+  const membersScrollRef = React.useRef(null);
+  const columnsContainerRef = React.useRef(null);
+  const inProgressColumnRef = React.useRef(null);
+
+  // En versión móvil (<768px), centrar suavemente en la columna 'EN PROCESO' en la carga inicial
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      const timer = setTimeout(() => {
+        if (inProgressColumnRef.current) {
+          inProgressColumnRef.current.scrollIntoView({
+            behavior: 'smooth',
+            inline: 'center',
+            block: 'nearest'
+          });
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   // Categorías dinámicas personalizadas (inician vacías por solicitud del usuario)
   const [categories, setCategories] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -570,15 +607,15 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
         label: 'TERMINADO',
         icon: CheckCircle2,
         colorText: 'text-emerald-400',
-        badgeBg: 'bg-emerald-950/80 text-emerald-400 border-emerald-800/40',
+        badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
         tasks: filteredTasks.filter(t => t.status === 'finished')
       },
       {
         id: 'in_progress',
         label: 'EN PROCESO',
-        icon: Clock,
+        icon: CircleDot,
         colorText: 'text-amber-400',
-        badgeBg: 'bg-amber-950/80 text-amber-400 border-amber-800/40',
+        badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
         tasks: filteredTasks.filter(t => t.status === 'in_progress')
       },
       {
@@ -586,7 +623,7 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
         label: 'ATRASADO / EN REVISIÓN',
         icon: AlertCircle,
         colorText: 'text-rose-400',
-        badgeBg: 'bg-rose-950/80 text-rose-400 border-rose-800/40',
+        badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
         tasks: filteredTasks.filter(t => t.status === 'overdue')
       },
       {
@@ -594,7 +631,7 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
         label: 'PENDIENTES / POR HACER',
         icon: Layers,
         colorText: 'text-cyan-400',
-        badgeBg: 'bg-cyan-950/80 text-cyan-400 border-cyan-800/40',
+        badgeBg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
         tasks: filteredTasks.filter(t => t.status === 'backlog')
       }
     ];
@@ -769,175 +806,256 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
   return (
     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300">
       
-      {/* ── HEADER SUPERIOR CON ESTILO VERSA GLASSMORPHISM ── */}
-      <div className="relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-white/10 bg-gradient-to-r from-[#141226]/90 via-[#191530]/85 to-[#0f1426]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+      {/* ── HEADER SUPERIOR CON ESTILO VERSA GLASSMORPHISM & MÓVIL EXACTO ── */}
+      <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7 border border-white/10 bg-gradient-to-r from-[#141226]/90 via-[#191530]/85 to-[#0f1426]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
         {/* Glows ambientales de fondo */}
         <div className="absolute -top-24 -left-20 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-20 w-80 h-80 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
         
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative z-10 flex flex-col gap-4">
           
-          {/* Título y Selector de Vistas Glassmorphism */}
-          <div className="flex flex-col gap-3">
+          {/* Fila Superior: Icono + Título de 2 líneas + Acciones (Lupa, •••, + Nueva Tarea) */}
+          <div className="flex items-center justify-between gap-3">
+            
+            {/* Icono + Título 2 líneas */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 via-indigo-500 to-blue-500 p-0.5 shadow-lg shadow-purple-500/25 flex items-center justify-center">
-                <div className="w-full h-full bg-[#121422] rounded-[14px] flex items-center justify-center">
-                  <Kanban className="w-5 h-5 text-purple-400" />
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-purple-500/20 via-indigo-500/20 to-blue-500/20 border border-purple-500/30 p-0.5 shadow-lg shadow-purple-500/10 flex items-center justify-center shrink-0">
+                <div className="w-full h-full bg-[#121422] rounded-[13px] flex items-center justify-center">
+                  <Kanban className="w-5 h-5 text-purple-300" />
                 </div>
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  Horario Organizacional
+              
+              <div className="flex flex-col">
+                <span className="text-lg sm:text-2xl font-black text-white tracking-tight leading-tight">
+                  Horario
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg sm:text-2xl font-black text-white tracking-tight leading-tight">
+                    Organizacional
+                  </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-widest font-bold">
                     Equipo (4)
                   </span>
-                </h1>
-                <p className="text-xs text-slate-400">
-                  Gestión Kanban, sincronización de tiempos libres y trazabilidad de tareas completadas.
-                </p>
+                </div>
               </div>
             </div>
 
-            {/* Selector de pestañas Glassmorphism (Table | Kanban | Calendar) */}
-            <div className="inline-flex items-center gap-1.5 p-1 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 w-fit self-start">
+            {/* Acciones de la derecha: Lupa, Menú 3 puntos y Botón + Nueva Tarea */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Botón Lupa */}
               <button
-                onClick={() => setCurrentView('table')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  currentView === 'table'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                onClick={() => setIsMobileSearchOpen(prev => !prev)}
+                className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                  isMobileSearchOpen || searchQuery
+                    ? 'bg-purple-600/30 border-purple-500/50 text-purple-200'
+                    : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white'
                 }`}
+                title="Buscar tarea"
               >
-                <TableIcon className="w-3.5 h-3.5" />
-                <span>Table</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-white/10 text-white/80">
-                  {finishedTasks.length}
-                </span>
+                <Search className="w-4 h-4" />
               </button>
 
-              <button
-                onClick={() => setCurrentView('kanban')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  currentView === 'kanban'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Kanban className="w-3.5 h-3.5" />
-                <span>Kanban</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-white/10 text-white/80">
-                  {tasks.length}
-                </span>
-              </button>
+              {/* Botón 3 puntos ••• con Popover */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsHeaderMenuOpen(prev => !prev)}
+                  className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                    isHeaderMenuOpen
+                      ? 'bg-purple-600/30 border-purple-500/50 text-purple-200'
+                      : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white'
+                  }`}
+                  title="Más opciones y filtros"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
 
+                {/* Menú flotante del header */}
+                {isHeaderMenuOpen && (
+                  <div className="absolute right-0 top-10 z-30 w-56 p-3 rounded-2xl bg-[#161a2e]/95 border border-white/15 shadow-2xl backdrop-blur-2xl flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Filtro por Integrante
+                    </div>
+                    <select
+                      value={selectedMemberFilter}
+                      onChange={(e) => {
+                        setSelectedMemberFilter(e.target.value);
+                        setIsHeaderMenuOpen(false);
+                      }}
+                      className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-black/50 border border-white/15 text-slate-200 focus:outline-none focus:border-purple-500/60 cursor-pointer"
+                    >
+                      <option value="all">Equipo: Todos (4)</option>
+                      {DEFAULT_TEAM_MEMBERS.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+
+                    <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+                      <span>Nube Supabase:</span>
+                      <span className="text-emerald-400 font-mono font-bold">Activo ✓</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botón + Nueva Tarea (Pill con gradiente) */}
               <button
-                onClick={() => setCurrentView('calendar')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  currentView === 'calendar'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
+                onClick={() => handleOpenCreateModal()}
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-600/30 transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Calendar & Horarios</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Nueva Tarea</span>
               </button>
             </div>
+
           </div>
 
-          {/* Acciones de la derecha: Buscador + Filtro Integrante + Botón Add Task */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Buscador */}
-            <div className="relative">
+          {/* Subtítulo descriptivo */}
+          <p className="text-xs text-slate-400 -mt-1 leading-relaxed">
+            Gestión Kanban, sincronización de tiempos libres y trazabilidad de tareas completada.
+          </p>
+
+          {/* Barra de búsqueda expandible */}
+          {(isMobileSearchOpen || searchQuery) && (
+            <div className="relative w-full animate-in fade-in slide-in-from-top-2 duration-200">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Buscar tarea o proyecto..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-3.5 py-2 text-xs font-medium rounded-xl bg-black/30 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/40 w-48 sm:w-56 transition-all"
+                className="w-full pl-9 pr-8 py-2 text-xs font-medium rounded-xl bg-black/50 border border-purple-500/40 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                autoFocus
               />
               {searchQuery && (
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => { setSearchQuery(''); setIsMobileSearchOpen(false); }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
+          )}
 
-            {/* Filtro por Integrante (4 personas) */}
-            <select
-              value={selectedMemberFilter}
-              onChange={(e) => setSelectedMemberFilter(e.target.value)}
-              className="px-3 py-2 text-xs font-bold rounded-xl bg-black/40 border border-white/10 text-slate-200 focus:outline-none focus:border-purple-500/60 cursor-pointer"
-            >
-              <option value="all">Equipo: Todos (4)</option>
-              {DEFAULT_TEAM_MEMBERS.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-
-            {/* Botón + Add Task */}
+          {/* Selector de pestañas Glassmorphism (Vista Tabla | Kanban | Calendario) */}
+          <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 w-fit self-start overflow-x-auto max-w-full">
             <button
-              onClick={() => handleOpenCreateModal()}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-600/30 transition-all cursor-pointer active:scale-95"
+              onClick={() => setCurrentView('table')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                currentView === 'table'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Task</span>
+              <TableIcon className="w-3.5 h-3.5" />
+              <span>Vista Tabla</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentView('kanban')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                currentView === 'kanban'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              <span>Kanban</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentView('calendar')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                currentView === 'calendar'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Calendario</span>
             </button>
           </div>
 
-        </div>
+          {/* ── BARRA DE INTEGRANTES ACTIVOS (Píldoras y scroll con flechas < >) ── */}
+          <div className="mt-1 pt-3.5 border-t border-white/10 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-purple-400" />
+                INTEGRANTES ACTIVOS:
+              </span>
 
-        {/* ── BARRA DE INTEGRANTES DEL EQUIPO (4 AVATARES Y ROLES) ── */}
-        <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center gap-3">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-purple-400" />
-            Integrantes Activos:
-          </span>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {DEFAULT_TEAM_MEMBERS.map(member => {
-              const isSelected = selectedMemberFilter === member.id;
-              return (
+              {/* Flechas de navegación táctil < > */}
+              <div className="flex items-center gap-1">
                 <button
-                  key={member.id}
-                  onClick={() => setSelectedMemberFilter(isSelected ? 'all' : member.id)}
-                  className={`flex items-center gap-2 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
-                    isSelected
-                      ? `${member.badgeBg} border-current shadow-sm`
-                      : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
-                  }`}
-                  title={member.role}
+                  onClick={() => membersScrollRef.current?.scrollBy({ left: -120, behavior: 'smooth' })}
+                  className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  title="Ver integrante anterior"
                 >
-                  <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${member.color} flex items-center justify-center text-[9px] font-black text-white shadow-sm`}>
-                    {member.avatar}
-                  </div>
-                  <span className="text-[11px] font-bold">{member.name}</span>
+                  <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-              );
-            })}
+                <button
+                  onClick={() => membersScrollRef.current?.scrollBy({ left: 120, behavior: 'smooth' })}
+                  className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  title="Ver siguiente integrante"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              ref={membersScrollRef}
+              className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 scroll-smooth"
+            >
+              {DEFAULT_TEAM_MEMBERS.map(member => {
+                const isSelected = selectedMemberFilter === member.id;
+                return (
+                  <button
+                    key={member.id}
+                    onClick={() => setSelectedMemberFilter(isSelected ? 'all' : member.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border shrink-0 ${
+                      isSelected
+                        ? `${member.badgeBg} border-current shadow-sm`
+                        : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+                    }`}
+                    title={member.role}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${member.color} flex items-center justify-center text-[9px] font-black text-white shadow-sm shrink-0`}>
+                      {member.avatar}
+                    </div>
+                    <span className="text-[11px] font-bold whitespace-nowrap">{member.name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
         </div>
 
       </div>
 
-      {/* ── VISTA 1: TABLERO KANBAN EDITABLE (ESTILO VERSA UI) ── */}
+      {/* ── VISTA 1: TABLERO KANBAN (CARRUSEL CON EFECTO PEEK EN MÓVIL / GRILLA EN DESKTOP) ── */}
       {currentView === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
+        <div
+          ref={columnsContainerRef}
+          className="flex overflow-x-auto pb-6 gap-3.5 snap-x snap-mandatory px-4 -mx-4 sm:mx-0 sm:px-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-5 md:overflow-visible scrollbar-none scroll-smooth"
+        >
           {columns.map(column => {
             const Icon = column.icon;
+            const isColInProgress = column.id === 'in_progress';
 
             return (
               <div
                 key={column.id}
-                className="flex flex-col gap-3.5 p-4 rounded-3xl bg-[#101423]/75 backdrop-blur-xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.35)] min-h-[480px]"
+                ref={isColInProgress ? inProgressColumnRef : null}
+                className="w-[82vw] max-w-[340px] shrink-0 snap-center md:w-auto md:max-w-none md:shrink flex flex-col gap-3.5 p-4 rounded-[28px] bg-[#101423]/80 backdrop-blur-xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.35)] min-h-[480px]"
               >
                 {/* Cabecera de la columna */}
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
-                    <Icon className={`w-4 h-4 ${column.colorText}`} />
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${column.badgeBg}`}>
+                      <Icon className={`w-3.5 h-3.5 ${column.colorText}`} />
+                    </div>
                     <span className="text-xs font-black tracking-wider uppercase text-white">
                       {column.label}
                     </span>
@@ -948,7 +1066,7 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
 
                   <button
                     onClick={() => handleOpenCreateModal(column.id)}
-                    className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/15 text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                    className="w-7 h-7 rounded-xl bg-white/5 hover:bg-white/15 text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer border border-white/5"
                     title={`Agregar tarea a ${column.label}`}
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -969,40 +1087,64 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
                     </div>
                   ) : (
                     column.tasks.map(task => {
-                      // Determinar estilo de prioridad
+                      // Prioridad localizada en español
+                      const priorityLabel =
+                        task.priority === 'High' ? 'Alta' : task.priority === 'Medium' ? 'Media' : 'Baja';
+
                       const priorityStyle =
                         task.priority === 'High'
                           ? 'bg-rose-500/15 text-rose-300 border-rose-500/40'
                           : task.priority === 'Medium'
                             ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
-                            : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40';
+                            : 'bg-sky-500/15 text-sky-300 border-sky-500/40';
+
+                      const isMenuOpen = activeTaskMenuId === task.id;
 
                       return (
                         <div
                           key={task.id}
-                          className="p-4 rounded-2xl bg-[#161a2e]/90 hover:bg-[#1c223c] border border-white/10 hover:border-purple-500/40 backdrop-blur-md transition-all duration-200 group shadow-md hover:shadow-purple-500/10 flex flex-col gap-3"
+                          className="p-4 rounded-2xl bg-[#161a2e]/90 hover:bg-[#1c223c] border border-white/10 hover:border-purple-500/40 backdrop-blur-md transition-all duration-200 group shadow-md hover:shadow-purple-500/10 flex flex-col gap-2.5 relative"
                         >
-                          {/* Tag de Proyecto y Menú */}
+                          {/* Tag de Proyecto y Menú de opciones ••• */}
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-0.5 rounded-md bg-white/5 border border-white/5 truncate max-w-[170px]">
-                              {task.project}
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 px-2.5 py-0.5 rounded-lg bg-white/5 border border-white/5 truncate max-w-[170px]">
+                              {task.project || 'General'}
                             </span>
 
-                            <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                            <div className="relative">
                               <button
-                                onClick={() => handleOpenEditModal(task)}
-                                className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white"
-                                title="Editar tarea"
+                                onClick={() => setActiveTaskMenuId(isMenuOpen ? null : task.id)}
+                                className="w-6 h-6 rounded-lg hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                title="Opciones de tarea"
                               >
-                                <Edit3 className="w-3 h-3" />
+                                <MoreHorizontal className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-rose-400"
-                                title="Eliminar tarea"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+
+                              {/* Menú flotante de opciones */}
+                              {isMenuOpen && (
+                                <div className="absolute right-0 top-7 z-30 w-36 py-1.5 rounded-xl bg-[#1a1e36] border border-white/15 shadow-xl backdrop-blur-xl flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-150">
+                                  <button
+                                    onClick={() => {
+                                      setActiveTaskMenuId(null);
+                                      handleOpenEditModal(task);
+                                    }}
+                                    className="w-full px-3 py-1.5 text-left text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5 text-purple-400" />
+                                    <span>Editar</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setActiveTaskMenuId(null);
+                                      handleDeleteTask(task.id);
+                                    }}
+                                    className="w-full px-3 py-1.5 text-left text-xs font-semibold text-rose-300 hover:text-rose-200 hover:bg-rose-500/10 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                                    <span>Eliminar</span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -1017,43 +1159,41 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
                             </p>
                           )}
 
-                          {/* Prioridad y Fecha Límite */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${priorityStyle}`}>
-                              {task.priority}
-                            </span>
+                          {/* Prioridad, Fecha Límite y Porcentaje de Progreso */}
+                          <div className="flex items-center justify-between gap-2 pt-0.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${priorityStyle}`}>
+                                {priorityLabel}
+                              </span>
 
-                            <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
-                              <CalendarDays className="w-3 h-3 text-slate-500" />
-                              {task.dueDate}
+                              <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                                <CalendarDays className="w-3 h-3 text-slate-500" />
+                                {task.dueDate}
+                              </span>
+                            </div>
+
+                            <span className="text-[11px] font-mono font-bold text-slate-200">
+                              {task.progress}%
                             </span>
                           </div>
 
-                          {/* Barra de progreso con gradiente dinámico según semáforo de salud (0-25%, 26-70%, 71-99%, 100%) */}
+                          {/* Barra de progreso con gradiente */}
                           {(() => {
-                            const progStyle = getCardProgressStyle(task.progress);
+                            const progStyle = getCardProgressStyle(task.progress, task.priority);
                             return (
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                                  <span>Progreso</span>
-                                  <span className={`font-bold font-mono transition-colors duration-300 ${progStyle.textColor}`}>
-                                    {task.progress}%
-                                  </span>
-                                </div>
-                                <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all duration-500 ${progStyle.glow}`}
-                                    style={{
-                                      width: `${task.progress}%`,
-                                      ...progStyle.barStyle
-                                    }}
-                                  />
-                                </div>
+                              <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${progStyle.glow}`}
+                                  style={{
+                                    width: `${task.progress}%`,
+                                    ...progStyle.barStyle
+                                  }}
+                                />
                               </div>
                             );
                           })()}
 
-                          {/* Footer de la tarjeta: Avatares asignados y Mover columna */}
+                          {/* Footer de la tarjeta: Avatares asignados y Botón Listo / Reabrir */}
                           <div className="flex items-center justify-between pt-2 border-t border-white/5 mt-0.5">
                             {/* Avatares solapados */}
                             <div className="flex items-center -space-x-1.5">
@@ -1072,26 +1212,24 @@ export default function HorarioKanbanOrganizacional({ isDark = true }) {
                               })}
                             </div>
 
-                            {/* Botones de mover rápido */}
-                            <div className="flex items-center gap-1">
-                              {column.id !== 'finished' && (
+                            {/* Botón de acción rápido (✓ Listo / ↻ Reabrir) */}
+                            <div>
+                              {column.id !== 'finished' ? (
                                 <button
                                   onClick={() => handleMoveTask(task.id, 'finished')}
-                                  className="px-2 py-0.5 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1 transition-all"
-                                  title="Marcar como Finalizada"
+                                  className="px-3 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold border border-emerald-500/30 flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95"
+                                  title="Marcar como Listo"
                                 >
-                                  <Check className="w-2.5 h-2.5" />
-                                  <span>Fin</span>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span>Listo</span>
                                 </button>
-                              )}
-
-                              {column.id === 'finished' && (
+                              ) : (
                                 <button
                                   onClick={() => handleMoveTask(task.id, 'in_progress')}
-                                  className="px-2 py-0.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold border border-amber-500/30 flex items-center gap-1 transition-all"
+                                  className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/30 flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95"
                                   title="Regresar a En Progreso"
                                 >
-                                  <Clock className="w-2.5 h-2.5" />
+                                  <RefreshCw className="w-3 h-3 text-amber-400" />
                                   <span>Reabrir</span>
                                 </button>
                               )}
