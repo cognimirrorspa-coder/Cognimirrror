@@ -99,20 +99,36 @@ export default function LandingPage() {
       {/* ===== NAVBAR ===== */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111827]/85 backdrop-blur-md border-b border-white/5">
         <div className="container mx-auto max-w-7xl px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 select-none cursor-pointer">
-            <img src="/logo.png" alt="CogniMirror" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
-            <span className="font-bold text-white text-xs sm:text-sm flex items-center">
-              Cogni
-              <GradientText
-                colors={['#00f2fe', '#38bdf8', '#818cf8', '#c084fc', '#ec4899', '#00f2fe']}
-                animationSpeed={3.5}
-                showBorder={false}
-                className="font-bold inline-block"
-              >
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="group flex items-center gap-2.5 sm:gap-3 select-none cursor-pointer py-1 transition-opacity duration-200 hover:opacity-95 focus:outline-none"
+            aria-label="CogniMirror - Inicio"
+          >
+            {/* Isotipo: Cubo Isométrico Pro Optical Alignment */}
+            <div className="relative flex items-center justify-center shrink-0">
+              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/25 to-pink-500/25 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <img
+                src="/logo.png"
+                alt="CogniMirror"
+                className="relative w-6 h-6 sm:w-7 sm:h-7 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-105"
+                style={{ imageRendering: '-webkit-optimize-contrast' }}
+              />
+            </div>
+
+            {/* Logotipo: Wordmark Pro con alineación baseline exacta, tracking fino y gradiente de marca */}
+            <div className="flex items-baseline font-extrabold tracking-[-0.035em] text-[1.15rem] sm:text-[1.35rem] leading-none">
+              <span className="text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                Cogni
+              </span>
+              <span className="bg-gradient-to-r from-[#00f2fe] via-[#818cf8] to-[#ec4899] bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift drop-shadow-[0_0_15px_rgba(0,242,254,0.25)]">
                 Mirror
-              </GradientText>
-            </span>
-          </div>
+              </span>
+            </div>
+          </a>
           <button
             onClick={goToLogin}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 sm:gap-2 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
@@ -887,9 +903,21 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12 text-left">
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="CogniMirror" className="w-8 h-8 object-contain" />
-                <span className="font-bold text-white text-sm">CogniMirror</span>
+              <div className="flex items-center gap-2.5 sm:gap-3 select-none">
+                <div className="relative flex items-center justify-center shrink-0">
+                  <img
+                    src="/logo.png"
+                    alt="CogniMirror"
+                    className="w-6 h-6 sm:w-7 sm:h-7 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]"
+                    style={{ imageRendering: '-webkit-optimize-contrast' }}
+                  />
+                </div>
+                <div className="flex items-baseline font-extrabold tracking-[-0.035em] text-lg sm:text-xl leading-none">
+                  <span className="text-white">Cogni</span>
+                  <span className="bg-gradient-to-r from-[#00f2fe] via-[#818cf8] to-[#ec4899] bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">
+                    Mirror
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed font-light">
                 Plataforma B2B especializada en captura de datos neuromotores y estimulación bimanual activa.
