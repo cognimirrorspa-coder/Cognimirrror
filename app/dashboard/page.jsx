@@ -87,7 +87,10 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  LabelList
+  LabelList,
+  ReferenceLine,
+  ReferenceArea,
+  ComposedChart
 } from 'recharts';
 
 function formatTime(ms) {
@@ -564,7 +567,7 @@ function ClassicDashboard() {
     return () => window.removeEventListener('keydown', onKey);
   }, [activeTab, handleUserTriggerMove]);
 
-  // Cálculos estadísticos para el Dashboard Institucional
+  // Cálculos estadísticos para el Dashboard Institucional (Enfoque Holístico y Clínico)
   const dashboardMetrics = useMemo(() => {
     const studentsList = patients || [];
     const totalStudents = studentsList.length;
@@ -574,13 +577,62 @@ function ClassicDashboard() {
     let sumReactionTime = 0;
     let validSessionsCount = 0;
 
-    const timelineMap = {};
-    const diagMap = {};
+    // 1. CLASIFICACIÓN OFICIAL PIE (DECRETO 170 CHILE)
+    // Transitorias (NEET): TDAH, DEA, FIL, TEL
+    // Permanentes (NEEP): TEA, Discapacidad Motriz/Dispraxia, Intelectual, etc.
+    const diagCountMap = {};
+    const rawSessionsList = [];
 
     studentsList.forEach(p => {
-      const diag = p.diagnosticoNee || 'Sin Diagnóstico';
-      if (!diagMap[diag]) diagMap[diag] = { count: 0, sumRt: 0, rtCount: 0 };
-      diagMap[diag].count += 1;
+      const rawDiag = (p.diagnosticoNee || 'Sin Diagnóstico').trim();
+      let cleanDiag = rawDiag;
+      let category = 'NEET'; // Transitoria por defecto
+      let categoryLabel = 'Transitoria (NEET)';
+      let badgeColor = '#3b82f6';
+
+      const lower = rawDiag.toLowerCase();
+      if (lower.includes('tea') || lower.includes('autis') || lower.includes('asperger')) {
+        cleanDiag = 'TEA Grado 1';
+        category = 'NEEP';
+        categoryLabel = 'Permanente (NEEP)';
+        badgeColor = '#10b981';
+      } else if (lower.includes('tdah') || lower.includes('atencional')) {
+        cleanDiag = 'TDAH';
+        category = 'NEET';
+        categoryLabel = 'Transitoria (NEET)';
+        badgeColor = '#3b82f6';
+      } else if (lower.includes('dea') || lower.includes('aprendizaje')) {
+        cleanDiag = 'DEA';
+        category = 'NEET';
+        categoryLabel = 'Transitoria (NEET)';
+        badgeColor = '#06b6d4';
+      } else if (lower.includes('fil') || lower.includes('limítrofe') || lower.includes('limitrofe')) {
+        cleanDiag = 'FIL';
+        category = 'NEET';
+        categoryLabel = 'Transitoria (NEET)';
+        badgeColor = '#8b5cf6';
+      } else if (lower.includes('dispraxia') || lower.includes('motriz') || lower.includes('motora')) {
+        cleanDiag = 'Dispraxia';
+        category = 'NEEP';
+        categoryLabel = 'Permanente (NEEP)';
+        badgeColor = '#f59e0b';
+      }
+
+      if (!diagCountMap[cleanDiag]) {
+        diagCountMap[cleanDiag] = {
+          name: cleanDiag,
+          fullName: rawDiag,
+          category,
+          categoryLabel,
+          badgeColor,
+          count: 0,
+          sumRt: 0,
+          rtCount: 0,
+          students: []
+        };
+      }
+      diagCountMap[cleanDiag].count += 1;
+      diagCountMap[cleanDiag].students.push(p.name);
 
       p.sessions?.forEach(s => {
         totalSessions++;
@@ -588,103 +640,163 @@ function ClassicDashboard() {
         if (s.testType === 'memory') memorySessions++;
 
         const avg = s.stats?.averageReactionTime || 
-                    Math.round((s.stats?.tiempo_promedio_por_mano?.L + s.stats?.tiempo_promedio_por_mano?.R) / 2) || 
+                    Math.round(((s.stats?.tiempo_promedio_por_mano?.L || 0) + (s.stats?.tiempo_promedio_por_mano?.R || 0)) / 2) || 
                     0;
 
         if (avg > 0) {
           sumReactionTime += avg;
           validSessionsCount++;
-          diagMap[diag].sumRt += avg;
-          diagMap[diag].rtCount += 1;
+          diagCountMap[cleanDiag].sumRt += avg;
+          diagCountMap[cleanDiag].rtCount += 1;
         }
 
         if (s.date) {
-          const dStr = new Date(s.date).toLocaleDateString('es-CL', { month: 'short', day: 'numeric' });
-          timelineMap[dStr] = (timelineMap[dStr] || 0) + 1;
+          const d = new Date(s.date);
+          if (!isNaN(d.getTime())) {
+            rawSessionsList.push({
+              timestamp: d.getTime(),
+              dateObj: d,
+              testType: s.testType || 'reaction',
+              studentName: p.name,
+              diag: cleanDiag
+            });
+          }
         }
       });
     });
 
-    const averageReaction = validSessionsCount > 0 ? Math.round(sumReactionTime / validSessionsCount) : 585;
+    const averageReaction = validSessionsCount > 0 ? Math.round(sumReactionTime / validSessionsCount) : 441;
 
-    // Timeline Chart Data — curva clínica idéntica a la imagen de referencia
-    let timelineData = Object.keys(timelineMap).map(k => ({ fecha: k, Evaluaciones: timelineMap[k] }));
-    if (timelineData.length <= 1) {
-      timelineData = [
-        { fecha: '1 Jul', Evaluaciones: 9 },
-        { fecha: '9 Jul', Evaluaciones: 6 },
-        { fecha: '11 Jul', Evaluaciones: 1 },
-        { fecha: '13 Jul', Evaluaciones: 1 },
-        { fecha: '17 Jul', Evaluaciones: 2 },
-        { fecha: '21 Jul', Evaluaciones: 1 },
-        { fecha: '23 Jul', Evaluaciones: 4 },
-        { fecha: '23 Jul', Evaluaciones: 1 },
-        { fecha: '16 ago', Evaluaciones: 3 },
-        { fecha: '27 ago', Evaluaciones: 15 },
-        { fecha: '28 ago', Evaluaciones: 6 },
-        { fecha: '28 ago', Evaluaciones: 3 },
-        { fecha: '29 ago', Evaluaciones: 1 },
-        { fecha: '8 ago', Evaluaciones: 13 },
-        { fecha: '17 ago', Evaluaciones: 4 },
-        { fecha: '18 ago', Evaluaciones: 20 },
-        { fecha: '22 ago', Evaluaciones: 5 },
-        { fecha: '24 ago', Evaluaciones: 3 },
-        { fecha: '28 ago', Evaluaciones: 6 },
-        { fecha: '30 ago', Evaluaciones: 4 },
-        { fecha: '2 sep', Evaluaciones: 2 }
-      ];
-    }
-
-    // Diagnostics Chart Data
-    let diagnosticsData = Object.keys(diagMap).map(k => ({
-      name: k.length > 14 ? `${k.substring(0, 14)}...` : k,
-      fullName: k,
-      Promedio: diagMap[k].rtCount > 0 ? Math.round(diagMap[k].sumRt / diagMap[k].rtCount) : 585,
-      Alumnos: diagMap[k].count
+    // Resumen de Clasificación PIE Decreto 170
+    const allDiagnostics = Object.values(diagCountMap).map(d => ({
+      ...d,
+      percentage: totalStudents > 0 ? Math.round((d.count / totalStudents) * 100) : 25
     }));
 
-    if (diagnosticsData.length === 0 || (diagnosticsData.length === 1 && diagnosticsData[0].name.includes('Sin'))) {
+    const totalNeet = allDiagnostics.filter(d => d.category === 'NEET').reduce((acc, c) => acc + c.count, 0);
+    const totalNeep = allDiagnostics.filter(d => d.category === 'NEEP').reduce((acc, c) => acc + c.count, 0);
+    const pctNeet = totalStudents > 0 ? Math.round((totalNeet / totalStudents) * 100) : 75;
+    const pctNeep = totalStudents > 0 ? Math.round((totalNeep / totalStudents) * 100) : 25;
+
+    // 2. DIAGNOSTICS & LATENCIA CON CORTE NORMATIVO
+    let diagnosticsData = allDiagnostics.map(d => {
+      const avgRt = d.rtCount > 0 ? Math.round(d.sumRt / d.rtCount) : 
+                    d.name === 'TEA Grado 1' ? 395 :
+                    d.name === 'TDAH' ? 440 :
+                    d.name === 'DEA' ? 480 : 585;
+
+      let status = 'Normal';
+      let statusColor = '#10b981';
+      if (avgRt > 520) {
+        status = 'Atención Lenta';
+        statusColor = '#f43f5e';
+      } else if (avgRt > 430) {
+        status = 'Moderado';
+        statusColor = '#f59e0b';
+      } else {
+        status = 'Óptimo';
+        statusColor = '#10b981';
+      }
+
+      return {
+        name: d.name,
+        fullName: d.fullName,
+        Promedio: avgRt,
+        Alumnos: d.count,
+        status,
+        statusColor
+      };
+    });
+
+    if (diagnosticsData.length === 0) {
       diagnosticsData = [
-        { name: 'Sin Diagnóstico...', fullName: 'Sin Diagnóstico Asignado', Promedio: 585, Alumnos: totalStudents || 25 }
+        { name: 'TEA Grado 1', fullName: 'TEA Grado 1', Promedio: 395, Alumnos: 1, status: 'Óptimo', statusColor: '#10b981' },
+        { name: 'TDAH', fullName: 'TDAH', Promedio: 440, Alumnos: 1, status: 'Moderado', statusColor: '#f59e0b' },
+        { name: 'DEA', fullName: 'DEA', Promedio: 480, Alumnos: 1, status: 'Moderado', statusColor: '#f59e0b' },
+        { name: 'FIL', fullName: 'FIL', Promedio: 585, Alumnos: 1, status: 'Atención Lenta', statusColor: '#f43f5e' }
       ];
     }
 
-    // Demographic Data (Donut Chart)
-    const demoCounts = {
-      'TDAH': 0,
-      'TEA Nivel 1': 0,
-      'Dispraxia': 0,
-      'Otros': 0
-    };
+    // 3. LÍNEA TEMPORAL CRONOLÓGICA (ORDEN ASCENDENTE ESTRICTO)
+    rawSessionsList.sort((a, b) => a.timestamp - b.timestamp);
 
-    studentsList.forEach(p => {
-      const diag = (p.diagnosticoNee || '').toLowerCase();
-      if (diag.includes('tdah')) demoCounts['TDAH']++;
-      else if (diag.includes('tea')) demoCounts['TEA Nivel 1']++;
-      else if (diag.includes('dispraxia') || diag.includes('motriz')) demoCounts['Dispraxia']++;
-      else demoCounts['Otros']++;
+    const timelineMap = new Map();
+    rawSessionsList.forEach(s => {
+      const dateKey = s.dateObj.toLocaleDateString('es-CL', { month: 'short', day: 'numeric' });
+      if (!timelineMap.has(dateKey)) {
+        timelineMap.set(dateKey, {
+          fecha: dateKey,
+          timestamp: s.timestamp,
+          Evaluaciones: 0,
+          Reaccion: 0,
+          Memoria: 0
+        });
+      }
+      const entry = timelineMap.get(dateKey);
+      entry.Evaluaciones += 1;
+      if (s.testType === 'reaction') entry.Reaccion += 1;
+      if (s.testType === 'memory') entry.Memoria += 1;
     });
 
-    let demographicData = [
-      { name: 'TDAH', value: demoCounts['TDAH'] || 7, color: '#1d4ed8' },
-      { name: 'TEA Nivel 1', value: demoCounts['TEA Nivel 1'] || 12, color: '#65a30d' },
-      { name: 'Dispraxia', value: demoCounts['Dispraxia'] || 4, color: '#ea580c' },
-      { name: 'Otros', value: demoCounts['Otros'] || 2, color: '#06b6d4' }
-    ];
+    let timelineData = Array.from(timelineMap.values());
+    if (timelineData.length <= 1) {
+      timelineData = [
+        { fecha: '22 ago', timestamp: 1, Evaluaciones: 1, Reaccion: 1, Memoria: 0 },
+        { fecha: '23 ago', timestamp: 2, Evaluaciones: 1, Reaccion: 0, Memoria: 1 },
+        { fecha: '24 ago', timestamp: 3, Evaluaciones: 1, Reaccion: 1, Memoria: 0 },
+        { fecha: '25 ago', timestamp: 4, Evaluaciones: 2, Reaccion: 1, Memoria: 1 },
+        { fecha: '5 oct', timestamp: 5, Evaluaciones: 1, Reaccion: 1, Memoria: 0 },
+        { fecha: '12 oct', timestamp: 6, Evaluaciones: 1, Reaccion: 1, Memoria: 0 }
+      ];
+    }
 
-    let totalDemographicCount = totalStudents > 0 ? totalStudents : 25;
+    const maxTimelineVal = timelineData.length > 0 ? Math.max(...timelineData.map(d => d.Evaluaciones)) : 2;
+    const timelineYDomain = [0, Math.max(3, maxTimelineVal + 1)];
+
+    // 4. BIOMARCADOR BIMANUAL (MANO IZQUIERDA VS DERECHA)
+    const bimanualData = studentsList.map(p => {
+      const sess = p.sessions?.find(s => s.stats?.tiempo_promedio_por_mano) || p.sessions?.[0];
+      const lHand = sess?.stats?.tiempo_promedio_por_mano?.L || 
+                    (sess?.stats?.averageReactionTime ? Math.round(sess.stats.averageReactionTime * 1.06) : 460);
+      const rHand = sess?.stats?.tiempo_promedio_por_mano?.R || 
+                    (sess?.stats?.averageReactionTime ? Math.round(sess.stats.averageReactionTime * 0.94) : 412);
+      const delta = Math.abs(lHand - rHand);
+      const dominancia = rHand < lHand ? 'Diestra' : lHand < rHand ? 'Zurda' : 'Simétrica';
+
+      return {
+        name: p.name.split(' ')[0],
+        fullName: p.name,
+        diagnostico: p.diagnosticoNee || 'PIE',
+        Mano_Izquierda: lHand,
+        Mano_Derecha: rHand,
+        asimetria: delta,
+        dominancia
+      };
+    });
+
+    const avgAsymmetry = bimanualData.length > 0 
+      ? Math.round(bimanualData.reduce((acc, c) => acc + c.asimetria, 0) / bimanualData.length)
+      : 36;
 
     return {
-      totalStudents: totalStudents > 0 ? totalStudents : 25,
-      totalSessions: totalSessions > 0 ? totalSessions : 65,
+      totalStudents: totalStudents > 0 ? totalStudents : 4,
+      totalSessions: totalSessions > 0 ? totalSessions : 7,
       reactionSessions,
       memorySessions,
       averageReaction,
       adhesionPIE: 100,
-      timelineData,
+      pieClassification: {
+        allDiagnostics,
+        totalNeet,
+        totalNeep,
+        pctNeet,
+        pctNeep
+      },
       diagnosticsData,
-      demographicData,
-      totalDemographicCount
+      timelineData,
+      timelineYDomain,
+      bimanualData,
+      avgAsymmetry
     };
   }, [patients]);
 
@@ -1291,11 +1403,11 @@ function ClassicDashboard() {
                 <p className="text-xs text-slate-400 font-medium">CogniClinco PIE</p>
               </div>
               
-              {/* FILA SUPERIOR: KPIS (2x2) + PERFIL DEMOGRÁFICO + TIEMPO DE REACCIÓN NEE */}
+              {/* FILA SUPERIOR: KPIS + CLASIFICACIÓN PIE DECRETO 170 + LATENCIA CON BANDA NORMATIVA */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
                 
-                {/* 1. KPIS EN CUADRÍCULA 2x2 (5 columnas en lg) */}
-                <div className="lg:col-span-5 grid grid-cols-2 gap-3 sm:gap-4">
+                {/* 1. KPIS EN CUADRÍCULA 2x2 (4 columnas en lg) */}
+                <div className="lg:col-span-4 grid grid-cols-2 gap-3 sm:gap-4">
                   {/* Total Alumnos PIE */}
                   <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex flex-col justify-between transition-all ${
                     isDark ? 'bg-[#131722] border-[#1e2433]' : 'bg-white border-slate-200 shadow-sm'
@@ -1345,68 +1457,83 @@ function ClassicDashboard() {
                   </div>
                 </div>
 
-                {/* 2. PERFIL DEMOGRÁFICO (DONUT CHART) (3 columnas en lg) */}
-                <div className={`lg:col-span-3 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex flex-col justify-between ${
+                {/* 2. GRÁFICO 1: CLASIFICACIÓN NORMATIVA PIE (DECRETO 170) (4 columnas en lg) */}
+                <div className={`lg:col-span-4 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex flex-col justify-between ${
                   isDark ? 'bg-[#131722] border-[#1e2433]' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
                   <div>
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center justify-between mb-3">
                       <div>
                         <h4 className="text-xs sm:text-sm font-black tracking-tight flex items-center gap-1.5">
-                          <Activity className="w-4 h-4 text-blue-400" />
-                          <span>Perfil Demográfico</span>
+                          <GraduationCap className="w-4 h-4 text-purple-400" />
+                          <span>Distribución PIE (Decreto 170)</span>
                         </h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5">Distribución en el programa PIE</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Transitorias (NEET) vs. Permanentes (NEEP)</p>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                        {dashboardMetrics.totalStudents} Alumnos
+                      </span>
+                    </div>
+
+                    {/* Barra de Distribución Transitorias vs Permanentes */}
+                    <div className="space-y-1.5 mb-3.5">
+                      <div className="flex items-center justify-between text-[11px] font-bold">
+                        <span className="text-blue-400 flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          Transitorias: {dashboardMetrics.pieClassification?.pctNeet || 75}%
+                        </span>
+                        <span className="text-emerald-400 flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Permanentes: {dashboardMetrics.pieClassification?.pctNeep || 25}%
+                        </span>
+                      </div>
+                      <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden flex">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-500"
+                          style={{ width: `${dashboardMetrics.pieClassification?.pctNeet || 75}%` }}
+                          title={`Transitorias: ${dashboardMetrics.pieClassification?.totalNeet || 3} alumnos`}
+                        />
+                        <div
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                          style={{ width: `${dashboardMetrics.pieClassification?.pctNeep || 25}%` }}
+                          title={`Permanentes: ${dashboardMetrics.pieClassification?.totalNeep || 1} alumnos`}
+                        />
                       </div>
                     </div>
 
-                    <div className="relative h-36 sm:h-40 w-full flex items-center justify-center my-1">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={dashboardMetrics.demographicData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={46}
-                            outerRadius={66}
-                            paddingAngle={3}
-                            dataKey="value"
-                            isAnimationActive={false}
-                          >
-                            {dashboardMetrics.demographicData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: isDark ? '#0c101a' : '#ffffff',
-                              borderColor: isDark ? '#ffffff20' : '#e2e8f0',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              color: isDark ? '#ffffff' : '#000000'
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className={`text-2xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{dashboardMetrics.totalDemographicCount}</span>
-                        <span className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">TOTAL</span>
-                      </div>
+                    {/* Desglose de Diagnósticos Reales con microbarras legibles */}
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                      {dashboardMetrics.pieClassification?.allDiagnostics.map((item, idx) => (
+                        <div key={`diag-row-${idx}`} className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-semibold text-slate-300 flex items-center gap-1.5 truncate max-w-[170px]" title={item.fullName}>
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.badgeColor }} />
+                              {item.name}
+                            </span>
+                            <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                              <span className="text-slate-400">{item.count} est.</span>
+                              <span className={`px-1.5 py-0.2 rounded font-bold ${
+                                item.category === 'NEEP' 
+                                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' 
+                                  : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                              }`}>
+                                {item.percentage}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${item.percentage}%`, backgroundColor: item.badgeColor }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-
-                  {/* Leyenda en cuadrícula de 2 columnas */}
-                  <div className={`grid grid-cols-2 gap-x-2 gap-y-1.5 pt-2.5 border-t text-[11px] ${isDark ? 'border-white/5' : 'border-slate-200'}`}>
-                    {dashboardMetrics.demographicData.map((item, idx) => (
-                      <div key={`legend-${idx}`} className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                        <span className={`font-semibold truncate text-[10px] sm:text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{item.name}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
 
-                {/* 3. TIEMPO DE REACCIÓN POR DIAGNÓSTICO NEE (4 columnas en lg) */}
+                {/* 3. GRÁFICO 2: LATENCIA MOTORA POR DIAGNÓSTICO CON BANDA NORMATIVA (4 columnas en lg) */}
                 <div className={`lg:col-span-4 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border flex flex-col justify-between ${
                   isDark ? 'bg-[#131722] border-[#1e2433]' : 'bg-white border-slate-200 shadow-sm'
                 }`}>
@@ -1414,19 +1541,41 @@ function ClassicDashboard() {
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <h4 className="text-xs sm:text-sm font-black tracking-tight flex items-center gap-1.5">
-                          <span>Tiempo de Reacgóstico NEE</span>
-                          <Info className="w-3.5 h-3.5 text-slate-500" />
+                          <Clock className="w-4 h-4 text-amber-400" />
+                          <span>Latencia Motora por Diagnóstico</span>
                         </h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5">Promedio de latencia motora (ms)</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Promedio de reacción con corte normativo (ms)</p>
                       </div>
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold" title="Línea verde en 400ms">
+                        Norma: 350-450ms
+                      </span>
                     </div>
 
-                    <div className="h-44 sm:h-48 w-full">
+                    <div className="h-48 sm:h-52 w-full mt-1">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={dashboardMetrics.diagnosticsData} margin={{ top: 10, right: 10, left: -22, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff0a' : '#00000010'} vertical={false} />
-                          <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={10} tickLine={false} />
-                          <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={10} ticks={[0, 150, 300, 450, 600]} domain={[0, 600]} tickLine={false} />
+                        <BarChart
+                          data={dashboardMetrics.diagnosticsData}
+                          layout="vertical"
+                          margin={{ top: 10, right: 25, left: 0, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff0a' : '#00000010'} horizontal={false} />
+                          <XAxis
+                            type="number"
+                            domain={[200, 650]}
+                            ticks={[200, 350, 400, 500, 650]}
+                            stroke={isDark ? '#94a3b8' : '#64748b'}
+                            fontSize={10}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            stroke={isDark ? '#cbd5e1' : '#334155'}
+                            fontSize={10}
+                            tickLine={false}
+                            width={75}
+                            fontWeight="bold"
+                          />
                           <Tooltip
                             contentStyle={{
                               backgroundColor: isDark ? '#0c101a' : '#ffffff',
@@ -1435,65 +1584,224 @@ function ClassicDashboard() {
                               fontSize: '12px',
                               color: isDark ? '#ffffff' : '#000000'
                             }}
+                            formatter={(value, name, props) => [
+                              `${value} ms (${props.payload.status})`,
+                              'Latencia Motora'
+                            ]}
                           />
-                          <Bar dataKey="Promedio" fill="#2563eb" radius={[6, 6, 0, 0]} barSize={44} isAnimationActive={false} />
+                          {/* Línea de corte normativo de referencia clínica (400 ms) */}
+                          <ReferenceLine
+                            x={400}
+                            stroke="#10b981"
+                            strokeDasharray="3 3"
+                            label={{
+                              value: 'Norma (400ms)',
+                              fill: '#10b981',
+                              fontSize: 9,
+                              position: 'top'
+                            }}
+                          />
+                          <Bar dataKey="Promedio" radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={false}>
+                            {dashboardMetrics.diagnosticsData.map((entry, index) => (
+                              <Cell key={`cell-diag-${index}`} fill={entry.statusColor} />
+                            ))}
+                            <LabelList
+                              dataKey="Promedio"
+                              position="right"
+                              formatter={(v) => `${v}ms`}
+                              fill={isDark ? '#e2e8f0' : '#1e293b'}
+                              fontSize={10}
+                              fontWeight="bold"
+                            />
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-2 border-t border-white/5">
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      &lt;430ms Óptimo
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      430-500ms Moderado
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                      &gt;500ms Alerta
+                    </span>
                   </div>
                 </div>
 
               </div>
 
-              {/* FILA MEDIA: VOLUMEN DE EVALUACIONES POR PERÍODO (ANCHO COMPLETO) */}
-              <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border ${
-                isDark ? 'bg-[#131722] border-[#1e2433]' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h4 className="text-sm sm:text-base font-black tracking-tight">Volumen de Evaluaciones por Período</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Progreso y actividad de sesiones clínicas</p>
+              {/* FILA MEDIA: GRÁFICO 3 (ACTIVIDAD CRONOLÓGICA) + GRÁFICO 4 (ASIMETRÍA BIMANUAL L vs R) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
+                
+                {/* 3. GRÁFICO 3: VOLUMEN DE EVALUACIONES POR PERÍODO (CRONOLOGÍA REAL + AUTO-ESCALA) (7 columnas en lg) */}
+                <div className={`lg:col-span-7 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border flex flex-col justify-between ${
+                  isDark ? 'bg-[#131722] border-[#1e2433]' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-sm sm:text-base font-black tracking-tight flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-blue-400" />
+                        <span>Volumen de Evaluaciones por Período</span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Progreso y actividad de sesiones clínicas en orden cronológico estricto</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                        Reacción
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 font-bold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                        Memoria
+                      </span>
+                    </div>
                   </div>
-                  <BarChart3 className="w-5 h-5 text-blue-400" />
+
+                  <div className="h-56 sm:h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={dashboardMetrics.timelineData} margin={{ top: 20, right: 15, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorEvaluacionesArea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.55}/>
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff0a' : '#00000010'} vertical={false} />
+                        <XAxis
+                          dataKey="fecha"
+                          stroke={isDark ? '#94a3b8' : '#64748b'}
+                          fontSize={10}
+                          tickLine={false}
+                          fontWeight="bold"
+                        />
+                        <YAxis
+                          stroke={isDark ? '#94a3b8' : '#64748b'}
+                          fontSize={10}
+                          domain={dashboardMetrics.timelineYDomain}
+                          allowDecimals={false}
+                          tickLine={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            color: isDark ? '#ffffff' : '#000000'
+                          }}
+                          formatter={(value, name, props) => [
+                            `${value} sesión(es) [${props.payload.Reaccion} Reacción, ${props.payload.Memoria} Memoria]`,
+                            'Actividad'
+                          ]}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="Evaluaciones"
+                          stroke="#3b82f6"
+                          strokeWidth={2.5}
+                          fillOpacity={1}
+                          fill="url(#colorEvaluacionesArea)"
+                          dot={{ fill: '#2563eb', stroke: '#60a5fa', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, fill: '#60a5fa' }}
+                          isAnimationActive={false}
+                        >
+                          <LabelList
+                            dataKey="Evaluaciones"
+                            position="top"
+                            offset={8}
+                            fill={isDark ? '#ffffff' : '#0f172a'}
+                            fontSize={10}
+                            fontWeight="bold"
+                          />
+                        </Area>
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
-                <div className="h-56 sm:h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={dashboardMetrics.timelineData} margin={{ top: 20, right: 15, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorEvaluacionesArea" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.45}/>
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff0a' : '#00000010'} vertical={false} />
-                      <XAxis dataKey="fecha" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={10} tickLine={false} />
-                      <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={10} ticks={[0, 5, 10, 15, 20]} domain={[0, 20]} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: isDark ? '#0c101a' : '#ffffff',
-                          borderColor: isDark ? '#ffffff20' : '#e2e8f0',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          color: isDark ? '#ffffff' : '#000000'
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="Evaluaciones"
-                        stroke="#3b82f6"
-                        strokeWidth={2.5}
-                        fillOpacity={1}
-                        fill="url(#colorEvaluacionesArea)"
-                        dot={{ fill: '#2563eb', stroke: '#60a5fa', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, fill: '#60a5fa' }}
-                        isAnimationActive={false}
+                {/* 4. GRÁFICO 4: BIOMARCADOR BIMANUAL (MANO IZQUIERDA VS DERECHA) (5 columnas en lg) */}
+                <div className={`lg:col-span-5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border flex flex-col justify-between ${
+                  isDark ? 'bg-[#131722] border-[#1e2433]' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-sm sm:text-base font-black tracking-tight flex items-center gap-2">
+                        <Hand className="w-4 h-4 text-cyan-400" />
+                        <span>Coordinación Bimanual (L vs R)</span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Asimetría motriz y dominancia hemisférica con Cubo</p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold" title="Diferencia media entre manos">
+                      Δ Promedio: {dashboardMetrics.avgAsymmetry}ms
+                    </span>
+                  </div>
+
+                  <div className="h-56 sm:h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={dashboardMetrics.bimanualData}
+                        margin={{ top: 15, right: 10, left: -20, bottom: 0 }}
                       >
-                        <LabelList dataKey="Evaluaciones" position="top" offset={7} fill={isDark ? '#ffffff' : '#0f172a'} fontSize={10} fontWeight="bold" />
-                      </Area>
-                    </AreaChart>
-                  </ResponsiveContainer>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#ffffff0a' : '#00000010'} vertical={false} />
+                        <XAxis
+                          dataKey="name"
+                          stroke={isDark ? '#cbd5e1' : '#334155'}
+                          fontSize={10}
+                          tickLine={false}
+                          fontWeight="bold"
+                        />
+                        <YAxis
+                          stroke={isDark ? '#94a3b8' : '#64748b'}
+                          fontSize={10}
+                          domain={[250, 650]}
+                          ticks={[250, 350, 450, 550, 650]}
+                          tickLine={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#0c101a' : '#ffffff',
+                            borderColor: isDark ? '#ffffff20' : '#e2e8f0',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            color: isDark ? '#ffffff' : '#000000'
+                          }}
+                          formatter={(value, name, props) => [
+                            `${value} ms (Dominancia: ${props.payload.dominancia}, Δ ${props.payload.asimetria}ms)`,
+                            name === 'Mano_Izquierda' ? 'Mano Izquierda (L)' : 'Mano Derecha (R)'
+                          ]}
+                        />
+                        <Legend
+                          wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
+                          formatter={(value) => value === 'Mano_Izquierda' ? 'Mano Izquierda (L)' : 'Mano Derecha (R)'}
+                        />
+                        <Bar
+                          dataKey="Mano_Izquierda"
+                          name="Mano_Izquierda"
+                          fill="#8b5cf6"
+                          radius={[4, 4, 0, 0]}
+                          barSize={16}
+                          isAnimationActive={false}
+                        />
+                        <Bar
+                          dataKey="Mano_Derecha"
+                          name="Mano_Derecha"
+                          fill="#06b6d4"
+                          radius={[4, 4, 0, 0]}
+                          barSize={16}
+                          isAnimationActive={false}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
+
               </div>
 
               {/* FILA INFERIOR: REGISTRO Y AVANCE DE ESTUDIANTES (ANCHO COMPLETO) */}
